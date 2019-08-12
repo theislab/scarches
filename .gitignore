@@ -1,0 +1,27 @@
+
+#developing directory
+/models/
+/checkpoint
+/dist/
+/test/data/
+/examples/
+
+
+#OS or Editor files and folders
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/
+.directory
+/.idea/
+
+# Python / Byte-compiled / optimized / DLL
+__pycache__/
+*.py[cod]
+*.so
+.cache
+*.h5ad
+#others
+*.pdf
+*.zip
+#testing modules
+.pytest_cache/
