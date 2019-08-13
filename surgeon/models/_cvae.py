@@ -132,9 +132,10 @@ class CVAE:
                            use_bias=True)(h)
             h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
 
-            mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
+            self.mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
+            self.disp_output = h_disp
 
-            model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([mean_output, h_disp])
+            model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([self.mean_output, self.disp_output])
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
@@ -152,7 +153,12 @@ class CVAE:
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
-            model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')([mean_output, h_disp, h_pi])
+            self.mean_output = mean_output
+            self.disp_output = h_disp
+            self.pi_output = h_pi
+
+            model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')(
+                [self.mean_output, self.disp_output, self.pi_output])
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
@@ -226,14 +232,9 @@ class CVAE:
 
     def _calculate_loss(self):
         if self.loss_fn == 'nb':
-            disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
-
-            loss = LOSSES[self.loss_fn](disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
+            loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
         elif self.loss_fn == 'zinb':
-            pi_output = self.cvae_model.get_layer("decoder").get_layer("decoder_pi")
-            disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
-
-            loss = LOSSES[self.loss_fn](pi_output, disp_output, self.mu, self.log_var, self.ridge, self.alpha)
+            loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
 
