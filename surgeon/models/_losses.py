@@ -1,6 +1,5 @@
 import tensorflow as tf
 from keras import backend as K
-import numpy as np
 
 from ._utils import compute_mmd, _nelem, _nan2zero, _nan2inf, _reduce_mean
 
@@ -10,6 +9,14 @@ def kl_recon(mu, log_var, alpha=0.1, eta=1.0):
         kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
         recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
         return eta * recon_loss + alpha * kl_loss
+
+    return kl_recon_loss
+
+
+def kl_loss(mu, log_var, alpha=0.1):
+    def kl_recon_loss(y_true, y_pred):
+        kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
+        return alpha * kl_loss
 
     return kl_recon_loss
 
@@ -107,9 +114,29 @@ class ZINB(NB):
         return result
 
 
+def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1):
+    kl = kl_loss(mu, log_var, alpha=alpha)
+
+    def nb(y_true, y_pred):
+        nb_obj = NB(theta=disp, masking=True, scale_factor=scale_factor)
+        return nb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
+
+    return nb
+
+
+def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1):
+    kl = kl_loss(mu, log_var, alpha=alpha)
+
+    def zinb(y_true, y_pred):
+        zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
+        return zinb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
+
+    return zinb
+
+
 LOSSES = {
     "mse": kl_recon,
     "mmd": mmd,
-    "nb": NB,
-    "zinb": ZINB,
+    "nb": nb_loss,
+    "zinb": zinb_loss,
 }
