@@ -1,5 +1,3 @@
-from sklearn.preprocessing import LabelEncoder
-
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
@@ -7,8 +5,9 @@ from . import utils as tl
 
 def operate(network: archs.CVAE,
             new_condition: str,
-            init: str = 'zeros',
-            freeze: bool = True,) -> archs.CVAE:
+            init: str = 'Xavier',
+            freeze: bool = True,
+            print_summary: bool = True) -> archs.CVAE:
     import numpy as np
     network_kwargs = network.network_kwargs
     training_kwargs = network.training_kwargs
@@ -36,13 +35,19 @@ def operate(network: archs.CVAE,
         prev_weights_decoder, prev_biases_decoder = network.cvae_model.get_layer("decoder").get_layer(
             "first_layer").get_weights()[0], None
 
-    # Modify the weights of 1st encoder & decoder layers (TODO: Add other initialization methods like xavier, ...)
+    # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
         to_be_added_weights_encoder = np.ones(shape=(1, prev_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.ones(shape=(1, prev_weights_decoder.shape[1]))
-    else:
+    if init == "zeros":
         to_be_added_weights_encoder = np.zeros(shape=(1, prev_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.zeros(shape=(1, prev_weights_decoder.shape[1]))
+
+    if init == "Xavier":
+        to_be_added_weights_encoder = np.random.randn(1, prev_weights_encoder.shape[1]) * np.sqrt(
+            2 / (prev_weights_encoder.shape[0] + 1 + prev_weights_encoder.shape[1]))
+        to_be_added_weights_decoder = np.random.randn(1, prev_weights_decoder.shape[1]) * np.sqrt(
+            2 / (prev_weights_decoder.shape[0] + 1 + prev_weights_decoder.shape[1]))
 
     new_weights_encoder = np.concatenate([prev_weights_encoder, to_be_added_weights_encoder], axis=0)
     new_weights_decoder = np.concatenate([prev_weights_decoder, to_be_added_weights_decoder], axis=0)
@@ -84,7 +89,8 @@ def operate(network: archs.CVAE,
         new_network.compile_models()
 
     # Print summary of new network
-    new_network.get_summary_of_networks()
+    if print_summary:
+            new_network.get_summary_of_networks()
 
     # Add new condition to new network condition encoder
     new_network.condition_encoder = network.condition_encoder
