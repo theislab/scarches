@@ -94,7 +94,7 @@ class CVAE:
             self.decoder_model.summary()
             self.cvae_model.summary()
 
-    def _encoder(self, x, y, name="encoder"):
+    def _encoder(self, name="encoder"):
         """
             Constructs the encoder sub-network of C-VAE. This function implements the
             encoder part of Variational Auto-encoder. It will transform primary
@@ -107,7 +107,7 @@ class CVAE:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        xy = concatenate([x, y], axis=1)
+        xy = concatenate([self.x, self.encoder_labels], axis=1)
         h = Dense(512, kernel_initializer=self.init_w, use_bias=False, name='first_layer')(xy)
         h = BatchNormalization()(h)
         h = LeakyReLU()(h)
@@ -119,7 +119,7 @@ class CVAE:
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
-        model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+        model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
     def _output_decoder(self, h):
@@ -135,7 +135,10 @@ class CVAE:
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([mean_output, h_disp])
+
+            model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
+
         elif self.loss_fn == 'zinb':
             h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
@@ -150,17 +153,20 @@ class CVAE:
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')([mean_output, h_disp, h_pi])
+
+            model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
         else:
             h = Dense(self.x_dim, activation=ACTIVATIONS[self.output_activation],
                       kernel_initializer=self.init_w,
                       use_bias=True,
                       name="reconstruction_output")(h)
+            model_inputs = [self.z, self.decoder_labels]
             model_outputs = [h]
 
-        return model_outputs
+        return model_inputs, model_outputs
 
-    def _decoder(self, z, y, name="decoder"):
+    def _decoder(self, name="decoder"):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
@@ -171,7 +177,7 @@ class CVAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        zy = concatenate([z, y], axis=1)
+        zy = concatenate([self.z, self.decoder_labels], axis=1)
         h = Dense(256, kernel_initializer=self.init_w, use_bias=False, name='first_layer')(zy)
         h = BatchNormalization(axis=1)(h)
         h = LeakyReLU()(h)
@@ -180,8 +186,8 @@ class CVAE:
         h = BatchNormalization(axis=1)(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
-        model_outputs = self._output_decoder(h)
-        model = Model(inputs=[z, y], outputs=model_outputs, name=name)
+        model_inputs, model_outputs = self._output_decoder(h)
+        model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
         return model
 
     def _create_networks(self):
@@ -199,10 +205,8 @@ class CVAE:
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
 
-        self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.decoder_model = self._decoder(self.z,
-                                           self.decoder_labels,
-                                           name="decoder")
+        self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
+        self.decoder_model = self._decoder(name="decoder")
 
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         self.cvae_model = Model(inputs=inputs,
