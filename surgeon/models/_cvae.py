@@ -395,6 +395,12 @@ class CVAE:
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
 
+        if self.loss_fn in ['nb', 'zinb']:
+            if train_adata.raw is not None:
+                train_adata = remove_sparsity(train_adata.raw)
+            if valid_adata.raw is not None:
+                valid_adata = remove_sparsity(valid_adata.raw)
+
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
                                                          condition_key=condition_key)
         valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=condition_key)
@@ -405,11 +411,20 @@ class CVAE:
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
-        x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-        y_train = train_adata.X
+        if self.loss_fn in ['nb', 'zinb']:
+            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
+                       train_adata.obs['size_factors'].values]
+            y_train = train_adata.raw.X
 
-        x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-        y_valid = valid_adata.X
+            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
+                       valid_adata.obs['size_factors'].values]
+            y_valid = valid_adata.raw.X
+        else:
+            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
+            y_train = train_adata.X
+
+            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
+            y_valid = valid_adata.X
 
         callbacks = [
             History(),
