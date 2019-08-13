@@ -203,12 +203,17 @@ class CVAE:
                 Nothing will be returned.
         """
 
-        inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
-
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
         self.decoder_model = self._decoder(name="decoder")
 
-        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        if self.loss_fn in ['nb', 'zinb']:
+            inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
+            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.size_factor]
+        else:
+            inputs = [self.x, self.encoder_labels, self.decoder_labels]
+            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
+
+        decoder_outputs = self.decoder_model(decoder_inputs)
         self.cvae_model = Model(inputs=inputs,
                                 outputs=decoder_outputs,
                                 name="cvae")
