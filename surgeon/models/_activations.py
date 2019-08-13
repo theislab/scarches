@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras import backend as K
-from keras.layers import ReLU, Activation
+from keras.layers import ReLU, Activation, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 
 
@@ -16,7 +16,7 @@ ACTIVATIONS = {
     "relu": ReLU,
     'leaky_relu': LeakyReLU,
     'linear': Activation("linear"),
-    'mean_activation': mean_activation,
-    'disp_activation': disp_activation,
+    'mean_activation': Lambda(lambda x: mean_activation(x)),
+    'disp_activation': Lambda(lambda x: disp_activation(x)),
     'sigmoid': Activation('sigmoid'),
 }

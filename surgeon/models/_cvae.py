@@ -126,11 +126,11 @@ class CVAE:
         if self.loss_fn == 'nb':
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_mean = Activation(ACTIVATIONS['mean_activation'], name='decoder_mean')(h_mean)
+            h_mean = ACTIVATIONS['mean_activation'](name='decoder_mean')(h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
+            h_disp = ACTIVATIONS['disp_activation'](name='decoder_disp')(h_disp)
 
             self.mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
             self.disp_output = h_disp
@@ -145,11 +145,11 @@ class CVAE:
                          name='decoder_pi')(h)
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_mean = Activation(ACTIVATIONS['mean_activation'], name='decoder_mean')(h_mean)
+            h_mean = ACTIVATIONS['mean_activation'](name='decoder_mean')(h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
+            h_disp = ACTIVATIONS['disp_activation'](name='decoder_disp')(h_disp)
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
@@ -163,10 +163,10 @@ class CVAE:
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
         else:
-            h = Dense(self.x_dim, activation=ACTIVATIONS[self.output_activation],
+            h = Dense(self.x_dim, activation=None,
                       kernel_initializer=self.init_w,
-                      use_bias=True,
-                      name="reconstruction_output")(h)
+                      use_bias=True)(h)
+            h = ACTIVATIONS[self.output_activation](name='reconstruction_output')(h)
             model_inputs = [self.z, self.decoder_labels]
             model_outputs = [h]
 
