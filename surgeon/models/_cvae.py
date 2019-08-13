@@ -71,6 +71,7 @@ class CVAE:
             "z_dimension": self.z_dim,
             "n_conditions": self.n_conditions,
             "dropout_rate": self.dr_rate,
+            "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
         }
 
