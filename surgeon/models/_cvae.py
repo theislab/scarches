@@ -76,8 +76,8 @@ class CVAE:
         self._create_networks()
         self.compile_models()
 
-        get_summary = kwargs.get("summary", True)
-        if get_summary:
+        print_summary = kwargs.get("print_summary", True)
+        if print_summary:
             self.encoder_model.summary()
             self.decoder_model.summary()
             self.cvae_model.summary()
