@@ -228,12 +228,12 @@ class CVAE:
         if self.loss_fn == 'nb':
             disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
 
-            loss = LOSSES[self.loss_fn](disp_output, masking=True, scale_factor=self.scale_factor)
+            loss = LOSSES[self.loss_fn](disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
         elif self.loss_fn == 'zinb':
             pi_output = self.cvae_model.get_layer("decoder").get_layer("decoder_pi")
             disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
 
-            loss = LOSSES[self.loss_fn](pi_output, disp_output, ridge=self.ridge)
+            loss = LOSSES[self.loss_fn](pi_output, disp_output, self.mu, self.log_var, self.ridge, self.alpha)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
 
