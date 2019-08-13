@@ -18,4 +18,5 @@ ACTIVATIONS = {
     'linear': Activation("linear"),
     'mean_activation': mean_activation,
     'disp_activation': disp_activation,
+    'sigmoid': Activation('sigmoid'),
 }
