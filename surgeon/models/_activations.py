@@ -16,7 +16,7 @@ ACTIVATIONS = {
     "relu": ReLU,
     'leaky_relu': LeakyReLU,
     'linear': Activation("linear"),
-    'mean_activation': Lambda(lambda x: mean_activation(x)),
-    'disp_activation': Lambda(lambda x: disp_activation(x)),
+    'mean_activation': Lambda(lambda x: mean_activation(x), name="decoder_mean"),
+    'disp_activation': Lambda(lambda x: disp_activation(x), name="decoder_disp"),
     'sigmoid': Activation('sigmoid'),
 }

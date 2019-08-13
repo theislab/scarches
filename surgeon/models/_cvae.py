@@ -127,11 +127,11 @@ class CVAE:
         if self.loss_fn == 'nb':
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_mean = ACTIVATIONS['mean_activation'](name='decoder_mean')(h_mean)
+            h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_disp = ACTIVATIONS['disp_activation'](name='decoder_disp')(h_disp)
+            h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             self.mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
             self.disp_output = h_disp
@@ -146,11 +146,11 @@ class CVAE:
                          name='decoder_pi')(h)
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_mean = ACTIVATIONS['mean_activation'](name='decoder_mean')(h_mean)
+            h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
-            h_disp = ACTIVATIONS['disp_activation'](name='decoder_disp')(h_disp)
+            h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
