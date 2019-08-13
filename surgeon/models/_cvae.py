@@ -8,9 +8,11 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
-from sklearn.preprocessing import LabelEncoder
+from keras.utils.generic_utils import get_custom_objects
 
-from surgeon.models._losses import kl_recon
+from surgeon.models._activations import ACTIVATIONS
+from surgeon.models._layers import LAYERS
+from surgeon.models._losses import LOSSES
 from surgeon.models._utils import sample_z
 from surgeon.utils import label_encoder, remove_sparsity
 
@@ -50,8 +52,13 @@ class CVAE:
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./models/trVAE/")
+        self.loss_fn = kwargs.get("loss_fn", 'mse')
+        self.ridge = kwargs.get('ridge', 0.1)
+        self.clip_value = kwargs.get('clip_value', 3.0)
+        self.output_activation = kwargs.get("output_activation", 'relu')
 
         self.x = Input(shape=(self.x_dim,), name="data")
+        self.size_factor = Input(shape=(1,), name='size_factor')
         self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
@@ -63,12 +70,15 @@ class CVAE:
             "z_dimension": self.z_dim,
             "n_conditions": self.n_conditions,
             "dropout_rate": self.dr_rate,
+            "output_activation": self.output_activation,
         }
 
         self.training_kwargs = {
             "learning_rate": self.lr,
             "alpha": self.alpha,
             "eta": self.eta,
+            "ridge": self.ridge,
+            "clip_value": self.clip_value,
             "model_path": self.model_path,
         }
 
@@ -110,6 +120,44 @@ class CVAE:
         model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
+    def _output_decoder(self, h):
+        if self.loss_fn == 'nb':
+            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_mean = Activation(ACTIVATIONS['mean_activation'], name='decoder_mean')(h_mean)
+
+            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
+
+            mean_output = LAYERS['ColWiseMultLayer']([h_mean, self.size_factor])
+
+            model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([mean_output, h_disp])
+            model_outputs = [model_outputs]
+        elif self.loss_fn == 'zinb':
+            h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
+                         name='decoder_pi')(h)
+            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_mean = Activation(ACTIVATIONS['mean_activation'], name='decoder_mean')(h_mean)
+
+            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
+
+            mean_output = LAYERS['ColWiseMultLayer']([h_mean, self.size_factor])
+
+            model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')([mean_output, h_disp, h_pi])
+            model_outputs = [model_outputs]
+        else:
+            h = Dense(self.x_dim, activation=ACTIVATIONS[self.output_activation],
+                      kernel_initializer=self.init_w,
+                      use_bias=True,
+                      name="reconstruction_output")(h)
+            model_outputs = [h]
+
+        return model_outputs
+
     def _decoder(self, z, y, name="decoder"):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
@@ -130,9 +178,8 @@ class CVAE:
         h = BatchNormalization(axis=1)(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = Activation('relu', name="reconstruction_output")(h)
-        model = Model(inputs=[z, y], outputs=h, name=name)
+        model_outputs = self._output_decoder(h)
+        model = Model(inputs=[z, y], outputs=model_outputs, name=name)
         return model
 
     def _create_networks(self):
@@ -148,7 +195,7 @@ class CVAE:
                 Nothing will be returned.
         """
 
-        inputs = [self.x, self.encoder_labels, self.decoder_labels]
+        inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
 
         self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
         self.decoder_model = self._decoder(self.z,
@@ -156,11 +203,30 @@ class CVAE:
                                            name="decoder")
 
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs)
-
         self.cvae_model = Model(inputs=inputs,
-                                outputs=reconstruction_output,
+                                outputs=decoder_outputs,
                                 name="cvae")
+        self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
+                               'disp_activation': ACTIVATIONS['disp_activation'],
+                               'SliceLayer': LAYERS['SliceLayer'],
+                               'ColwiseMultLayer': LAYERS['ColWiseMultLayer']}
+
+        get_custom_objects().update(self.custom_objects)
+
+    def _calculate_loss(self):
+        if self.loss_fn == 'nb':
+            disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
+
+            loss = LOSSES[self.loss_fn](disp_output)
+        elif self.loss_fn == 'zinb':
+            pi_output = self.cvae_model.get_layer("decoder").get_layer("decoder_pi")
+            disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
+
+            loss = LOSSES[self.loss_fn](pi_output, disp_output, ridge=self.ridge)
+        else:
+            loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
+
+        return loss
 
     def compile_models(self):
         """
@@ -173,11 +239,12 @@ class CVAE:
             # Returns
                 Nothing will be returned.
         """
-        self.optimizer = keras.optimizers.Adam(lr=self.lr)
-        self.classifier_optimizer = keras.optimizers.Adam(lr=self.lr)
-        self.cvae_model.compile(optimizer=self.optimizer,
-                                loss=kl_recon(self.mu, self.log_var, self.alpha, self.eta),
-                                metrics=[kl_recon(self.mu, self.log_var, self.alpha, self.eta)],
+        optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
+        loss = self._calculate_loss()
+
+        self.cvae_model.compile(optimizer=optimizer,
+                                loss=loss,
+                                metrics=[loss],
                                 )
 
     def get_summary_of_networks(self):
@@ -262,9 +329,12 @@ class CVAE:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_path, 'mmd_cvae.h5'), compile=False)
-        self.encoder_model = load_model(os.path.join(self.model_path, 'encoder.h5'), compile=False)
-        self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False)
+        self.cvae_model = load_model(os.path.join(self.model_path, 'mmd_cvae.h5'), compile=False,
+                                     custom_objects=self.custom_objects)
+        self.encoder_model = load_model(os.path.join(self.model_path, 'encoder.h5'), compile=False,
+                                        custom_objects=self.custom_objects)
+        self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False,
+                                        custom_objects=self.custom_objects)
         self.compile_models()
 
     def save_model(self):
