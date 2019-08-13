@@ -1,6 +1,6 @@
 import numpy as np
+import scanpy as sc
 from scipy import sparse
-from sklearn import preprocessing
 
 
 def label_encoder(adata, label_encoder, condition_key='condition'):
@@ -45,3 +45,43 @@ def train_test_split(adata, train_frac=0.85):
     valid_data = adata[test_idx, :]
 
     return train_data, valid_data
+
+
+def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True,
+              n_top_genes=2000):
+    if filter_min_counts:
+        sc.pp.filter_genes(adata, min_counts=1)
+        sc.pp.filter_cells(adata, min_counts=1)
+
+    adata_count = adata.copy()
+
+    if size_factors:
+        sc.pp.normalize_per_cell(adata)
+        adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
+    else:
+        adata.obs['size_factors'] = 1.0
+
+    if logtrans_input:
+        sc.pp.log1p(adata)
+
+    if n_top_genes > 0 and adata.shape[1] > n_top_genes:
+        sc.pp.highly_variable_genes(adata, n_top_genes=n_top_genes)
+        genes = adata.var['highly_variable']
+        adata = adata[:, genes]
+        adata_count = adata_count[:, genes]
+
+    if normalize_input:
+        sc.pp.scale(adata)
+
+    if sparse.issparse(adata_count.X):
+        adata_count.X = adata_count.X.A
+
+    if sparse.issparse(adata.X):
+        adata.X = adata.X.A
+
+    if size_factors or normalize_input or logtrans_input:
+        adata.raw = adata_count.copy()
+    else:
+        adata.raw = adata_count
+
+    return adata
