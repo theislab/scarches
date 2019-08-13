@@ -54,6 +54,7 @@ class CVAE:
         self.model_path = kwargs.get("model_path", "./models/trVAE/")
         self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
+        self.scale_factor = kwargs.get("scale_factor", 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
         self.output_activation = kwargs.get("output_activation", 'relu')
 
@@ -78,6 +79,7 @@ class CVAE:
             "alpha": self.alpha,
             "eta": self.eta,
             "ridge": self.ridge,
+            "scale_factor": self.scale_factor,
             "clip_value": self.clip_value,
             "model_path": self.model_path,
         }
@@ -130,7 +132,7 @@ class CVAE:
                            use_bias=True)(h)
             h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
 
-            mean_output = LAYERS['ColWiseMultLayer']([h_mean, self.size_factor])
+            mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([mean_output, h_disp])
             model_outputs = [model_outputs]
@@ -145,7 +147,7 @@ class CVAE:
                            use_bias=True)(h)
             h_disp = Activation(ACTIVATIONS['disp_activation'], name='decoder_disp')(h_disp)
 
-            mean_output = LAYERS['ColWiseMultLayer']([h_mean, self.size_factor])
+            mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')([mean_output, h_disp, h_pi])
             model_outputs = [model_outputs]
@@ -217,7 +219,7 @@ class CVAE:
         if self.loss_fn == 'nb':
             disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
 
-            loss = LOSSES[self.loss_fn](disp_output)
+            loss = LOSSES[self.loss_fn](disp_output, masking=True, scale_factor=self.scale_factor)
         elif self.loss_fn == 'zinb':
             pi_output = self.cvae_model.get_layer("decoder").get_layer("decoder_pi")
             disp_output = self.cvae_model.get_layer("decoder").get_layer("decoder_disp")
