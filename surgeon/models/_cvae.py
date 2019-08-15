@@ -223,11 +223,11 @@ class CVAE:
             inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
             decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.size_factor]
             self.disp_output = self.aux_models['disp'](decoder_inputs)
+            if self.loss_fn == 'zinb':
+                self.pi_output = self.aux_models['pi'](decoder_inputs)
         else:
             inputs = [self.x, self.encoder_labels, self.decoder_labels]
             decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
-            self.disp_output = self.aux_models['disp'](decoder_inputs)
-            self.pi_output = self.aux_models['pi'](decoder_inputs)
 
         decoder_outputs = self.decoder_model(decoder_inputs)
 
