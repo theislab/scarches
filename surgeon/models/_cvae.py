@@ -398,9 +398,9 @@ class CVAE:
 
         if self.loss_fn in ['nb', 'zinb']:
             if train_adata.raw is not None:
-                train_adata = remove_sparsity(train_adata.raw)
+                train_adata.raw = remove_sparsity(train_adata.raw)
             if valid_adata.raw is not None:
-                valid_adata = remove_sparsity(valid_adata.raw)
+                valid_adata.raw = remove_sparsity(valid_adata.raw)
 
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
                                                          condition_key=condition_key)
