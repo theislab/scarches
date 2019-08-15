@@ -4,7 +4,7 @@ import os
 import anndata
 import keras
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
@@ -141,7 +141,7 @@ class CVAE:
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
-            
+
             self.aux_models['disp'] = Model(inputs=[self.z, self.decoder_labels, self.size_factor],
                                             output=h_disp)
         elif self.loss_fn == 'zinb':
@@ -158,11 +158,17 @@ class CVAE:
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')(
-                [h_mean, h_disp, h_pi])
+                [mean_output, h_disp, h_pi])
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
-            
+
+            self.aux_models['disp'] = Model(inputs=[self.z, self.decoder_labels, self.size_factor],
+                                            output=h_disp)
+
+            self.aux_models['pi'] = Model(inputs=[self.z, self.decoder_labels, self.size_factor],
+                                          output=h_pi)
+
         else:
             h = Dense(self.x_dim, activation=None,
                       kernel_initializer=self.init_w,
@@ -220,9 +226,11 @@ class CVAE:
         else:
             inputs = [self.x, self.encoder_labels, self.decoder_labels]
             decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
+            self.disp_output = self.aux_models['disp'](decoder_inputs)
+            self.pi_output = self.aux_models['pi'](decoder_inputs)
 
         decoder_outputs = self.decoder_model(decoder_inputs)
-        
+
         self.cvae_model = Model(inputs=inputs,
                                 outputs=decoder_outputs,
                                 name="cvae")
