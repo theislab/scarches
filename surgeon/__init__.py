@@ -39,15 +39,16 @@ def operate(network: archs.CVAE,
     if init == 'ones':
         to_be_added_weights_encoder = np.ones(shape=(1, prev_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.ones(shape=(1, prev_weights_decoder.shape[1]))
-    if init == "zeros":
+    elif init == "zeros":
         to_be_added_weights_encoder = np.zeros(shape=(1, prev_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.zeros(shape=(1, prev_weights_decoder.shape[1]))
-
-    if init == "Xavier":
+    elif init == "Xavier":
         to_be_added_weights_encoder = np.random.randn(1, prev_weights_encoder.shape[1]) * np.sqrt(
             2 / (prev_weights_encoder.shape[0] + 1 + prev_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.random.randn(1, prev_weights_decoder.shape[1]) * np.sqrt(
             2 / (prev_weights_decoder.shape[0] + 1 + prev_weights_decoder.shape[1]))
+    else:
+        raise Exception("Invalid initialization for new weights")
 
     new_weights_encoder = np.concatenate([prev_weights_encoder, to_be_added_weights_encoder], axis=0)
     new_weights_decoder = np.concatenate([prev_weights_decoder, to_be_added_weights_decoder], axis=0)
