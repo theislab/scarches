@@ -9,6 +9,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
+from scipy import sparse
 
 from surgeon.models._activations import ACTIVATIONS
 from surgeon.models._layers import LAYERS
@@ -397,9 +398,9 @@ class CVAE:
         valid_adata = remove_sparsity(valid_adata)
 
         if self.loss_fn in ['nb', 'zinb']:
-            if train_adata.raw is not None:
+            if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
                 train_adata.raw.X = train_adata.raw.X.A
-            if valid_adata.raw is not None:
+            if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw.X = valid_adata.raw.X.A
 
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
