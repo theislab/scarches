@@ -167,7 +167,7 @@ class CVAE:
             h = Dense(self.x_dim, activation=None,
                       kernel_initializer=self.init_w,
                       use_bias=True)(h)
-            h = ACTIVATIONS[self.output_activation](name='reconstruction_output')(h)
+            h = ACTIVATIONS[self.output_activation](h)
             model_inputs = [self.z, self.decoder_labels]
             model_outputs = [h]
 

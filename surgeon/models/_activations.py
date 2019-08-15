@@ -13,10 +13,10 @@ def disp_activation(x):
 
 
 ACTIVATIONS = {
-    "relu": ReLU,
-    'leaky_relu': LeakyReLU,
-    'linear': Activation("linear"),
+    "relu": ReLU(name="reconstruction_output"),
+    'leaky_relu': LeakyReLU(name="reconstruction_output"),
+    'linear': Activation("linear", name='reconstruction_output'),
     'mean_activation': Lambda(lambda x: mean_activation(x), name="decoder_mean"),
     'disp_activation': Lambda(lambda x: disp_activation(x), name="decoder_disp"),
-    'sigmoid': Activation('sigmoid'),
+    'sigmoid': Activation('sigmoid', name='decoder_pi'),
 }
