@@ -66,6 +66,7 @@ class CVAE:
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.condition_encoder = None
+        self.aux_models = {}
 
         self.network_kwargs = {
             "x_dimension": self.x_dim,
@@ -134,14 +135,15 @@ class CVAE:
                            use_bias=True)(h)
             h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
-            self.mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
-            self.disp_output = h_disp
+            h_mean = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
-            model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([self.mean_output, self.disp_output])
+            model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([h_mean, h_disp])
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
-
+            
+            self.aux_models['disp'] = Model(inputs=[self.z, self.decoder_labels, self.size_factor],
+                                            output=h_disp)
         elif self.loss_fn == 'zinb':
             h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
@@ -155,15 +157,12 @@ class CVAE:
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
 
-            self.mean_output = mean_output
-            self.disp_output = h_disp
-            self.pi_output = h_pi
-
             model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')(
-                [self.mean_output, self.disp_output, self.pi_output])
+                [h_mean, h_disp, h_pi])
 
             model_inputs = [self.z, self.decoder_labels, self.size_factor]
             model_outputs = [model_outputs]
+            
         else:
             h = Dense(self.x_dim, activation=None,
                       kernel_initializer=self.init_w,
@@ -217,11 +216,13 @@ class CVAE:
         if self.loss_fn in ['nb', 'zinb']:
             inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
             decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.size_factor]
+            self.disp_output = self.aux_models['disp'](decoder_inputs)
         else:
             inputs = [self.x, self.encoder_labels, self.decoder_labels]
             decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
 
         decoder_outputs = self.decoder_model(decoder_inputs)
+        
         self.cvae_model = Model(inputs=inputs,
                                 outputs=decoder_outputs,
                                 name="cvae")

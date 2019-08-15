@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras import backend as K
-from keras.layers import ReLU, Activation, Lambda
+from keras.layers import Activation, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 
 
@@ -13,7 +13,7 @@ def disp_activation(x):
 
 
 ACTIVATIONS = {
-    "relu": ReLU(name="reconstruction_output"),
+    "relu": Activation("relu", name='reconstruction_output'),
     'leaky_relu': LeakyReLU(name="reconstruction_output"),
     'linear': Activation("linear", name='reconstruction_output'),
     'mean_activation': Lambda(lambda x: mean_activation(x), name="decoder_mean"),
