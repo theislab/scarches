@@ -33,7 +33,7 @@ def data():
     condition_key = data_dict['condition']
     cell_type_key = data_dict['cell_type']
     target_conditions = data_dict['target_conditions']
-    condition_encoder = data_dict['label_encoder']
+    condition_encoder = data_dict['condition_encoder']
 
     if data_name.endswith("count"):
         adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
