@@ -19,12 +19,12 @@ from surgeon.utils import normalize, train_test_split
 def data():
     DATASETS = {
         "PBMC": {'name': 'pbmc', 'need_merge': False,
-                 'source_conditions': ['inDrops', '10x Chromium V2 B', '10x Chromium V2 A', 'Smart-seq2', 'CEL-Seq2'],
                  'target_conditions': ['Drop-seq'],
-                 'condition_encoder': {'inDrops': 0, '10x Chromium V2 A': 1, '10x Chromium V2 B': 2, 'Smart-seq2': 3,
-                                       "CEL-Seq2": 4, '68K': 5, 'Small 3K': 6},
-                 'condition': 'Method',
-                 'cell_type': 'CellType'},
+                 'condition_encoder': {'10x PBMC 68k': 0, '10X_3prime': 1, '10X_5prime': 2, 'inDrops': 3,
+                                       "10x Chromium V2 B": 4, '10x Chromium V2 A': 5, '10x PBMC 3k': 6,
+                                       'Smart-seq2': 7, 'CEL-Seq2': 8},
+                 'condition': 'study',
+                 'cell_type': 'cell_type'},
 
     }
     data_key = "PBMC"
