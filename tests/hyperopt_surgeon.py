@@ -65,7 +65,7 @@ def data():
 def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                  net_train_adata_out_of_sample, net_valid_adata_out_of_sample,
                  condition_key, cell_type_key,
-                 n_conditions, label_encoder, data_name, target_conditions):
+                 n_conditions, condition_encoder, data_name, target_conditions):
     z_dim_choices = {{choice([10, 20, 40, 50, 60, 80, 100])}}
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
@@ -88,7 +88,7 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     network.train(net_train_adata_in_sample,
                   net_valid_adata_in_sample,
                   condition_key=condition_key,
-                  le=label_encoder,
+                  le=condition_encoder,
                   n_epochs=1,
                   batch_size=batch_size_choices,
                   early_stop_limit=100,
