@@ -156,6 +156,5 @@ if __name__ == '__main__':
                                             algo=tpe.suggest,
                                             max_evals=args['max_evals'],
                                             trials=Trials())
-    best_network.save_model()
     print("All Done!")
     print(best_run)
