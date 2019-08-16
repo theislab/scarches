@@ -125,8 +125,8 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     for cell_type in latent_adata.obs[cell_type_key].unique().tolist():
         cell_type_adata = latent_adata.copy()[latent_adata.obs[cell_type_key] == cell_type]
         X_pca = cell_type_adata.obsm["X_pca"]
-        conditions = cell_type_adata.obs[condition_key].tolist()
-        asw_score_cell_type = silhouette_score(X_pca, conditions)
+        conditions_encoded, _ = surgeon.utils.label_encoder(cell_type_adata, new_network.condition_encoder, condition_key)
+        asw_score_cell_type = silhouette_score(X_pca, conditions_encoded)
         asw_score += asw_score_cell_type
         print(f"ASW for {cell_type} is {asw_score_cell_type:.6f}")
 
