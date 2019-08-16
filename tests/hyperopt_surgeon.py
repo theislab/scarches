@@ -62,8 +62,8 @@ def data():
     return net_train_adata_in_sample, net_valid_adata_in_sample, net_train_adata_out_of_sample, net_valid_adata_out_of_sample, condition_key, cell_type_key, n_conditions, condition_encoder, data_name, target_conditions
 
 
-def create_model(net_train_adata, net_valid_adata,
-                 net_train_adata_out, net_valid_adata_out,
+def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
+                 net_train_adata_out_of_sample, net_valid_adata_out_of_sample,
                  condition_key, cell_type_key,
                  n_conditions, label_encoder, data_name, target_conditions):
     z_dim_choices = {{choice([10, 20, 40, 50, 60, 80, 100])}}
@@ -73,7 +73,7 @@ def create_model(net_train_adata, net_valid_adata,
     batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
-    network = surgeon.archs.CVAE(x_dimension=net_train_adata.shape[1],
+    network = surgeon.archs.CVAE(x_dimension=net_train_adata_in_sample.shape[1],
                                  z_dimension=z_dim_choices,
                                  n_conditions=n_conditions,
                                  lr=0.001,
@@ -85,8 +85,8 @@ def create_model(net_train_adata, net_valid_adata,
                                  dropout_rate=dropout_rate_choices,
                                  output_activation='relu')
 
-    network.train(net_train_adata,
-                  net_valid_adata,
+    network.train(net_train_adata_in_sample,
+                  net_valid_adata_in_sample,
                   condition_key=condition_key,
                   le=label_encoder,
                   n_epochs=1,
@@ -101,8 +101,8 @@ def create_model(net_train_adata, net_valid_adata,
                                   init='Xavier',
                                   freeze=True)
 
-    new_network.train(net_train_adata_out,
-                      net_valid_adata_out,
+    new_network.train(net_train_adata_out_of_sample,
+                      net_valid_adata_out_of_sample,
                       condition_key=condition_key,
                       le=new_network.condition_encoder,
                       n_epochs=1,
@@ -111,7 +111,7 @@ def create_model(net_train_adata, net_valid_adata,
                       lr_reducer=50,
                       save=False,
                       verbose=2)
-    adata = net_train_adata.concatenate(net_valid_adata, net_train_adata_out, net_valid_adata_out)
+    adata = net_train_adata_in_sample.concatenate(net_valid_adata_in_sample, net_train_adata_out_of_sample, net_valid_adata_out_of_sample)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata, label_encoder=new_network.condition_encoder,
                                                     condition_key=condition_key)
