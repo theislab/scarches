@@ -66,7 +66,7 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                  net_train_adata_out_of_sample, net_valid_adata_out_of_sample,
                  condition_key, cell_type_key,
                  n_conditions, condition_encoder, data_name, target_conditions):
-    z_dim_choices = {{choice([10, 20, 40, 50, 60, 80, 100])}}
+    z_dim_choices = {{choice([15, 20, 40, 50, 60, 80, 100])}}
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     eta_choices = {{choice([1, 2, 5, 7, 10])}}
@@ -118,7 +118,7 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
 
     latent_adata = new_network.to_latent(adata, encoder_labels)
 
-    sc.pp.pca(latent_adata, svd_solver="arpack")
+    sc.pp.pca(latent_adata, svd_solver="arpack", n_comps=10)
     sc.pp.neighbors(latent_adata, n_neighbors=25)
 
     asw_score = 0
