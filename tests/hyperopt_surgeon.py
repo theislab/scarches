@@ -44,11 +44,11 @@ def data():
                           n_top_genes=2000)
         train_adata, valid_adata = train_test_split(adata, 0.80)
     else:
-        if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
-            train_adata = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-            valid_adata = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+        if os.path.exists(f"./data/{data_name}/train_{data_name}_normalized.h5ad"):
+            train_adata = sc.read(f"./data/{data_name}/train_{data_name}_normalized.h5ad")
+            valid_adata = sc.read(f"./data/{data_name}/valid_{data_name}_normalized.h5ad")
         else:
-            adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+            adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
             train_adata, valid_adata = train_test_split(adata, 0.80)
 
     net_train_adata_in_sample = train_adata.copy()[~(train_adata.obs[condition_key].isin(target_conditions))]
