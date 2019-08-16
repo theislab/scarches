@@ -112,7 +112,8 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                       save=False,
                       verbose=2)
     adata = net_train_adata_in_sample.concatenate(net_valid_adata_in_sample, net_train_adata_out_of_sample, net_valid_adata_out_of_sample)
-
+    if sparse.issparse(adata.X):
+        adata.X = adata.X.A
     encoder_labels, _ = surgeon.utils.label_encoder(adata, label_encoder=new_network.condition_encoder,
                                                     condition_key=condition_key)
 
@@ -124,6 +125,8 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     asw_score = 0
     for cell_type in latent_adata.obs[cell_type_key].unique().tolist():
         cell_type_adata = latent_adata.copy()[latent_adata.obs[cell_type_key] == cell_type]
+        if sparse.issparse(cell_type_adata.X):
+            cell_type_adata.X = cell_type_adata.X.A
         nb_conditions = len(cell_type_adata.obs[condition_key].unique().tolist())
         if nb_conditions > 1:
             X_pca = cell_type_adata.obsm["X_pca"]
