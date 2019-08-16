@@ -35,12 +35,13 @@ def data():
     target_conditions = data_dict['target_conditions']
     condition_encoder = data_dict['condition_encoder']
 
-    if os.path.exists(f"./data/{data_name}/train_{data_name}_normalized.h5ad"):
-        train_adata = sc.read(f"./data/{data_name}/train_{data_name}_normalized.h5ad")
-        valid_adata = sc.read(f"./data/{data_name}/valid_{data_name}_normalized.h5ad")
-    else:
-        adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
-        train_adata, valid_adata = train_test_split(adata, 0.80)
+    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+    adata = normalize(adata,
+                      filter_min_counts=False,
+                      normalize_input=False,
+                      logtrans_input=True,
+                      n_top_genes=2000)
+    train_adata, valid_adata = train_test_split(adata, 0.80)
 
     net_train_adata_in_sample = train_adata.copy()[~(train_adata.obs[condition_key].isin(target_conditions))]
     net_valid_adata_in_sample = valid_adata.copy()[~(valid_adata.obs[condition_key].isin(target_conditions))]
@@ -60,8 +61,9 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     z_dim_choices = {{choice([15, 20, 40, 50, 60, 80, 100])}}
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    eta_choices = {{choice([1, 2, 5, 7, 10])}}
-    batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
+    scale_factor_choices = {{choice([0.1, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0])}}
+    clip_value_choices = {{choice([3.0, 5.0, 10.0])}}
+    batch_size_choices = {{choice([32, 64, 128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
     network = surgeon.archs.CVAE(x_dimension=net_train_adata_in_sample.shape[1],
@@ -69,12 +71,12 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=alpha_choices,
-                                 eta=eta_choices,
-                                 clip_value=1e6,
-                                 loss_fn='mse',
+                                 scale_factor=scale_factor_choices,
+                                 clip_value=clip_value_choices,
+                                 loss_fn='nb',
                                  model_path=f"./models/CVAE/hyperopt/{data_name}/",
                                  dropout_rate=dropout_rate_choices,
-                                 output_activation='relu')
+                                 )
 
     network.train(net_train_adata_in_sample,
                   net_valid_adata_in_sample,
