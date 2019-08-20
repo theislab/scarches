@@ -1,4 +1,5 @@
 import gzip
+<<<<<<< HEAD
 import numpy as np
 import os.path
 import scipy.sparse
@@ -10,18 +11,39 @@ import sys
 
 MIN_TRANSCRIPTS = 600
 
+=======
+import os.path
+import sys
+
+import numpy as np
+import scipy.sparse
+from scipy.sparse import csr_matrix
+from sklearn.preprocessing import normalize
+
+MIN_TRANSCRIPTS = 600
+
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def load_tab(fname, max_genes=40000):
     if fname.endswith('.gz'):
         opener = gzip.open
     else:
         opener = open
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     with opener(fname, 'r') as f:
         if fname.endswith('.gz'):
             header = f.readline().decode('utf-8').rstrip().split('\t')
         else:
             header = f.readline().rstrip().split('\t')
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
         cells = header[1:]
         X = np.zeros((len(cells), max_genes))
         genes = []
@@ -32,9 +54,16 @@ def load_tab(fname, max_genes=40000):
                 line = line.decode('utf-8')
             fields = line.rstrip().split('\t')
             genes.append(fields[0])
+<<<<<<< HEAD
             X[:, i] = [ float(f) for f in fields[1:] ]
     return X[:, range(len(genes))], np.array(cells), np.array(genes)
 
+=======
+            X[:, i] = [float(f) for f in fields[1:]]
+    return X[:, range(len(genes))], np.array(cells), np.array(genes)
+
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def load_mtx(dname):
     with open(dname + '/matrix.mtx', 'r') as f:
         while True:
@@ -48,8 +77,13 @@ def load_mtx(dname):
         for line in f:
             fields = line.rstrip().split()
             data.append(float(fields[2]))
+<<<<<<< HEAD
             i.append(int(fields[1])-1)
             j.append(int(fields[0])-1)
+=======
+            i.append(int(fields[1]) - 1)
+            j.append(int(fields[0]) - 1)
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
         X = csr_matrix((data, (i, j)), shape=(n_cells, n_genes))
 
     genes = []
@@ -57,10 +91,18 @@ def load_mtx(dname):
         for line in f:
             fields = line.rstrip().split()
             genes.append(fields[1])
+<<<<<<< HEAD
     assert(len(genes) == n_genes)
 
     return X, np.array(genes)
 
+=======
+    assert (len(genes) == n_genes)
+
+    return X, np.array(genes)
+
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def load_h5(fname, genome='mm10'):
     try:
         import tables
@@ -68,7 +110,11 @@ def load_h5(fname, genome='mm10'):
         sys.stderr.write('Please install PyTables to read .h5 files: '
                          'https://www.pytables.org/usersguide/installation.html\n')
         exit(1)
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     # Adapted from scanpy's read_10x_h5() method.
     with tables.open_file(str(fname), 'r') as f:
         try:
@@ -84,6 +130,7 @@ def load_h5(fname, genome='mm10'):
 
             X = csr_matrix((data, dsets['indices'], dsets['indptr']),
                            shape=(n_cells, n_genes))
+<<<<<<< HEAD
             genes = [ gene for gene in dsets['genes'].astype(str) ]
             assert(len(genes) == n_genes)
             assert(len(genes) == X.shape[1])
@@ -100,6 +147,25 @@ def process_tab(fname, min_trans=MIN_TRANSCRIPTS):
 
     gt_idx = [ i for i, s in enumerate(np.sum(X != 0, axis=1))
                if s >= min_trans ]
+=======
+            genes = [gene for gene in dsets['genes'].astype(str)]
+            assert (len(genes) == n_genes)
+            assert (len(genes) == X.shape[1])
+
+        except tables.NoSuchNodeError:
+            raise Exception('Genome %s does not exist in this file.' % genome)
+        except KeyError:
+            raise Exception('File is missing one or more required datasets.')
+
+    return X, np.array(genes)
+
+
+def process_tab(fname, min_trans=MIN_TRANSCRIPTS):
+    X, cells, genes = load_tab(fname)
+
+    gt_idx = [i for i, s in enumerate(np.sum(X != 0, axis=1))
+              if s >= min_trans]
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     X = X[gt_idx, :]
     cells = cells[gt_idx]
     if len(gt_idx) == 0:
@@ -115,12 +181,17 @@ def process_tab(fname, min_trans=MIN_TRANSCRIPTS):
     else:
         sys.stderr.write('Tab files should end with ".txt" or ".tsv"\n')
         exit(1)
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     cache_fname = cache_prefix + '.npz'
     np.savez(cache_fname, X=X, genes=genes)
 
     return X, cells, genes
 
+<<<<<<< HEAD
 def process_mtx(dname, min_trans=MIN_TRANSCRIPTS):
     X, genes = load_mtx(dname)
 
@@ -130,6 +201,18 @@ def process_mtx(dname, min_trans=MIN_TRANSCRIPTS):
     if len(gt_idx) == 0:
         print('Warning: 0 cells passed QC in {}'.format(dname))
     
+=======
+
+def process_mtx(dname, min_trans=MIN_TRANSCRIPTS):
+    X, genes = load_mtx(dname)
+
+    gt_idx = [i for i, s in enumerate(np.sum(X != 0, axis=1))
+              if s >= min_trans]
+    X = X[gt_idx, :]
+    if len(gt_idx) == 0:
+        print('Warning: 0 cells passed QC in {}'.format(dname))
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     cache_fname = dname + '/tab.npz'
     scipy.sparse.save_npz(cache_fname, X, compressed=False)
 
@@ -138,6 +221,7 @@ def process_mtx(dname, min_trans=MIN_TRANSCRIPTS):
 
     return X, genes
 
+<<<<<<< HEAD
 def process_h5(fname, min_trans=MIN_TRANSCRIPTS):
     X, genes = load_h5(fname)
 
@@ -150,6 +234,21 @@ def process_h5(fname, min_trans=MIN_TRANSCRIPTS):
     if fname.endswith('.h5'):
         cache_prefix = '.'.join(fname.split('.')[:-1])
         
+=======
+
+def process_h5(fname, min_trans=MIN_TRANSCRIPTS):
+    X, genes = load_h5(fname)
+
+    gt_idx = [i for i, s in enumerate(np.sum(X != 0, axis=1))
+              if s >= min_trans]
+    X = X[gt_idx, :]
+    if len(gt_idx) == 0:
+        print('Warning: 0 cells passed QC in {}'.format(fname))
+
+    if fname.endswith('.h5'):
+        cache_prefix = '.'.join(fname.split('.')[:-1])
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
     cache_fname = cache_prefix + '.h5.npz'
     scipy.sparse.save_npz(cache_fname, X, compressed=False)
 
@@ -158,6 +257,10 @@ def process_h5(fname, min_trans=MIN_TRANSCRIPTS):
 
     return X, genes
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def load_data(name):
     if os.path.isfile(name + '.h5.npz'):
         X = scipy.sparse.load_npz(name + '.h5.npz')
@@ -175,9 +278,16 @@ def load_data(name):
     else:
         sys.stderr.write('Could not find: {}\n'.format(name))
         exit(1)
+<<<<<<< HEAD
     genes = np.array([ gene.upper() for gene in genes ])
     return X, genes
 
+=======
+    genes = np.array([gene.upper() for gene in genes])
+    return X, genes
+
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def load_names(data_names, norm=True, log1p=False, verbose=True):
     # Load datasets.
     datasets = []
@@ -190,7 +300,11 @@ def load_names(data_names, norm=True, log1p=False, verbose=True):
         if log1p:
             X_i = np.log1p(X_i)
         X_i = csr_matrix(X_i)
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
         datasets.append(X_i)
         genes_list.append(genes_i)
         n_cells += X_i.shape[0]
@@ -203,6 +317,10 @@ def load_names(data_names, norm=True, log1p=False, verbose=True):
 
     return datasets, genes_list, n_cells
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def save_datasets(datasets, genes, data_names, verbose=True,
                   truncate_neg=False):
     for i in range(len(datasets)):
@@ -216,15 +334,26 @@ def save_datasets(datasets, genes, data_names, verbose=True,
             # Save header.
             of.write('Genes\t')
             of.write('\t'.join(
+<<<<<<< HEAD
                 [ 'cell' + str(cell) for cell in range(dataset.shape[0]) ]
+=======
+                ['cell' + str(cell) for cell in range(dataset.shape[0])]
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
             ) + '\n')
 
             for g in range(dataset.shape[1]):
                 of.write(genes[g] + '\t')
                 of.write('\t'.join(
+<<<<<<< HEAD
                     [ str(expr) for expr in dataset[:, g] ]
                 ) + '\n')
 
+=======
+                    [str(expr) for expr in dataset[:, g]]
+                ) + '\n')
+
+
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 def process(data_names, min_trans=MIN_TRANSCRIPTS):
     for name in data_names:
         if os.path.isdir(name):
@@ -248,7 +377,13 @@ def process(data_names, min_trans=MIN_TRANSCRIPTS):
             continue
         print('Successfully processed {}'.format(name))
 
+<<<<<<< HEAD
 if __name__ == '__main__':
     from config import data_names
+=======
+
+if __name__ == '__main__':
+    data_names = []
+>>>>>>> 5a776ac712f1c140a9950b76bd76b287dc3d1734
 
     process(data_names)
