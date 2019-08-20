@@ -85,3 +85,14 @@ def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=
         adata.raw = adata_count
 
     return adata
+
+
+def create_dictionary(conditions, target_conditions):
+    if not isinstance(target_conditions, list):
+        target_conditions = [target_conditions]
+
+    dictionary = {}
+    conditions = [e for e in conditions if e not in target_conditions]
+    for idx, condition in enumerate(conditions):
+        dictionary[condition] = idx
+    return dictionary
