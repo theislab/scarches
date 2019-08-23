@@ -1,6 +1,7 @@
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
+from . import metrics 
 
 
 def operate(network: archs.CVAE,
