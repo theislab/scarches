@@ -1,19 +1,29 @@
+import numpy as np
+from typing import TypeVar
+
+from . import metrics
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
-from . import metrics 
+
+list_str = TypeVar('list_str', str, list)
 
 
 def operate(network: archs.CVAE,
-            new_condition: str,
+            new_conditions: list_str,
             init: str = 'Xavier',
             freeze: bool = True,
             print_summary: bool = True) -> archs.CVAE:
-    import numpy as np
+
+    if isinstance(new_conditions, str):
+        new_conditions = [new_conditions]
+
+    n_new_conditions = len(new_conditions)
+
     network_kwargs = network.network_kwargs
     training_kwargs = network.training_kwargs
 
-    network_kwargs['n_conditions'] += 1
+    network_kwargs['n_conditions'] += n_new_conditions
 
     # Instantiate new model with old parameters except `n_conditions`
     new_network = archs.CVAE(**network_kwargs, **training_kwargs, summary=False)
@@ -38,15 +48,15 @@ def operate(network: archs.CVAE,
 
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
-        to_be_added_weights_encoder = np.ones(shape=(1, prev_weights_encoder.shape[1]))
-        to_be_added_weights_decoder = np.ones(shape=(1, prev_weights_decoder.shape[1]))
+        to_be_added_weights_encoder = np.ones(shape=(n_new_conditions, prev_weights_encoder.shape[1]))
+        to_be_added_weights_decoder = np.ones(shape=(n_new_conditions, prev_weights_decoder.shape[1]))
     elif init == "zeros":
-        to_be_added_weights_encoder = np.zeros(shape=(1, prev_weights_encoder.shape[1]))
-        to_be_added_weights_decoder = np.zeros(shape=(1, prev_weights_decoder.shape[1]))
+        to_be_added_weights_encoder = np.zeros(shape=(n_new_conditions, prev_weights_encoder.shape[1]))
+        to_be_added_weights_decoder = np.zeros(shape=(n_new_conditions, prev_weights_decoder.shape[1]))
     elif init == "Xavier":
-        to_be_added_weights_encoder = np.random.randn(1, prev_weights_encoder.shape[1]) * np.sqrt(
+        to_be_added_weights_encoder = np.random.randn(n_new_conditions, prev_weights_encoder.shape[1]) * np.sqrt(
             2 / (prev_weights_encoder.shape[0] + 1 + prev_weights_encoder.shape[1]))
-        to_be_added_weights_decoder = np.random.randn(1, prev_weights_decoder.shape[1]) * np.sqrt(
+        to_be_added_weights_decoder = np.random.randn(n_new_conditions, prev_weights_decoder.shape[1]) * np.sqrt(
             2 / (prev_weights_decoder.shape[0] + 1 + prev_weights_decoder.shape[1]))
     else:
         raise Exception("Invalid initialization for new weights")
@@ -92,10 +102,11 @@ def operate(network: archs.CVAE,
 
     # Print summary of new network
     if print_summary:
-            new_network.get_summary_of_networks()
+        new_network.get_summary_of_networks()
 
     # Add new condition to new network condition encoder
     new_network.condition_encoder = network.condition_encoder
-    new_network.condition_encoder[new_condition] = new_network.n_conditions - 1
+    for idx, new_condition in enumerate(new_conditions):
+        new_network.condition_encoder[new_condition] = network.n_conditions + idx
 
     return new_network
