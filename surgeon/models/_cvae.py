@@ -448,7 +448,8 @@ class CVAE:
         ]
 
         if n_per_epoch > 0:
-            callbacks.append(ScoreCallback(score_filename, adata.X, labels, self.encoder_model, n_per_epoch=n_per_epoch))
+            callbacks.append(ScoreCallback(score_filename, adata.X, labels, self.encoder_model,
+                                           n_per_epoch=n_per_epoch, n_labels=self.n_conditions))
 
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
