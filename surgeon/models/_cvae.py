@@ -3,7 +3,8 @@ import os
 
 import anndata
 import keras
-from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
+import numpy as np
+from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -12,6 +13,8 @@ from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from surgeon.models._activations import ACTIVATIONS
+
+from surgeon.models._callbacks import ScoreCallback
 from surgeon.models._layers import LAYERS
 from surgeon.models._losses import LOSSES
 from surgeon.models._utils import sample_z
@@ -437,8 +440,13 @@ class CVAE:
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
             y_valid = valid_adata.X
 
+        adata = train_adata.concatenate(valid_adata)
+
+        data = adata.X
+        labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
         callbacks = [
             History(),
+            ScoreCallback("./scores.log", adata.X, labels, self.encoder_model, n_per_epoch=10)
         ]
 
         if early_stop_limit > 0:
