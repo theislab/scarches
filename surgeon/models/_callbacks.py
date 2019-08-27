@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pandas as pd
 from keras.callbacks import Callback
@@ -28,10 +30,14 @@ class ScoreCallback(Callback):
     def on_train_begin(self, logs=None):
         self.scores = []
         self.epochs = []
+        self.times = []
 
     def on_train_end(self, logs=None):
-        scores_df = pd.DataFrame({"epoch": self.epochs, "score": self.scores})
+        scores_df = pd.DataFrame({"epoch": self.epochs, "score": self.scores, "time": self.times})
         scores_df.to_csv(self.filename, index=False)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_time_start = time.time()
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.n_per_epoch == 0:
@@ -39,6 +45,7 @@ class ScoreCallback(Callback):
             latent_X = self.encoder_model.predict([self.X, labels_onehot])[2]
 
             self.epochs.append(epoch)
+            self.times.append(time.time() - self.epoch_time_start)
             self.scores.append(self.asw(latent_X))
 
             print(f"Epoch {epoch}: ASW = {self.scores[-1]:.4f}")
