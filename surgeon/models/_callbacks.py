@@ -27,6 +27,7 @@ class ScoreCallback(Callback):
         super(ScoreCallback, self).__init__()
         self.X = data
         self.labels = np.reshape(labels, (-1,))
+        self.labels_onehot = to_categorical(self.labels)
         self.filename = filename
         self.encoder_model = encoder_model
         self.n_per_epoch = n_per_epoch
@@ -59,8 +60,7 @@ class ScoreCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.n_per_epoch == 0:
-            labels_onehot = to_categorical(self.labels)
-            latent_X = self.encoder_model.predict([self.X, labels_onehot])[2]
+            latent_X = self.encoder_model.predict([self.X, self.labels_onehot])[2]
 
             self.epochs.append(epoch)
             last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
