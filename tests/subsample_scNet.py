@@ -93,7 +93,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
 
     scores = np.array(scores)
 
-    filename = "scores_"
+    filename = "scores_scNet"
     filename += "Freezed" if freeze else "UnFreezed"
     filename += "_count.log" if count_adata else "_normalized.log"
 
