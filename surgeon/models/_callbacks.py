@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from keras.callbacks import Callback
 from keras.models import Model
+from keras.utils import to_categorical
 from sklearn.metrics import silhouette_score
 
 
@@ -30,7 +31,8 @@ class ScoreCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.n_per_epoch == 0:
-            latent_X = self.encoder_model.predict([self.X, self.labels])[2]
+            labels_onehot = to_categorical(self.labels)
+            latent_X = self.encoder_model.predict([self.X, labels_onehot])[2]
 
             self.epochs.append(epoch)
             self.scores.append(self.asw(latent_X))
