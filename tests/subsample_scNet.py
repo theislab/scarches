@@ -92,7 +92,12 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
         print([subsample_frac, ebm, asw, ari, nmi])
 
     scores = np.array(scores)
-    np.savetxt(os.path.join(path_to_save, "scores_scNetFreezed.log"), X=scores, delimiter=",")
+
+    filename = "scores_"
+    filename += "Freezed" if freeze else "UnFreezed"
+    filename += "_count.log" if count_adata else "_normalized.log"
+
+    np.savetxt(os.path.join(path_to_save, filename), X=scores, delimiter=",")
 
 
 if __name__ == '__main__':
