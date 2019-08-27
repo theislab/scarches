@@ -371,7 +371,7 @@ class CVAE:
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, condition_key, le,
-              n_epochs=25, batch_size=32, early_stop_limit=20,
+              n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, score_filename="./scores.log",
               lr_reducer=10, save=True, verbose=2):
         """
             Trains the network `n_epochs` times with given `train_data`
@@ -442,11 +442,10 @@ class CVAE:
 
         adata = train_adata.concatenate(valid_adata)
 
-        data = adata.X
         labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
         callbacks = [
             History(),
-            ScoreCallback("./scores.log", adata.X, labels, self.encoder_model, n_per_epoch=10)
+            ScoreCallback(score_filename, adata.X, labels, self.encoder_model, n_per_epoch=n_per_epoch)
         ]
 
         if early_stop_limit > 0:
