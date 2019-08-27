@@ -40,39 +40,38 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                                       logtrans_input=True,
                                                       n_top_genes=5000,
                                                       )
-
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
-    n_conditions = len(train_adata.obs[condition_key].unique().tolist())
-
-    network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=20,
-                                 n_conditions=n_conditions,
-                                 lr=0.001,
-                                 alpha=0.001,
-                                 eta=1.0,
-                                 clip_value=1e6,
-                                 loss_fn=loss_fn,
-                                 model_path="./models/CVAE/Subsample/Toy_normalized/",
-                                 dropout_rate=0.2,
-                                 output_activation='relu')
-
-    conditions = adata_for_training.obs[condition_key].unique().tolist()
-    condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
-
-    network.train(train_adata,
-                  valid_adata,
-                  condition_key=condition_key,
-                  le=condition_encoder,
-                  n_epochs=200,
-                  batch_size=128,
-                  early_stop_limit=20,
-                  lr_reducer=15,
-                  n_per_epoch=0,
-                  save=True,
-                  verbose=2)
-
     scores = []
     for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2]:
+        train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
+        n_conditions = len(train_adata.obs[condition_key].unique().tolist())
+
+        network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
+                                     z_dimension=20,
+                                     n_conditions=n_conditions,
+                                     lr=0.001,
+                                     alpha=0.001,
+                                     eta=1.0,
+                                     clip_value=1e6,
+                                     loss_fn=loss_fn,
+                                     model_path="./models/CVAE/Subsample/Toy_normalized/",
+                                     dropout_rate=0.2,
+                                     output_activation='relu')
+
+        conditions = adata_for_training.obs[condition_key].unique().tolist()
+        condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
+
+        network.train(train_adata,
+                      valid_adata,
+                      condition_key=condition_key,
+                      le=condition_encoder,
+                      n_epochs=200,
+                      batch_size=128,
+                      early_stop_limit=20,
+                      lr_reducer=15,
+                      n_per_epoch=0,
+                      save=True,
+                      verbose=2)
+
         new_network = surgeon.operate(network,
                                       new_conditions=target_conditions,
                                       init='Xavier',
