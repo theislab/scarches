@@ -1,3 +1,4 @@
+import os
 import time
 from typing import TypeVar
 
@@ -54,7 +55,7 @@ class ScoreCallback(Callback):
         for i, clustering_score in enumerate(self.clustering_scores):
             computed_scores = self.scores_np[:, i]
             scores_df[clustering_score] = computed_scores
-
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
         scores_df.to_csv(self.filename, index=False)
 
     def on_epoch_begin(self, epoch, logs=None):
