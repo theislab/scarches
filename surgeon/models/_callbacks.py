@@ -63,7 +63,7 @@ class ScoreCallback(Callback):
             latent_X = self.encoder_model.predict([self.X, labels_onehot])[2]
 
             self.epochs.append(epoch)
-            self.times.append(time.time() - self.epoch_time_start)
+            self.times.append(time.time() - self.epoch_time_start + self.times[-1])
             if self.clustering_scores == 'all':
                 self.scores.append([self.asw(latent_X), self.ari(latent_X), self.nmi(latent_X),
                                     self.entropy_of_batch_mixing(latent_X)])
