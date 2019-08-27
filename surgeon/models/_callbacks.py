@@ -66,36 +66,51 @@ class ScoreCallback(Callback):
 
             self.epochs.append(epoch)
             last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
-            self.times.append(time.time() - self.epoch_time_start + last_time_record)
             print(f"Epoch {epoch}: ", end="\t")
             if self.clustering_scores == 'all':
-                asw = self.asw(latent_X)
-                ari = self.ari(latent_X)
-                nmi = self.nmi(latent_X)
-                ebm = self.entropy_of_batch_mixing(latent_X)
+                asw, asw_time = self.asw(latent_X)
+                ari, ari_time = self.ari(latent_X)
+                nmi, nmi_time = self.nmi(latent_X)
+                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X)
                 self.scores.append([asw, ari, nmi, ebm])
                 print(f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f}")
+                computation_times = asw_time + ari_time + nmi_time + ebm_time
             else:
                 scores = []
+                computation_times = 0
                 for clustering_score in self.clustering_scores:
-                    scores += [self.score_computers[clustering_score](latent_X)]
+                    score, computation_time = self.score_computers[clustering_score](latent_X)
+                    scores.append(score)
+                    computation_times += computation_time
                     print(f"{clustering_score}: {scores[-1]:.4f}", end=" - ")
                 print()
                 self.scores.append(scores)
 
+            self.times.append(time.time() - self.epoch_time_start + last_time_record - computation_times)
+
     def asw(self, latent):
-        return silhouette_score(latent, self.labels)
+        start_time = time.time()
+        score = silhouette_score(latent, self.labels)
+        end_time = time.time()
+        return score, end_time - start_time
 
     def ari(self, latent):
+        start_time = time.time()
         labels_pred = self.kmeans.fit_predict(latent)
-        return adjusted_rand_score(self.labels, labels_pred)
+        score = adjusted_rand_score(self.labels, labels_pred)
+        end_time = time.time()
+        return score, end_time - start_time
 
     def nmi(self, latent):
+        start_time = time.time()
         labels_pred = self.kmeans.fit_predict(latent)
-        return normalized_mutual_info_score(self.labels, labels_pred)
+        score = normalized_mutual_info_score(self.labels, labels_pred)
+        end_time = time.time()
+        return score, end_time - start_time
 
     def entropy_of_batch_mixing(self, latent,
                                 n_neighbors=50, n_pools=50, n_samples_per_pool=100, subsample_frac=1.0):
+        start_time = time.time()
 
         def entropy_from_indices(indices):
             return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)))
@@ -119,5 +134,5 @@ class ScoreCallback(Callback):
                 np.mean(entropies[np.random.choice(len(entropies), size=n_samples_per_pool)])
                 for _ in range(n_pools)
             ])
-
-        return score
+        end_time = time.time()
+        return score, end_time - start_time
