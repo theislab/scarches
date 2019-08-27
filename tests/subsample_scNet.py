@@ -8,7 +8,7 @@ import surgeon
 
 
 def train_and_evaluate(data_name, freeze=True, count_adata=True):
-    path_to_save = "./results/subsample/toy/"
+    path_to_save = f"./results/subsample/{data_name}/"
     condition_key = "batch"
     target_conditions = ["Batch8", "Batch9"]
 
