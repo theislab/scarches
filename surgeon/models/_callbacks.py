@@ -31,7 +31,7 @@ class ScoreCallback(Callback):
 
     def on_train_end(self, logs=None):
         scores_df = pd.DataFrame({"epoch": self.epochs, "score": self.scores})
-        scores_df.to_csv(self.filename)
+        scores_df.to_csv(self.filename, index=False)
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.n_per_epoch == 0:

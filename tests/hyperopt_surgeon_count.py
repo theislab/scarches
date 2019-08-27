@@ -90,7 +90,7 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                   verbose=2)
 
     new_network = surgeon.operate(network,
-                                  new_condition=target_conditions[0],
+                                  new_conditions=target_conditions[0],
                                   init='Xavier',
                                   freeze=True)
 

@@ -445,8 +445,10 @@ class CVAE:
         labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
         callbacks = [
             History(),
-            ScoreCallback(score_filename, adata.X, labels, self.encoder_model, n_per_epoch=n_per_epoch)
         ]
+
+        if n_per_epoch > 0:
+            callbacks.append(ScoreCallback(score_filename, adata.X, labels, self.encoder_model, n_per_epoch=n_per_epoch))
 
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
