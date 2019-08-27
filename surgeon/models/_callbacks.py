@@ -63,7 +63,8 @@ class ScoreCallback(Callback):
             latent_X = self.encoder_model.predict([self.X, labels_onehot])[2]
 
             self.epochs.append(epoch)
-            self.times.append(time.time() - self.epoch_time_start + self.times[-1])
+            last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
+            self.times.append(time.time() - self.epoch_time_start + last_time_record)
             if self.clustering_scores == 'all':
                 self.scores.append([self.asw(latent_X), self.ari(latent_X), self.nmi(latent_X),
                                     self.entropy_of_batch_mixing(latent_X)])
@@ -73,7 +74,7 @@ class ScoreCallback(Callback):
                     scores += [self.score_computers[clustering_score](latent_X)]
                 self.scores.append(scores)
 
-            print(f"Epoch {epoch}: ASW = {self.scores[-1]:.4f}")
+            print(f"Epoch {epoch}: {self.scores[-1]}")
 
     def asw(self, latent):
         return silhouette_score(latent, self.labels)
