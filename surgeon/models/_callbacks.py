@@ -49,6 +49,8 @@ class ScoreCallback(Callback):
         scores_df = pd.DataFrame({"epoch": self.epochs, "time": self.times})
 
         self.scores_np = np.array(self.scores)
+        if self.clustering_scores == 'all':
+            self.clustering_scores = ['ASW', 'ARI', 'NMI', 'EBM']
         for i, clustering_score in enumerate(self.clustering_scores):
             computed_scores = self.scores_np[:, i]
             scores_df[clustering_score] = computed_scores
