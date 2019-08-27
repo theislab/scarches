@@ -24,6 +24,23 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
     adata_out_of_sample = adata[adata.obs[condition_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[condition_key].isin(target_conditions)]
 
+    if count_adata:
+        adata_for_training = surgeon.utils.normalize(adata_for_training,
+                                                     filter_min_counts=False,
+                                                     normalize_input=False,
+                                                     size_factors=True,
+                                                     logtrans_input=True,
+                                                     n_top_genes=5000,
+                                                     )
+
+        adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
+                                                      filter_min_counts=False,
+                                                      normalize_input=False,
+                                                      size_factors=True,
+                                                      logtrans_input=True,
+                                                      n_top_genes=5000,
+                                                      )
+
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
     n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
