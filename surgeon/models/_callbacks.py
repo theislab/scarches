@@ -26,7 +26,7 @@ class ScoreCallback(Callback):
                  ):
         super(ScoreCallback, self).__init__()
         self.X = data
-        self.labels = labels
+        self.labels = np.reshape(labels, (-1,))
         self.filename = filename
         self.encoder_model = encoder_model
         self.n_per_epoch = n_per_epoch
