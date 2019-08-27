@@ -37,8 +37,6 @@ class ScoreCallback(Callback):
                                 "nmi": self.nmi,
                                 "ebm": self.entropy_of_batch_mixing}
 
-        self.kmeans = KMeans(n_labels, n_init=200)
-
     def on_train_begin(self, logs=None):
         self.scores = []
         self.epochs = []
@@ -80,11 +78,13 @@ class ScoreCallback(Callback):
         return silhouette_score(latent, self.labels)
 
     def ari(self, latent):
-        labels_pred = self.kmeans.fit_predict(latent)
+        kmeans = KMeans(self.n_labels, n_init=200)
+        labels_pred = kmeans.fit_predict(latent)
         return adjusted_rand_score(self.labels, labels_pred)
 
     def nmi(self, latent):
-        labels_pred = self.kmeans.fit_predict(latent)
+        kmeans = KMeans(self.n_labels, n_init=200)
+        labels_pred = kmeans.fit_predict(latent)
         return normalized_mutual_info_score(self.labels, labels_pred)
 
     def entropy_of_batch_mixing(self, latent,
