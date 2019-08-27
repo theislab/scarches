@@ -16,8 +16,10 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
 
     if count_adata:
         adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+        loss_fn = "nb"
     else:
         adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
+        loss_fn = "mse"
 
     adata_out_of_sample = adata[adata.obs[condition_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[condition_key].isin(target_conditions)]
@@ -32,7 +34,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                  alpha=0.001,
                                  eta=1.0,
                                  clip_value=1e6,
-                                 loss_fn='mse',
+                                 loss_fn=loss_fn,
                                  model_path="./models/CVAE/Subsample/Toy_normalized/",
                                  dropout_rate=0.2,
                                  output_activation='relu')
