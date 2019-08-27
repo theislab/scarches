@@ -49,7 +49,7 @@ class ScoreCallback(Callback):
         scores_df = pd.DataFrame({"epoch": self.epochs, "time": self.times})
 
         self.scores_np = np.array(self.scores)
-        for i, clustering_score in self.clustering_scores:
+        for i, clustering_score in enumerate(self.clustering_scores):
             computed_scores = self.scores_np[:, i]
             scores_df[clustering_score] = computed_scores
 
@@ -65,13 +65,20 @@ class ScoreCallback(Callback):
             self.epochs.append(epoch)
             last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
             self.times.append(time.time() - self.epoch_time_start + last_time_record)
+            print(f"Epoch {epoch}: ", end="\t")
             if self.clustering_scores == 'all':
-                self.scores.append([self.asw(latent_X), self.ari(latent_X), self.nmi(latent_X),
-                                    self.entropy_of_batch_mixing(latent_X)])
+                asw = self.asw(latent_X)
+                ari = self.ari(latent_X)
+                nmi = self.nmi(latent_X)
+                ebm = self.entropy_of_batch_mixing(latent_X)
+                self.scores.append([asw, ari, nmi, ebm])
+                print(f"ASW = {asw:.4f} - ARI = {ari:.4f} - NMI = {nmi:.4f} - EBM = {ebm:.4f}")
             else:
                 scores = []
                 for clustering_score in self.clustering_scores:
                     scores += [self.score_computers[clustering_score](latent_X)]
+                    print(f"{clustering_score} = {scores[-1]:.4f}", end=" - ")
+                print()
                 self.scores.append(scores)
 
             print(f"Epoch {epoch}: {self.scores[-1]}")
