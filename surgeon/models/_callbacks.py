@@ -81,8 +81,6 @@ class ScoreCallback(Callback):
                 print()
                 self.scores.append(scores)
 
-            print(f"Epoch {epoch}: {self.scores[-1]}")
-
     def asw(self, latent):
         return silhouette_score(latent, self.labels)
 
