@@ -72,12 +72,12 @@ class ScoreCallback(Callback):
                 nmi = self.nmi(latent_X)
                 ebm = self.entropy_of_batch_mixing(latent_X)
                 self.scores.append([asw, ari, nmi, ebm])
-                print(f"ASW = {asw:.4f} - ARI = {ari:.4f} - NMI = {nmi:.4f} - EBM = {ebm:.4f}")
+                print(f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f}")
             else:
                 scores = []
                 for clustering_score in self.clustering_scores:
                     scores += [self.score_computers[clustering_score](latent_X)]
-                    print(f"{clustering_score} = {scores[-1]:.4f}", end=" - ")
+                    print(f"{clustering_score}: {scores[-1]:.4f}", end=" - ")
                 print()
                 self.scores.append(scores)
 
