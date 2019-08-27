@@ -53,7 +53,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                      eta=1.0,
                                      clip_value=1e6,
                                      loss_fn=loss_fn,
-                                     model_path="./models/CVAE/Subsample/Toy_normalized/",
+                                     model_path=f"./models/CVAE/Subsample/{data_name}-{loss_fn}-{subsample_frac}/",
                                      dropout_rate=0.2,
                                      output_activation='relu')
 
