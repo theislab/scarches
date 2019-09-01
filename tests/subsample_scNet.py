@@ -9,8 +9,14 @@ import surgeon
 
 def train_and_evaluate(data_name, freeze=True, count_adata=True):
     path_to_save = f"./results/subsample/{data_name}/"
-    condition_key = "batch"
-    target_conditions = ["Batch8", "Batch9"]
+    if data_name == "toy":
+        condition_key = "batch"
+        cell_type_key = "cell_type"
+        target_conditions = ["Batch8", "Batch9"]
+    else:
+        condition_key = "study"
+        cell_type_key = "cell_type"
+        target_conditions = ["Pancreas Celseq", "Pancreas Celseq2"]
 
     os.makedirs(path_to_save, exist_ok=True)
 
@@ -40,6 +46,10 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                                       logtrans_input=True,
                                                       n_top_genes=5000,
                                                       )
+        clip_value = 5.0
+    else:
+        clip_value = 1e6
+
     scores = []
     for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2]:
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
@@ -51,7 +61,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                      lr=0.001,
                                      alpha=0.001,
                                      eta=1.0,
-                                     clip_value=1e6,
+                                     clip_value=clip_value,
                                      loss_fn=loss_fn,
                                      model_path=f"./models/CVAE/Subsample/{data_name}-{loss_fn}-{subsample_frac}/",
                                      dropout_rate=0.2,
@@ -76,8 +86,10 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                       new_conditions=target_conditions,
                                       init='Xavier',
                                       freeze=freeze)
-        n_samples = adata_out_of_sample.shape[0]
-        keep_idx = np.random.choice(n_samples, int(subsample_frac * n_samples), replace=False)
+
+        subsample_frac = '' if subsample_frac == 1.0 else subsample_frac
+        keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv')
+        keep_idx = keep_idx.astype('int32')
 
         adata_out_of_sample = adata_out_of_sample[keep_idx, :]
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
@@ -86,7 +98,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                           valid_adata,
                           condition_key=condition_key,
                           le=new_network.condition_encoder,
-                          n_epochs=100,
+                          n_epochs=300,
                           batch_size=128,
                           early_stop_limit=25,
                           lr_reducer=20,
@@ -101,8 +113,8 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
 
         ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
         asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-        ari = surgeon.metrics.ari(latent_adata, label_key=condition_key)
-        nmi = surgeon.metrics.nmi(latent_adata, label_key=condition_key)
+        ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
+        nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
 
         scores.append([subsample_frac, ebm, asw, ari, nmi])
         print([subsample_frac, ebm, asw, ari, nmi])
