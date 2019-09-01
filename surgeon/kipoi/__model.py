@@ -1,4 +1,6 @@
 import os
+from collections import OrderedDict
+
 import yaml
 
 from surgeon.models import CVAE
@@ -8,10 +10,10 @@ def create_network_yaml(network: CVAE,
                         model_url: str = None,
                         model_md5: str = None,
                         path_to_save: str = "./surgeon.yaml"):
-    data = dict(
+    data = OrderedDict(
         defined_as='kipoi.model.KerasModel',
-        args=dict(
-            weights=dict(
+        args=OrderedDict(
+            weights=OrderedDict(
                 url=model_url,
                 md5=model_md5,
             ),
@@ -19,14 +21,14 @@ def create_network_yaml(network: CVAE,
 
         default_dataloader=None,
 
-        info=dict(
+        info=OrderedDict(
             authors=[
-                dict(
+                OrderedDict(
                     name="Mohsen Naghipourfar",
                     github="Naghipourfar",
                     email="mohsen.naghipourfar@gmail.com",
                 ),
-                dict(
+                OrderedDict(
                     name="Mohammad Lotfollahi",
                     github="M0hammadL",
                     email="mohammad.lotfollahi@helmholtz-muenchen.de",
@@ -38,7 +40,7 @@ def create_network_yaml(network: CVAE,
             licence="MIT",
         ),
 
-        dependencies=dict(  # TODO: Add more depenedencies
+        dependencies=OrderedDict(  # TODO: Add more depenedencies
             conda=[
                 "python=3.6",
                 "bioconda::scanpy"
@@ -48,26 +50,26 @@ def create_network_yaml(network: CVAE,
             ],
         ),
 
-        schema=dict(
+        schema=OrderedDict(
             inputs=[
-                dict(
-                    name="gene counts",
-                    shape=(None, network.x_dim),
+                OrderedDict(
+                    name="genes",
+                    shape=(network.x_dim,),
                 ),
-                dict(
+                OrderedDict(
                     name="study",
-                    shape=(None, network.n_conditions),
+                    shape=(network.n_conditions,),
                     doc="one hot encoded vector of batches (studies)",
                 ),
-                dict(
-                    name="size factors",
-                    shape=(None, 1),
+                OrderedDict(
+                    name="size_factors",
+                    shape=(1,),
                 )
             ],
             targets=[
-                dict(
-                    name="predicted counts",
-                    shape=(None, network.x_dim),
+                OrderedDict(
+                    name="predicted_genes",
+                    shape=(network.x_dim,),
                 ),
             ]
         )
