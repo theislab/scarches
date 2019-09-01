@@ -4,7 +4,7 @@ import os
 import anndata
 import keras
 import numpy as np
-from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
+from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -13,7 +13,6 @@ from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from surgeon.models._activations import ACTIVATIONS
-
 from surgeon.models._callbacks import ScoreCallback
 from surgeon.models._layers import LAYERS
 from surgeon.models._losses import LOSSES
@@ -421,15 +420,13 @@ class CVAE:
 
         valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=condition_key)
 
-        train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
-        valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
-
         if self.condition_encoder is None:
             self.condition_encoder = new_le
-        
+
         if retrain == False and os.path.exists(self.model_path):
             self.restore_model()
             return
+
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
@@ -448,15 +445,18 @@ class CVAE:
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
             y_valid = valid_adata.X
 
-        adata = train_adata.concatenate(valid_adata)
-
-        batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
-        celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
         callbacks = [
             History(),
         ]
 
         if n_per_epoch > 0:
+            adata = train_adata.concatenate(valid_adata)
+
+            train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
+            batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+
             callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.encoder_model,
                                            n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
                                            n_celltype_labels=len(np.unique(celltype_labels))))
