@@ -5,6 +5,7 @@ from . import metrics
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
+from . import kipoi as kp
 
 list_str = TypeVar('list_str', str, list)
 
