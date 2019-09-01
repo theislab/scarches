@@ -51,7 +51,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
         clip_value = 1e6
 
     scores = []
-    for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2]:
+    for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]:
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
         n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
@@ -63,7 +63,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                      eta=1.0,
                                      clip_value=clip_value,
                                      loss_fn=loss_fn,
-                                     model_path=f"./models/CVAE/Subsample/{data_name}-{loss_fn}-{subsample_frac}/",
+                                     model_path=f"./models/CVAE/Subsample/before-{data_name}-{loss_fn}-{subsample_frac}/",
                                      dropout_rate=0.2,
                                      output_activation='relu')
 
@@ -74,8 +74,8 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                       valid_adata,
                       condition_key=condition_key,
                       le=condition_encoder,
-                      n_epochs=200,
-                      batch_size=128,
+                      n_epochs=10000,
+                      batch_size=32,
                       early_stop_limit=20,
                       lr_reducer=15,
                       n_per_epoch=0,
@@ -86,6 +86,8 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                       new_conditions=target_conditions,
                                       init='Xavier',
                                       freeze=freeze)
+        
+        new_network.model_path = f"./models/CVAE/Subsample/after-{data_name}-{loss_fn}-{subsample_frac}/"
 
         subsample_frac = '' if subsample_frac == 1.0 else subsample_frac
         keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv')
@@ -99,7 +101,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                           condition_key=condition_key,
                           le=new_network.condition_encoder,
                           n_epochs=300,
-                          batch_size=128,
+                          batch_size=32,
                           early_stop_limit=25,
                           lr_reducer=20,
                           n_per_epoch=0,
