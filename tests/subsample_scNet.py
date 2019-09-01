@@ -16,7 +16,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
     else:
         condition_key = "study"
         cell_type_key = "cell_type"
-        target_conditions = ["Pancreas Celseq", "Pancreas Celseq2"]
+        target_conditions = ["Pancreas Celseq", "Pancreas CelSeq2"]
 
     os.makedirs(path_to_save, exist_ok=True)
 
@@ -80,6 +80,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                       lr_reducer=15,
                       n_per_epoch=0,
                       save=True,
+                      retrain=False,
                       verbose=2)
 
         new_network = surgeon.operate(network,
@@ -89,10 +90,13 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
         
         new_network.model_path = f"./models/CVAE/Subsample/after-{data_name}-{loss_fn}-{subsample_frac}/"
 
-        subsample_frac = '' if subsample_frac == 1.0 else subsample_frac
-        keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv')
-        keep_idx = keep_idx.astype('int32')
-
+        if subsample_frac < 1.0:
+            keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv')
+            keep_idx = keep_idx.astype('int32')
+        else:
+            n_samples = adata_out_of_sample.shape[0]
+            keep_idx = np.random.choice(n_samples, n_samples, replace=False)
+        
         adata_out_of_sample = adata_out_of_sample[keep_idx, :]
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
 
@@ -112,7 +116,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
             adata_out_of_sample, label_encoder=network.condition_encoder, condition_key=condition_key)
 
         latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
-
+        print(latent_adata.obs[condition_key].value_counts())
         ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
         asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
         ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)

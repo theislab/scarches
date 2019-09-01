@@ -362,6 +362,7 @@ class CVAE:
         self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False,
                                         custom_objects=self.custom_objects)
         self.compile_models()
+        print("Model has been successfully restored!")
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
@@ -372,7 +373,7 @@ class CVAE:
 
     def train(self, train_adata, valid_adata, condition_key, le,
               n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, score_filename="./scores.log",
-              lr_reducer=10, save=True, verbose=2):
+              lr_reducer=10, save=True, verbose=2, retrain=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -421,7 +422,10 @@ class CVAE:
 
         if self.condition_encoder is None:
             self.condition_encoder = new_le
-
+        
+        if retrain == False and os.path.exists(self.model_path):
+            self.restore_model()
+            return
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
