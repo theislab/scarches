@@ -1,6 +1,7 @@
 import numpy as np
 import scanpy as sc
 from scipy import sparse
+from sklearn.preprocessing import LabelEncoder
 
 
 def label_encoder(adata, label_encoder, condition_key='condition'):
@@ -22,8 +23,12 @@ def label_encoder(adata, label_encoder, condition_key='condition'):
         >>> train_labels, label_encoder = surgeon.utils.label_encoder(train_data)
     """
     labels = np.zeros(adata.shape[0])
-    for condition, label in label_encoder.items():
-        labels[adata.obs[condition_key] == condition] = label
+    if label_encoder:
+        for condition, label in label_encoder.items():
+            labels[adata.obs[condition_key] == condition] = label
+    else:
+        label_encoder = LabelEncoder()
+        labels = label_encoder.fit_transform(adata.obs[condition_key].values)
     return labels.reshape(-1, 1), label_encoder
 
 

@@ -11,7 +11,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
     path_to_save = f"./results/subsample/{data_name}/"
     if data_name == "toy":
         condition_key = "batch"
-        cell_type_key = "cell_type"
+        cell_type_key = "celltype"
         target_conditions = ["Batch8", "Batch9"]
     else:
         condition_key = "study"
@@ -63,7 +63,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                      eta=1.0,
                                      clip_value=clip_value,
                                      loss_fn=loss_fn,
-                                     model_path=f"./models/CVAE/Subsample/before-{data_name}-{loss_fn}-{subsample_frac}/",
+                                     model_path=f"./models/CVAE/Subsample/before-{data_name}-{loss_fn}/",
                                      dropout_rate=0.2,
                                      output_activation='relu')
 
@@ -73,6 +73,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
         network.train(train_adata,
                       valid_adata,
                       condition_key=condition_key,
+                      cell_type_key=cell_type_key,
                       le=condition_encoder,
                       n_epochs=10000,
                       batch_size=32,
@@ -97,12 +98,13 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
             n_samples = adata_out_of_sample.shape[0]
             keep_idx = np.random.choice(n_samples, n_samples, replace=False)
         
-        adata_out_of_sample = adata_out_of_sample[keep_idx, :]
-        train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
+        adata_out_of_sample_subsampled = adata_out_of_sample[keep_idx, :]
+        train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.85)
 
         new_network.train(train_adata,
                           valid_adata,
                           condition_key=condition_key,
+                          cell_type_key=cell_type_key,
                           le=new_network.condition_encoder,
                           n_epochs=300,
                           batch_size=32,
@@ -113,10 +115,10 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                           verbose=2)
 
         encoder_labels, _ = surgeon.utils.label_encoder(
-            adata_out_of_sample, label_encoder=network.condition_encoder, condition_key=condition_key)
+            adata_out_of_sample_subsampled, label_encoder=network.condition_encoder, condition_key=condition_key)
 
-        latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
-        print(latent_adata.obs[condition_key].value_counts())
+        latent_adata = new_network.to_latent(adata_out_of_sample_subsampled, encoder_labels)
+        
         ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
         asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
         ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
