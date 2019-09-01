@@ -99,7 +99,7 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                   init='Xavier',
                                   freeze=freeze)
 
-    new_network.model_path = f"./models/CVAE/Convergence/after-{data_name}-{loss_fn}-{subsample_frac}/"
+    new_network.model_path = f"./models/CVAE/Convergence/after-{data_name}-{loss_fn}/"
 
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
 
