@@ -371,7 +371,7 @@ class CVAE:
         self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
-    def train(self, train_adata, valid_adata, condition_key, le,
+    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
               n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, score_filename="./scores.log",
               lr_reducer=10, save=True, verbose=2, retrain=True):
         """
@@ -418,7 +418,11 @@ class CVAE:
 
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
                                                          condition_key=condition_key)
+
         valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=condition_key)
+
+        train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
+        valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
 
         if self.condition_encoder is None:
             self.condition_encoder = new_le
@@ -446,14 +450,16 @@ class CVAE:
 
         adata = train_adata.concatenate(valid_adata)
 
-        labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
+        batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
+        celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
         callbacks = [
             History(),
         ]
 
         if n_per_epoch > 0:
-            callbacks.append(ScoreCallback(score_filename, adata.X, labels, self.encoder_model,
-                                           n_per_epoch=n_per_epoch, n_labels=self.n_conditions))
+            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.encoder_model,
+                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
+                                           n_celltype_labels=len(np.unique(celltype_labels))))
 
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
