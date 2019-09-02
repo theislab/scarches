@@ -139,4 +139,5 @@ LOSSES = {
     "mmd": mmd,
     "nb": nb_loss,
     "zinb": zinb_loss,
+    "cce": 'categorical_crossentropy',
 }

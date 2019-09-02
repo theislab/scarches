@@ -19,27 +19,38 @@ class ScoreCallback(Callback):
     def __init__(self,
                  filename: str,
                  data: np.ndarray,
-                 labels: np.ndarray,
+                 batch_labels: np.ndarray,
+                 celltype_labels: np.ndarray,
                  encoder_model: Model,
                  n_per_epoch: int = 5,
-                 n_labels: int = 0,
+                 n_batch_labels: int = 0,
+                 n_celltype_labels: int = 0,
                  clustering_scores: list_or_str = 'all'
                  ):
         super(ScoreCallback, self).__init__()
         self.X = data
-        self.labels = np.reshape(labels, (-1,))
-        self.labels_onehot = to_categorical(self.labels)
+
+        self.batch_labels = np.reshape(batch_labels, (-1,))
+        self.batch_labels_onehot = to_categorical(self.batch_labels)
+
+        self.celltype_labels = np.reshape(celltype_labels, (-1,))
+        self.celltype_labels_onehot = to_categorical(self.celltype_labels)
+
         self.filename = filename
         self.encoder_model = encoder_model
         self.n_per_epoch = n_per_epoch
-        self.n_labels = n_labels
+
+        self.n_batch_labels = n_batch_labels
+        self.n_celltype_labels = n_celltype_labels
+
         self.clustering_scores = clustering_scores
         self.score_computers = {"asw": self.asw,
                                 "ari": self.ari,
                                 "nmi": self.nmi,
                                 "ebm": self.entropy_of_batch_mixing}
 
-        self.kmeans = KMeans(n_labels, n_init=200)
+        self.kmeans_batch = KMeans(self.n_batch_labels, n_init=200)
+        self.kmeans_celltype = KMeans(self.n_celltype_labels, n_init=200)
 
     def on_train_begin(self, logs=None):
         self.scores = []
@@ -63,7 +74,7 @@ class ScoreCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.n_per_epoch == 0:
-            latent_X = self.encoder_model.predict([self.X, self.labels_onehot])[2]
+            latent_X = self.encoder_model.predict([self.X, self.batch_labels_onehot])[2]
 
             self.epochs.append(epoch)
             last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
@@ -91,21 +102,21 @@ class ScoreCallback(Callback):
 
     def asw(self, latent):
         start_time = time.time()
-        score = silhouette_score(latent, self.labels)
+        score = silhouette_score(latent, self.batch_labels)
         end_time = time.time()
         return score, end_time - start_time
 
     def ari(self, latent):
         start_time = time.time()
-        labels_pred = self.kmeans.fit_predict(latent)
-        score = adjusted_rand_score(self.labels, labels_pred)
+        labels_pred = self.kmeans_celltype.fit_predict(latent)
+        score = adjusted_rand_score(self.batch_labels, labels_pred)
         end_time = time.time()
         return score, end_time - start_time
 
     def nmi(self, latent):
         start_time = time.time()
-        labels_pred = self.kmeans.fit_predict(latent)
-        score = normalized_mutual_info_score(self.labels, labels_pred)
+        labels_pred = self.kmeans_celltype.fit_predict(latent)
+        score = normalized_mutual_info_score(self.batch_labels, labels_pred)
         end_time = time.time()
         return score, end_time - start_time
 
@@ -123,7 +134,7 @@ class ScoreCallback(Callback):
 
         neighbors = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)
         indices = neighbors.kneighbors(latent, return_distance=False)[:, 1:]
-        batch_indices = np.vectorize(lambda i: self.labels[i])(indices)
+        batch_indices = np.vectorize(lambda i: self.batch_labels[i])(indices)
 
         entropies = np.apply_along_axis(entropy_from_indices, axis=1, arr=batch_indices)
 

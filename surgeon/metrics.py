@@ -41,23 +41,22 @@ def entropy_batch_mixing(adata, label_key='batch',
 
 
 def asw(adata, label_key):
-    sc.pp.pca(adata)
-    x_pca = adata.obsm['X_pca']
+    adata = remove_sparsity(adata)
+
     labels = adata.obs[label_key].values
 
     labels_encoded = LabelEncoder().fit_transform(labels)
 
-    return silhouette_score(x_pca, labels_encoded)
+    return silhouette_score(adata.X, labels_encoded)
 
 
 def ari(adata, label_key):
+    adata = remove_sparsity(adata)
+
     n_labels = len(adata.obs[label_key].unique().tolist())
     kmeans = KMeans(n_labels, n_init=200)
 
-    sc.pp.pca(adata)
-    x_pca = adata.obsm['X_pca']
-
-    labels_pred = kmeans.fit_predict(x_pca)
+    labels_pred = kmeans.fit_predict(adata.X)
     labels = adata.obs[label_key].values
     labels_encoded = LabelEncoder().fit_transform(labels)
 
@@ -65,13 +64,12 @@ def ari(adata, label_key):
 
 
 def nmi(adata, label_key):
+    adata = remove_sparsity(adata)
+
     n_labels = len(adata.obs[label_key].unique().tolist())
     kmeans = KMeans(n_labels, n_init=200)
-
-    sc.pp.pca(adata)
-    x_pca = adata.obsm['X_pca']
-
-    labels_pred = kmeans.fit_predict(x_pca)
+    
+    labels_pred = kmeans.fit_predict(adata.X)
     labels = adata.obs[label_key].values
     labels_encoded = LabelEncoder().fit_transform(labels)
 

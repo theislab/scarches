@@ -9,8 +9,14 @@ import surgeon
 
 def train_and_evaluate(data_name, freeze=True, count_adata=True):
     path_to_save = f"./results/subsample/{data_name}/"
-    condition_key = "batch"
-    target_conditions = ["Batch8", "Batch9"]
+    if data_name == "toy":
+        condition_key = "batch"
+        cell_type_key = "celltype"
+        target_conditions = ["Batch8", "Batch9"]
+    else:
+        condition_key = "study"
+        cell_type_key = "cell_type"
+        target_conditions = ["Pancreas Celseq", "Pancreas CelSeq2"]
 
     os.makedirs(path_to_save, exist_ok=True)
 
@@ -40,8 +46,12 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                                       logtrans_input=True,
                                                       n_top_genes=5000,
                                                       )
+        clip_value = 5.0
+    else:
+        clip_value = 1e6
+
     scores = []
-    for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2]:
+    for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]:
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
         n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
@@ -51,9 +61,9 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                                      lr=0.001,
                                      alpha=0.001,
                                      eta=1.0,
-                                     clip_value=1e6,
+                                     clip_value=clip_value,
                                      loss_fn=loss_fn,
-                                     model_path=f"./models/CVAE/Subsample/{data_name}-{loss_fn}-{subsample_frac}/",
+                                     model_path=f"./models/CVAE/Subsample/before-{data_name}-{loss_fn}/",
                                      dropout_rate=0.2,
                                      output_activation='relu')
 
@@ -63,31 +73,41 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
         network.train(train_adata,
                       valid_adata,
                       condition_key=condition_key,
+                      cell_type_key=cell_type_key,
                       le=condition_encoder,
-                      n_epochs=200,
-                      batch_size=128,
+                      n_epochs=10000,
+                      batch_size=32,
                       early_stop_limit=20,
                       lr_reducer=15,
                       n_per_epoch=0,
                       save=True,
+                      retrain=False,
                       verbose=2)
 
         new_network = surgeon.operate(network,
                                       new_conditions=target_conditions,
                                       init='Xavier',
                                       freeze=freeze)
-        n_samples = adata_out_of_sample.shape[0]
-        keep_idx = np.random.choice(n_samples, int(subsample_frac * n_samples), replace=False)
+        
+        new_network.model_path = f"./models/CVAE/Subsample/after-{data_name}-{loss_fn}-{subsample_frac}/"
 
-        adata_out_of_sample = adata_out_of_sample[keep_idx, :]
-        train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
+        if subsample_frac < 1.0:
+            keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv')
+            keep_idx = keep_idx.astype('int32')
+        else:
+            n_samples = adata_out_of_sample.shape[0]
+            keep_idx = np.random.choice(n_samples, n_samples, replace=False)
+        
+        adata_out_of_sample_subsampled = adata_out_of_sample[keep_idx, :]
+        train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.85)
 
         new_network.train(train_adata,
                           valid_adata,
                           condition_key=condition_key,
+                          cell_type_key=cell_type_key,
                           le=new_network.condition_encoder,
-                          n_epochs=100,
-                          batch_size=128,
+                          n_epochs=300,
+                          batch_size=32,
                           early_stop_limit=25,
                           lr_reducer=20,
                           n_per_epoch=0,
@@ -95,14 +115,14 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
                           verbose=2)
 
         encoder_labels, _ = surgeon.utils.label_encoder(
-            adata_out_of_sample, label_encoder=network.condition_encoder, condition_key=condition_key)
+            adata_out_of_sample_subsampled, label_encoder=network.condition_encoder, condition_key=condition_key)
 
-        latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
-
+        latent_adata = new_network.to_latent(adata_out_of_sample_subsampled, encoder_labels)
+        
         ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
         asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-        ari = surgeon.metrics.ari(latent_adata, label_key=condition_key)
-        nmi = surgeon.metrics.nmi(latent_adata, label_key=condition_key)
+        ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
+        nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
 
         scores.append([subsample_frac, ebm, asw, ari, nmi])
         print([subsample_frac, ebm, asw, ari, nmi])

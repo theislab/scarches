@@ -4,7 +4,7 @@ import os
 import anndata
 import keras
 import numpy as np
-from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
+from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -13,7 +13,6 @@ from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from surgeon.models._activations import ACTIVATIONS
-
 from surgeon.models._callbacks import ScoreCallback
 from surgeon.models._layers import LAYERS
 from surgeon.models._losses import LOSSES
@@ -362,6 +361,7 @@ class CVAE:
         self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False,
                                         custom_objects=self.custom_objects)
         self.compile_models()
+        print("Model has been successfully restored!")
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
@@ -370,9 +370,9 @@ class CVAE:
         self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
-    def train(self, train_adata, valid_adata, condition_key, le,
+    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
               n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, score_filename="./scores.log",
-              lr_reducer=10, save=True, verbose=2):
+              lr_reducer=10, save=True, verbose=2, retrain=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -417,10 +417,15 @@ class CVAE:
 
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
                                                          condition_key=condition_key)
+
         valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=condition_key)
 
         if self.condition_encoder is None:
             self.condition_encoder = new_le
+
+        if retrain == False and os.path.exists(self.model_path):
+            self.restore_model()
+            return
 
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
@@ -440,16 +445,21 @@ class CVAE:
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
             y_valid = valid_adata.X
 
-        adata = train_adata.concatenate(valid_adata)
-
-        labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
         callbacks = [
             History(),
         ]
 
         if n_per_epoch > 0:
-            callbacks.append(ScoreCallback(score_filename, adata.X, labels, self.encoder_model,
-                                           n_per_epoch=n_per_epoch, n_labels=self.n_conditions))
+            adata = train_adata.concatenate(valid_adata)
+
+            train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
+            batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+
+            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.encoder_model,
+                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
+                                           n_celltype_labels=len(np.unique(celltype_labels))))
 
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
