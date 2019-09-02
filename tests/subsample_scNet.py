@@ -62,7 +62,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                       dtype='int32')
                 condition_adata_subsampled = condition_adata[keep_idx, :]
 
-                adata_out_of_sample_subsampled = condition_adata_subsampled if adata_out_of_sample is None \
+                adata_out_of_sample_subsampled = condition_adata_subsampled if adata_out_of_sample_subsampled is None \
                     else adata_out_of_sample_subsampled.concatenate(condition_adata_subsampled)
 
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
