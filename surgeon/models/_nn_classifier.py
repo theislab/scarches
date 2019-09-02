@@ -32,7 +32,7 @@ class NNClassifier:
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        self.condition_encoder = None
+        self.label_encoder = None
         self.aux_models = {}
 
         self.network_kwargs = {
@@ -233,8 +233,9 @@ class NNClassifier:
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
 
-        train_classes_encoded = label_encoder(train_adata, condition_key=cell_type_key, label_encoder=None)
-        valid_classes_encoded = label_encoder(valid_adata, condition_key=cell_type_key, label_encoder=None)
+        train_classes_encoded, self.label_encoder = label_encoder(train_adata, condition_key=cell_type_key,
+                                                                  label_encoder=None)
+        valid_classes_encoded, _ = label_encoder(valid_adata, condition_key=cell_type_key, label_encoder=None)
 
         train_classes_onehot = to_categorical(train_classes_encoded, num_classes=self.n_labels)
         valid_classes_onehot = to_categorical(valid_classes_encoded, num_classes=self.n_labels)
