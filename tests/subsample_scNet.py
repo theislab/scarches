@@ -10,6 +10,7 @@ DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
+    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
 }
 
 
@@ -63,7 +64,9 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                 condition_adata_subsampled = condition_adata[keep_idx, :]
                 adata_out_of_sample_subsampled = condition_adata_subsampled if adata_out_of_sample_subsampled is None \
                     else adata_out_of_sample_subsampled.concatenate(condition_adata_subsampled)
-                raw_out_of_sample = sc.AnnData(condition_adata_subsampled.raw.X) if raw_out_of_sample is None else raw_out_of_sample.concatenate(sc.AnnData(condition_adata_subsampled.raw.X))
+                raw_out_of_sample = sc.AnnData(
+                    condition_adata_subsampled.raw.X) if raw_out_of_sample is None else raw_out_of_sample.concatenate(
+                    sc.AnnData(condition_adata_subsampled.raw.X))
             adata_out_of_sample_subsampled.raw = raw_out_of_sample
 
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
