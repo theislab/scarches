@@ -113,7 +113,7 @@ class CVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         xy = concatenate([self.x, self.encoder_labels], axis=1)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False)(xy)
+        h = Dense(128, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(xy)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -188,7 +188,7 @@ class CVAE:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         zy = concatenate([self.z, self.decoder_labels], axis=1)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False)(zy)
+        h = Dense(128, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(zy)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         model_inputs, model_outputs = self._output_decoder(h)
