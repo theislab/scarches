@@ -99,8 +99,6 @@ def train_and_evaluate(data_name, freeze=True, count_adata=True):
             keep_idx = np.random.choice(n_samples, n_samples, replace=False)
         
         adata_out_of_sample_subsampled = adata_out_of_sample[keep_idx, :]
-        print(adata_out_of_sample_subsampled.obs[condition_key].value_counts())
-        continue
         train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.85)
 
         new_network.train(train_adata,
