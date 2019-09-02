@@ -51,8 +51,6 @@ class NNClassifier:
         self._create_networks()
         self.compile_models()
 
-        if self.cvae is not None:
-            self._intialize_weights()
         print_summary = kwargs.get("print_summary", True)
         if print_summary:
             self.get_summary_of_networks()
@@ -104,9 +102,10 @@ class NNClassifier:
             for idx, layer in enumerate(self.cvae.encoder_model.layers[3:]):
                 if layer.name == "first_layer":
                     weights = layer.get_weights()[0][:self.x_dim, :]
+                    self.classifier_model.layers[idx + 1].set_weights([weights])
                 else:
                     weights = layer.get_weights()
-                self.classifier_model.layers[idx + 1].set_weights(weights)
+                    self.classifier_model.layers[idx + 1].set_weights(weights)
 
     def _calculate_loss(self):
         loss = LOSSES['cce']
@@ -266,8 +265,3 @@ class NNClassifier:
                                   )
         if save:
             self.save_model()
-
-    def _intialize_weights(self):
-        for idx, encoder_layer in enumerate(self.classifier_model.layers[:-1]):
-            if encoder_layer.name != 'first_layer' and encoder_layer.get_weights():
-                encoder_layer.set_weights(network.encoder_model.layers[idx].get_weights())

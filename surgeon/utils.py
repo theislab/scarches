@@ -23,9 +23,11 @@ def label_encoder(adata, label_encoder, condition_key='condition'):
         >>> train_labels, label_encoder = surgeon.utils.label_encoder(train_data)
     """
     labels = np.zeros(adata.shape[0])
-    if label_encoder:
+    if isinstance(label_encoder, dict):
         for condition, label in label_encoder.items():
             labels[adata.obs[condition_key] == condition] = label
+    elif isinstance(label_encoder, LabelEncoder):
+        labels = label_encoder.transform(adata.obs[condition_key].values)
     else:
         label_encoder = LabelEncoder()
         labels = label_encoder.fit_transform(adata.obs[condition_key].values)
