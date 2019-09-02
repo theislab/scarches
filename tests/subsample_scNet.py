@@ -16,7 +16,7 @@ DATASETS = {
 def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
-    condition_key = data_dict['condition_key']
+    condition_key = data_dict['batch_key']
     target_conditions = data_dict['target']
 
     path_to_save = f"./results/subsample/{data_name}/"
