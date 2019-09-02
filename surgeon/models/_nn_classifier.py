@@ -148,7 +148,7 @@ class NNClassifier:
                     returns array containing latent space encoding of 'data'
         """
         adata = remove_sparsity(adata)
-        model = Model(self.classifier_model.inputs, self.classifier_model.layers[-1].output)
+        model = Model(self.classifier_model.inputs, self.classifier_model.layers[-2].output)
 
         latent = model.predict(adata.X)
 
