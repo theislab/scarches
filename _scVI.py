@@ -63,7 +63,7 @@ class scVI_Trainer(UnsupervisedTrainer):
                
     def on_epoch_end(self):
         epoch = self.epoch
-        if self.frequency and (epoch == 0 or epoch == self.n_epochs or (epoch % self.frequency == 0)):
+        if self.frequency and (epoch == 0 or epoch == self.n_epochs - 1 or (epoch % self.frequency == 0)):
             begin = time.time()
 
             p = self.create_posterior(self.model, self.gene_dataset, indices=np.arange(len(self.gene_dataset)))
@@ -74,8 +74,9 @@ class scVI_Trainer(UnsupervisedTrainer):
                 latent, batch_ind, labels = p.get_latent()
                 ebm_score = entropy_batch_mixing(latent, batch_ind)
                 end = time.time()
-                self.elapsed_time += (time.time() - self.start_time) - self.compute_metrics_time - (end - begin) - self.writing_time
-                
+                self.scores_time += end - begin
+                self.elapsed_time = (time.time() - self.start_time) - (self.compute_metrics_time + self.scores_time + self.writing_time)
+
                 begin = time.time()
                 
                 row = [epoch, self.elapsed_time, asw_score, nmi_score , ari_score , ebm_score]
@@ -96,6 +97,7 @@ class scVI_Trainer(UnsupervisedTrainer):
             writer = csv.writer(csvFile)
             writer.writerow(row)
         csvFile.close()
+        self.scores_time = 0
         self.start_time = time.time()
         super().train(n_epochs, lr, eps, params)
         
