@@ -11,7 +11,7 @@ from surgeon.utils import remove_sparsity
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
-    "toy": {"name": "pancreas", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
 }
 
 parser = argparse.ArgumentParser(description='scNet')
@@ -63,7 +63,7 @@ for subsample_frac in [0.1, 0.2, 0.4, 0.6, 0.8, 1.0]:
     adata_in_sample = adata[~adata.obs[batch_key].isin(target_batches)]
 
     if subsample_frac < 1.0:
-        keep_idx = np.loadtxt(f'./data/subsample/pancreas_N*{subsample_frac}.csv', dtype='int32')
+        keep_idx = np.loadtxt(f'./data/subsample/{data_name}_N*{subsample_frac}.csv', dtype='int32')
     else:
         n_samples = adata_out_of_sample.shape[0]
         keep_idx = np.random.choice(n_samples, n_samples, replace=False)
@@ -80,7 +80,7 @@ for subsample_frac in [0.1, 0.2, 0.4, 0.6, 0.8, 1.0]:
                          frequency=5,
                          early_stopping_kwargs=early_stopping_kwargs)
 
-    model.train(f"./results/subsample/pancreas/scVI_frac={subsample_frac}.csv", n_epochs=n_epochs, lr=lr)
+    model.train(f"./results/subsample/{data_name}/scVI_frac={subsample_frac}.csv", n_epochs=n_epochs, lr=lr)
 
     os.makedirs("./models/scVI/subsample/", exist_ok=True)
-    torch.save(model.model.state_dict(), "./models/scVI/subsample/pancreasModel.pt")
+    torch.save(model.model.state_dict(), f"./models/scVI/subsample/{data_name}-{subsample_frac}.pt")
