@@ -9,7 +9,7 @@ import surgeon
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
-    "toy": {"name": "pancreas", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
 }
 
 
@@ -55,15 +55,16 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     for i in range(5):
         scores = []
         for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]:
-            adata_out_of_sample_subsampled = None
+            adata_out_of_sample_subsampled, raw_out_of_sample = None, None
             for condition in target_conditions:
                 condition_adata = adata_out_of_sample[adata_out_of_sample.obs[condition_key] == condition]
                 keep_idx = np.loadtxt(f'./data/subsample/{data_name}/{condition}/{subsample_frac}/{i}.csv',
                                       dtype='int32')
                 condition_adata_subsampled = condition_adata[keep_idx, :]
-
                 adata_out_of_sample_subsampled = condition_adata_subsampled if adata_out_of_sample_subsampled is None \
                     else adata_out_of_sample_subsampled.concatenate(condition_adata_subsampled)
+                raw_out_of_sample = sc.AnnData(condition_adata_subsampled.raw.X) if raw_out_of_sample is None else raw_out_of_sample.concatenate(sc.AnnData(condition_adata_subsampled.raw.X))
+            adata_out_of_sample_subsampled.raw = raw_out_of_sample
 
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
@@ -103,7 +104,6 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                           freeze=freeze)
 
             new_network.model_path = f"./models/CVAE/subsample/after-{data_name}-{loss_fn}-{subsample_frac}-{freeze}/"
-
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.85)
 
             new_network.train(train_adata,
