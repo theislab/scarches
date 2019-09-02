@@ -38,6 +38,8 @@ highly_variable_genes = adata_normalized.var['highly_variable']
 
 adata = adata[:, highly_variable_genes]
 
+adata.obs['cell_types'] = adata.obs[cell_type_key]
+
 le = LabelEncoder()
 adata.obs['labels'] = le.fit_transform(adata.obs[cell_type_key])
 
@@ -58,29 +60,29 @@ early_stopping_kwargs = {
 use_batches = True
 n_samples = adata.shape[0]
 
-for subsample_frac in [0.1, 0.2, 0.4, 0.6, 0.8, 1.0]:
-    adata_out_of_sample = adata[adata.obs[batch_key].isin(target_batches)]
-    adata_in_sample = adata[~adata.obs[batch_key].isin(target_batches)]
+for i in range(5):
+    for subsample_frac in [0.1, 0.2, 0.4, 0.6, 0.8, 1.0]:
+        final_adata = None
+        for target in target_batches:
+            adata_sampled = adata[adata.obs[batch_key].isin(list(target))]
+            keep_idx = np.loadtxt(f'./data/subsample/{data_name}/{target}/{subsample_frac}/{i}.csv', dtype='int32')
+            adata_sampled = adata_sampled[keep_idx, :]
 
-    if subsample_frac < 1.0:
-        keep_idx = np.loadtxt(f'./data/subsample/{data_name}_N*{subsample_frac}.csv', dtype='int32')
-    else:
-        n_samples = adata_out_of_sample.shape[0]
-        keep_idx = np.random.choice(n_samples, n_samples, replace=False)
+            if final_adata is None:
+                final_adata = adata_sampled
+            else:
+                final_adata.concatenate(adata_sampled)
 
-    adata_out_of_sample = adata_out_of_sample[keep_idx, :]
-    final_adata = adata_in_sample.concatenate(adata_out_of_sample)
+        scvi_dataset = ADataset(final_adata)
 
-    scvi_dataset = ADataset(final_adata)
+        vae = VAE(scvi_dataset.nb_genes, n_batch=scvi_dataset.n_batches * use_batches)
 
-    vae = VAE(scvi_dataset.nb_genes, n_batch=scvi_dataset.n_batches * use_batches)
+        model = scVI_Trainer(vae, scvi_dataset,
+                             train_size=0.85,
+                             frequency=5,
+                             early_stopping_kwargs=early_stopping_kwargs)
 
-    model = scVI_Trainer(vae, scvi_dataset,
-                         train_size=0.85,
-                         frequency=5,
-                         early_stopping_kwargs=early_stopping_kwargs)
+        model.train(f"./results/subsample/{data_name}/scVI_frac={subsample_frac}-{i}.csv", n_epochs=n_epochs, lr=lr)
 
-    model.train(f"./results/subsample/{data_name}/scVI_frac={subsample_frac}.csv", n_epochs=n_epochs, lr=lr)
-
-    os.makedirs("./models/scVI/subsample/", exist_ok=True)
-    torch.save(model.model.state_dict(), f"./models/scVI/subsample/{data_name}-{subsample_frac}.pt")
+        os.makedirs("./models/scVI/subsample/", exist_ok=True)
+        torch.save(model.model.state_dict(), f"./models/scVI/subsample/{data_name}-{subsample_frac}-{i}.pt")
