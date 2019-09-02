@@ -6,18 +6,19 @@ import scanpy as sc
 
 import surgeon
 
+DATASETS = {
+    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
+    "toy": {"name": "pancreas", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
+}
 
-def train_and_evaluate(data_name, freeze=True, count_adata=True):
+
+def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+    data_name = data_dict['name']
+    cell_type_key = data_dict['cell_type_key']
+    condition_key = data_dict['condition_key']
+    target_conditions = data_dict['target']
+
     path_to_save = f"./results/subsample/{data_name}/"
-    if data_name == "toy":
-        condition_key = "batch"
-        cell_type_key = "celltype"
-        target_conditions = ["Batch8", "Batch9"]
-    else:
-        condition_key = "study"
-        cell_type_key = "cell_type"
-        target_conditions = ["Pancreas Celseq", "Pancreas CelSeq2"]
-
     os.makedirs(path_to_save, exist_ok=True)
 
     if count_adata:
@@ -150,5 +151,6 @@ if __name__ == '__main__':
     data_name = args['data']
     freeze = True if args['freeze'] > 0 else False
     count_adata = True if args['count'] > 0 else False
+    data_dict = DATASETS[data_name]
 
-    train_and_evaluate(data_name=data_name, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
