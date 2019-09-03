@@ -61,7 +61,7 @@ def train_and_evaluate(data_dict):
 
     adata_out_of_sample = ADataset(adata_out_of_sample)
 
-    vae = VAE(adata_out_of_sample.nb_genes, n_batch=adata_out_of_sample.n_batches * use_batches)
+    vae = VAE(adata_out_of_sample.nb_genes, n_batch=adata_out_of_sample.n_batches * use_batches, n_layers = 2)
 
     model = scVI_Trainer(vae, adata_out_of_sample,
                          train_size=0.85,
