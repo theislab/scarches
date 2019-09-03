@@ -109,14 +109,14 @@ class ScoreCallback(Callback):
     def ari(self, latent):
         start_time = time.time()
         labels_pred = self.kmeans_celltype.fit_predict(latent)
-        score = adjusted_rand_score(self.batch_labels, labels_pred)
+        score = adjusted_rand_score(self.celltype_labels, labels_pred)
         end_time = time.time()
         return score, end_time - start_time
 
     def nmi(self, latent):
         start_time = time.time()
         labels_pred = self.kmeans_celltype.fit_predict(latent)
-        score = normalized_mutual_info_score(self.batch_labels, labels_pred)
+        score = normalized_mutual_info_score(self.celltype_labels, labels_pred)
         end_time = time.time()
         return score, end_time - start_time
 
