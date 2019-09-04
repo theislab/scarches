@@ -126,6 +126,7 @@ class CVAE:
             if self.dr_rate > 0:
                 h = Dropout(self.dr_rate)(h)
 
+
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
