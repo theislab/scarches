@@ -233,13 +233,13 @@ class scVI:
 
         if self.loss_fn in ['nb', 'zinb']:
             inputs = [self.x, self.decoder_labels, self.size_factor]
-            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.size_factor]
+            decoder_inputs = [self.encoder_model(inputs[0])[2], self.decoder_labels, self.size_factor]
             self.disp_output = self.aux_models['disp'](decoder_inputs)
             if self.loss_fn == 'zinb':
                 self.pi_output = self.aux_models['pi'](decoder_inputs)
         else:
             inputs = [self.x, self.decoder_labels]
-            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
+            decoder_inputs = [self.encoder_model(inputs[0])[2], self.decoder_labels]
 
         decoder_outputs = self.decoder_model(decoder_inputs)
 
