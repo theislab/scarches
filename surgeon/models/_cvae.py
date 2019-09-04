@@ -256,9 +256,11 @@ class CVAE:
 
     def _calculate_loss(self):
         if self.loss_fn == 'nb':
-            loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
+            loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
+                                        self.eta)
         elif self.loss_fn == 'zinb':
-            loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha)
+            loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
+                                        self.eta)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
 

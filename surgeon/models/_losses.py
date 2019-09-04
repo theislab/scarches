@@ -40,7 +40,7 @@ class NB(object):
                  scale_factor=1.0):
 
         # for numerical stability
-        self.eps = 1e-10
+        self.eps = 1e-8
         self.scale_factor = scale_factor
         self.scope = scope
         self.masking = masking
@@ -73,6 +73,8 @@ class NB(object):
                     final = tf.divide(tf.reduce_sum(final), nelem)
                 else:
                     final = tf.reduce_mean(final)
+            else:
+                final = tf.reduce_sum(final)
 
         return final
 
@@ -114,22 +116,22 @@ class ZINB(NB):
         return result
 
 
-def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1):
+def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
     kl = kl_loss(mu, log_var, alpha=alpha)
 
     def nb(y_true, y_pred):
-        nb_obj = NB(theta=disp, masking=True, scale_factor=scale_factor)
-        return nb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
+        nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
+        return eta * nb_obj.loss(y_true, y_pred, mean=False) + kl(y_true, y_pred)
 
     return nb
 
 
-def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1):
+def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
     kl = kl_loss(mu, log_var, alpha=alpha)
 
     def zinb(y_true, y_pred):
         zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
-        return zinb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
+        return eta * zinb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
 
     return zinb
 
