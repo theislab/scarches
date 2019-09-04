@@ -60,6 +60,8 @@ class CVAE:
         self.scale_factor = kwargs.get("scale_factor", 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
         self.output_activation = kwargs.get("output_activation", 'relu')
+        self.use_batchnorm = kwargs.get("use_batchnorm", False)
+        self.architecture = kwargs.get("architecture", [128])
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
@@ -113,9 +115,17 @@ class CVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         xy = concatenate([self.x, self.encoder_labels], axis=1)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(xy)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        for idx, n_neuron in enumerate(self.architecture):
+            if idx == 0:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(xy)
+            else:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
+            if self.use_batchnorm:
+                h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            if self.dr_rate > 0:
+                h = Dropout(self.dr_rate)(h)
+
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
@@ -188,9 +198,18 @@ class CVAE:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         zy = concatenate([self.z, self.decoder_labels], axis=1)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(zy)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+
+        for idx, n_neuron in enumerate(self.architecture[::-1]):
+            if idx == 0:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(zy)
+            else:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
+            if self.use_batchnorm:
+                h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            if self.dr_rate > 0:
+                h = Dropout(self.dr_rate)(h)
+
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
         return model
