@@ -27,7 +27,7 @@ def operate(network: archs.CVAE,
     network_kwargs['n_conditions'] += n_new_conditions
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = archs.CVAE(**network_kwargs, **training_kwargs, summary=False)
+    new_network = archs.CVAE(**network_kwargs, **training_kwargs, print_summary=False)
 
     # Get Previous Model's weights
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
