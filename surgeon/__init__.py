@@ -81,13 +81,21 @@ def operate(network: archs.CVAE,
             [new_weights_decoder])
 
     # set weights of other parts of model
-    for idx, encoder_layer in enumerate(new_network.encoder_model.layers):
+    idx = 0
+    for encoder_layer in new_network.encoder_model.layers:
         if encoder_layer.name != 'first_layer' and encoder_layer.get_weights():
             encoder_layer.set_weights(network.encoder_model.layers[idx].get_weights())
+            idx += 1
+        if encoder_layer.name == 'first_layer':
+            idx += 1
 
-    for idx, decoder_layer in enumerate(new_network.decoder_model.layers):
+    idx = 0
+    for decoder_layer in new_network.decoder_model.layers:
         if decoder_layer.name != 'first_layer' and decoder_layer.get_weights():
             decoder_layer.set_weights(network.decoder_model.layers[idx].get_weights())
+            idx += 1
+        if decoder_layer.name == 'first_layer':
+            idx += 1
 
     # Freeze old parts of cloned network
     if freeze:
