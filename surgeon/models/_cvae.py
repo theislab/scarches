@@ -79,6 +79,7 @@ class CVAE:
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
+            "architecture": self.architecture,
         }
 
         self.training_kwargs = {
@@ -125,7 +126,6 @@ class CVAE:
             h = LeakyReLU()(h)
             if self.dr_rate > 0:
                 h = Dropout(self.dr_rate)(h)
-
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
