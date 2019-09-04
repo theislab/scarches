@@ -123,7 +123,7 @@ class CVAE:
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1)(h)
+                h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
             if self.dr_rate > 0:
                 h = Dropout(self.dr_rate)(h)
@@ -207,7 +207,7 @@ class CVAE:
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1)(h)
+                h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
             if self.dr_rate > 0:
                 h = Dropout(self.dr_rate)(h)
