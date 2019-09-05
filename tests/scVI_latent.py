@@ -90,8 +90,12 @@ for i in range(5):
                              train_size=0.85,
                              frequency=5,
                              early_stopping_kwargs=early_stopping_kwargs)
-        os.makedirs(f"./results/subsample/{data_name}", exist_ok=True)
-        model.train(f"./results/subsample/{data_name}/scVI_frac={subsample_frac}-{i}.csv", n_epochs=n_epochs, lr=lr)
-
-        os.makedirs("./models/scVI/subsample/", exist_ok=True)
-        torch.save(model.model.state_dict(), f"./models/scVI/subsample/{data_name}-{subsample_frac}-{i}.pt")
+        os.makedirs(f"./results/latent/scVI/{data_name}/", exist_ok=True)
+        model.model.load_state_dict(torch.load(f"./models/scVI/subsample/{data_name}-{subsample_frac}-{i}.pt"))
+        model.model.eval()
+        p = model.create_posterior(model.model, model.gene_dataset, indices=np.arange(len(model.gene_dataset)))
+#         latent, _, _ = p.get_latent()
+#         np.savetxt(f"./results/latent/scVI/{data_name}/{subsample_frac}-{i}.csv", latent, delimiter=",", )
+#         pd.DataFrame(latent, ).to_csv(f"./results/latent/scVI/{data_name}/{subsample_frac}-{i}.csv", index=None)
+        p.show_t_sne(color_by='batches and labels', save_name=f"./results/latent/scVI/{data_name}/{subsample_frac}-{i}.png")
+        
