@@ -11,6 +11,8 @@ DATASETS = {
                  "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Rosenberg", "Zeisel"]},
 }
 
 
@@ -39,7 +41,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                      normalize_input=False,
                                                      size_factors=True,
                                                      logtrans_input=True,
-                                                     n_top_genes=5000,
+                                                     n_top_genes=2000,
                                                      )
 
         adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
@@ -47,7 +49,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                       normalize_input=False,
                                                       size_factors=True,
                                                       logtrans_input=True,
-                                                      n_top_genes=5000,
+                                                      n_top_genes=2000,
                                                       )
         clip_value = 5.0
     else:
@@ -73,7 +75,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                         z_dimension=20,
+                                         z_dimension=40,
+                                         architecture=[800, 400, 100],
                                          n_conditions=n_conditions,
                                          lr=0.001,
                                          alpha=0.001,
@@ -93,9 +96,9 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                           cell_type_key=cell_type_key,
                           le=condition_encoder,
                           n_epochs=10000,
-                          batch_size=32,
-                          early_stop_limit=20,
-                          lr_reducer=15,
+                          batch_size=64,
+                          early_stop_limit=30,
+                          lr_reducer=20,
                           n_per_epoch=0,
                           save=True,
                           retrain=False,
@@ -114,10 +117,10 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                               condition_key=condition_key,
                               cell_type_key=cell_type_key,
                               le=new_network.condition_encoder,
-                              n_epochs=300,
+                              n_epochs=5000,
                               batch_size=32,
-                              early_stop_limit=40,
-                              lr_reducer=35,
+                              early_stop_limit=50,
+                              lr_reducer=40,
                               n_per_epoch=0,
                               save=True,
                               verbose=2)

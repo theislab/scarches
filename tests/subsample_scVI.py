@@ -1,17 +1,21 @@
-import scanpy as sc
-from sklearn.preprocessing import LabelEncoder
-from _scVI import ADataset, scVI_Trainer
-from scvi.models.vae import VAE
-import numpy as np
-import pandas as pd
-import torch
-import os
 import argparse
+import os
+
+import numpy as np
+import scanpy as sc
+import torch
+from scvi.models.vae import VAE
+from sklearn.preprocessing import LabelEncoder
+
+from _scVI import ADataset, scVI_Trainer
 from surgeon.utils import remove_sparsity
 
 DATASETS = {
-    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
+    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
+                 "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
+    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Rosenberg", "Zeisel"]},
 }
 
 parser = argparse.ArgumentParser(description='scNet')
@@ -33,7 +37,7 @@ adata_normalized = adata.copy()
 
 sc.pp.normalize_per_cell(adata_normalized)
 sc.pp.log1p(adata_normalized)
-sc.pp.highly_variable_genes(adata_normalized, n_top_genes=5000)
+sc.pp.highly_variable_genes(adata_normalized, n_top_genes=2000)
 highly_variable_genes = adata_normalized.var['highly_variable']
 
 adata = adata[:, highly_variable_genes]
