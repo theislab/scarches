@@ -36,7 +36,7 @@ def data():
                                                  normalize_input=False,
                                                  size_factors=True,
                                                  logtrans_input=True,
-                                                 n_top_genes=5000,
+                                                 n_top_genes=2000,
                                                  )
 
     adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
@@ -44,7 +44,7 @@ def data():
                                                   normalize_input=False,
                                                   size_factors=True,
                                                   logtrans_input=True,
-                                                  n_top_genes=5000,
+                                                  n_top_genes=2000,
                                                   )
     train_adata_for_training, valid_adata_for_training = surgeon.utils.train_test_split(adata_for_training, 0.85)
     train_adata_out_of_sample, valid_adata_out_of_sample = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
