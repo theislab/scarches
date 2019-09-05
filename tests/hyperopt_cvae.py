@@ -63,11 +63,12 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
     clip_value_choices = {{choice([1, 3, 5, 10])}}
     batch_size_choices_before = {{choice([16, 32, 64, 128, 256, 512, 1024])}}
     batch_size_choices_after = {{choice([16, 32, 64, 128, 256, 512, 1024])}}
-    dropout_rate_choices = {{choice([0.1, 0.2, 0.3, 0.4, 0.5])}}
+    dropout_rate_choices = {{choice([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])}}
     architecture_choices = {{choice([[128], [128, 128], [128, 128, 128]])}}
     network = surgeon.archs.CVAE(x_dimension=train_adata_for_training.shape[1],
                                  z_dimension=z_dim_choices,
                                  n_conditions=n_conditions,
+                                 use_batchnorm=True,
                                  lr=0.001,
                                  alpha=alpha_choices,
                                  scale_factor=scale_factor_choices,
