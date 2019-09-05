@@ -16,9 +16,11 @@ def data():
                      "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
         "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
         "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+        "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
+                        "target": ["Rosenberg", "Zeisel"]},
     }
 
-    data_key = "pancreas"
+    data_key = "mouse_brain"
 
     data_dict = DATASETS[data_key]
 
@@ -52,7 +54,8 @@ def data():
     return adata_out_of_sample, train_adata_for_training, valid_adata_for_training, train_adata_out_of_sample, valid_adata_out_of_sample, batch_key, cell_type_key, target_conditions
 
 
-def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_training, train_adata_out_of_sample, valid_adata_out_of_sample,
+def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_training, train_adata_out_of_sample,
+                 valid_adata_out_of_sample,
                  batch_key, cell_type_key, target_conditions):
     n_conditions = len(train_adata_for_training.obs[batch_key].unique().tolist())
 
