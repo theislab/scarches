@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../")
 
 import scanpy as sc
@@ -6,16 +7,20 @@ from sklearn.preprocessing import LabelEncoder
 from _scVI import ADataset, scVI_Trainer
 from scvi.models.vae import VAE
 import numpy as np
-import pandas as pd
 import torch
 import os
 import argparse
 from surgeon.utils import remove_sparsity
 
 DATASETS = {
-    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Pancreas Celseq", "Pancreas CelSeq2"], "HV": True},
-    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Drop-seq", "inDrops"], "HV": False},
-    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"], "HV": True},
+    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
+                 "target": ["Pancreas Celseq", "Pancreas CelSeq2"], "HV": True},
+    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Drop-seq", "inDrops"],
+             "HV": False},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"],
+            "HV": True},
+    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Rosenberg", "Zeisel"], "HV": True}
 }
 
 parser = argparse.ArgumentParser(description='scNet')
@@ -52,7 +57,6 @@ adata.obs['labels'] = le.fit_transform(adata.obs[cell_type_key])
 le = LabelEncoder()
 adata.obs['batch_indices'] = le.fit_transform(adata.obs[batch_key])
 
-
 n_epochs = 300
 lr = 1e-3
 early_stopping_kwargs = {
@@ -79,11 +83,11 @@ for i in range(5):
                 final_adata = adata_sampled
             else:
                 final_adata = final_adata.concatenate(adata_sampled)
-        
+
         le = LabelEncoder()
         final_adata.obs['labels'] = le.fit_transform(final_adata.obs["cell_types"])
         scvi_dataset = ADataset(final_adata)
-        
+
         vae = VAE(scvi_dataset.nb_genes, n_batch=scvi_dataset.n_batches * use_batches)
 
         model = scVI_Trainer(vae, scvi_dataset,
