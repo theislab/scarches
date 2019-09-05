@@ -309,6 +309,7 @@ class CVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
         latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
+        latent = np.nan_to_num(latent)
 
         adata_latent = anndata.AnnData(X=latent)
         adata_latent.obs = adata.obs
