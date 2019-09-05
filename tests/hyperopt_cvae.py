@@ -64,7 +64,7 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
     batch_size_choices_before = {{choice([16, 32, 64, 128, 256, 512, 1024])}}
     batch_size_choices_after = {{choice([16, 32, 64, 128, 256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.3, 0.4, 0.5])}}
-    architecture_choices = {{choice([[128], [128, 128]])}}
+    architecture_choices = {{choice([[128], [128, 128], [128, 128, 128]])}}
     network = surgeon.archs.CVAE(x_dimension=train_adata_for_training.shape[1],
                                  z_dimension=z_dim_choices,
                                  n_conditions=n_conditions,
@@ -88,8 +88,8 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
                   le=condition_encoder,
                   n_epochs=10000,
                   batch_size=batch_size_choices_before,
-                  early_stop_limit=300,
-                  lr_reducer=250,
+                  early_stop_limit=70,
+                  lr_reducer=50,
                   n_per_epoch=0,
                   save=True,
                   retrain=True,
@@ -105,7 +105,7 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
                       condition_key=batch_key,
                       cell_type_key=cell_type_key,
                       le=new_network.condition_encoder,
-                      n_epochs=300,
+                      n_epochs=10000,
                       batch_size=batch_size_choices_after,
                       early_stop_limit=50,
                       lr_reducer=40,
