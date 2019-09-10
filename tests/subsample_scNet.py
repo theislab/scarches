@@ -71,7 +71,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                     sc.AnnData(condition_adata_subsampled.raw.X))
             adata_out_of_sample_subsampled.raw = raw_out_of_sample
 
-            train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
+            train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
