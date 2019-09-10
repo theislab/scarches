@@ -6,6 +6,7 @@ from . import models as archs
 from . import plotting as pl
 from . import utils as tl
 from . import kipoi as kp
+from . import data_loader as dl
 
 list_str = TypeVar('list_str', str, list)
 
@@ -14,7 +15,9 @@ def operate(network: archs.CVAE,
             new_conditions: list_str,
             init: str = 'Xavier',
             freeze: bool = True,
-            print_summary: bool = True) -> archs.CVAE:
+            remove_dropout: bool = True,
+            print_summary: bool = True,
+            ) -> archs.CVAE:
 
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
@@ -25,6 +28,9 @@ def operate(network: archs.CVAE,
     training_kwargs = network.training_kwargs
 
     network_kwargs['n_conditions'] += n_new_conditions
+
+    if remove_dropout:
+        training_kwargs['dropout_rate'] = 0.0
 
     # Instantiate new model with old parameters except `n_conditions`
     new_network = archs.CVAE(**network_kwargs, **training_kwargs, print_summary=False)
