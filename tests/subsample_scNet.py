@@ -51,7 +51,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                       logtrans_input=True,
                                                       n_top_genes=2000,
                                                       )
-        clip_value = 5.0
+        clip_value = 3.0
     else:
         clip_value = 1e6
 
@@ -75,15 +75,15 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                         z_dimension=40,
-                                         architecture=[800, 400, 100],
+                                         z_dimension=10,
+                                         architecture=[128],
                                          n_conditions=n_conditions,
                                          lr=0.001,
                                          alpha=0.001,
                                          eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/Subsample/before-{data_name}-{loss_fn}/",
+                                         model_path=f"./models/CVAE/subsample/before-{data_name}-{loss_fn}/",
                                          dropout_rate=0.2,
                                          output_activation='relu')
 
@@ -123,6 +123,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                               lr_reducer=40,
                               n_per_epoch=0,
                               save=True,
+                              retrain=True,
                               verbose=2)
 
             encoder_labels, _ = surgeon.utils.label_encoder(
@@ -154,9 +155,9 @@ if __name__ == '__main__':
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
     arguments_group.add_argument('-f', '--freeze', type=int, default=1, required=True,
-                                 help='freeze')
-    arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
-                                 help='latent space dimension')
+                                 help='if 1 will freeze the network after surgery')
+    arguments_group.add_argument('-c', '--count', type=int, default=1, required=False,
+                                 help='if 1 will use count adata')
     args = vars(parser.parse_args())
 
     data_name = args['data']

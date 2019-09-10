@@ -435,7 +435,7 @@ class CVAE:
         if self.condition_encoder is None:
             self.condition_encoder = new_le
 
-        if retrain == False and os.path.exists(self.model_path):
+        if not retrain and os.path.exists(self.model_path):
             self.restore_model()
             return
 
