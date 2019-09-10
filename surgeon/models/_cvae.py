@@ -125,8 +125,7 @@ class CVAE:
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
-            if self.dr_rate > 0:
-                h = Dropout(self.dr_rate)(h)
+            h = Dropout(self.dr_rate)(h)
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -209,8 +208,7 @@ class CVAE:
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
-            if self.dr_rate > 0:
-                h = Dropout(self.dr_rate)(h)
+            h = Dropout(self.dr_rate)(h)
 
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
