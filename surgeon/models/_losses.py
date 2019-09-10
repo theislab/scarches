@@ -121,7 +121,7 @@ def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
 
     def nb(y_true, y_pred):
         nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
-        return eta * nb_obj.loss(y_true, y_pred, mean=False) + kl(y_true, y_pred)
+        return eta * nb_obj.loss(y_true, y_pred, mean=True) + kl(y_true, y_pred)
 
     return nb
 

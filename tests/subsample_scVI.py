@@ -44,18 +44,10 @@ if highly_variable:
 
     sc.pp.normalize_per_cell(adata_normalized)
     sc.pp.log1p(adata_normalized)
-    sc.pp.highly_variable_genes(adata_normalized, n_top_genes=5000)
+    sc.pp.highly_variable_genes(adata_normalized, n_top_genes=2000)
     highly_variable_genes = adata_normalized.var['highly_variable']
 
     adata = adata[:, highly_variable_genes]
-
-adata.obs['cell_types'] = adata.obs[cell_type_key]
-
-le = LabelEncoder()
-adata.obs['labels'] = le.fit_transform(adata.obs[cell_type_key])
-
-le = LabelEncoder()
-adata.obs['batch_indices'] = le.fit_transform(adata.obs[batch_key])
 
 n_epochs = 300
 lr = 1e-3
@@ -84,14 +76,16 @@ for i in range(5):
             else:
                 final_adata = final_adata.concatenate(adata_sampled)
 
-        le = LabelEncoder()
-        final_adata.obs['labels'] = le.fit_transform(final_adata.obs["cell_types"])
+        final_adata.obs['labels'] = LabelEncoder().fit_transform(final_adata.obs[cell_type_key])
+        final_adata.obs['batch_indices'] = LabelEncoder().fit_transform(final_adata.obs[batch_key])
         scvi_dataset = ADataset(final_adata)
+
+        print(scvi_dataset.n_batches, scvi_dataset.n_labels)
 
         vae = VAE(scvi_dataset.nb_genes, n_batch=scvi_dataset.n_batches * use_batches)
 
         model = scVI_Trainer(vae, scvi_dataset,
-                             train_size=0.85,
+                             train_size=0.80,
                              frequency=5,
                              early_stopping_kwargs=early_stopping_kwargs)
         os.makedirs(f"./results/subsample/{data_name}", exist_ok=True)
