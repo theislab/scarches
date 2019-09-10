@@ -70,7 +70,7 @@ def create_dataloader_yaml(network: CVAE,
         )
     )
 
-    with open(path_to_save, 'w') as outfile:
+    with open(os.path.join(path_to_save, "dataloader.yaml"), 'w') as outfile:
         yaml.dump(data, outfile, default_flow_style=False)
 
     print(f"DataLoader YAML has been saved to {os.path.abspath(path_to_save)}!")

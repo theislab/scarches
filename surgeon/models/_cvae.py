@@ -368,7 +368,7 @@ class CVAE:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_path, 'mmd_cvae.h5'), compile=False,
+        self.cvae_model = load_model(os.path.join(self.model_path, 'cvae.h5'), compile=False,
                                      custom_objects=self.custom_objects)
         self.encoder_model = self.cvae_model.get_layer("encoder")
 
@@ -379,7 +379,7 @@ class CVAE:
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_path, "mmd_cvae.h5"), overwrite=True)
+        self.cvae_model.save(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,

@@ -9,7 +9,7 @@ from surgeon.models import CVAE
 def create_network_yaml(network: CVAE,
                         model_url: str = None,
                         model_md5: str = None,
-                        path_to_save: str = "./surgeon.yaml"):
+                        path_to_save: str = None,):
     data = OrderedDict(
         defined_as='kipoi.model.KerasModel',
         args=OrderedDict(
@@ -19,7 +19,7 @@ def create_network_yaml(network: CVAE,
             ),
         ),
 
-        default_dataloader=None,
+        default_dataloader=".",
 
         info=OrderedDict(
             authors=[
@@ -75,7 +75,7 @@ def create_network_yaml(network: CVAE,
         )
     )
 
-    with open(path_to_save, 'w') as outfile:
+    with open(os.path.join(path_to_save, "model.yaml"), 'w') as outfile:
         yaml.dump(data, outfile, default_flow_style=False)
 
     print(f"Model YAML has been saved to {os.path.abspath(path_to_save)}!")
