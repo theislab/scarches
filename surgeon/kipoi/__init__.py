@@ -1,2 +1,2 @@
-from .__model import create_network_yaml
-from .__data import create_dataloader_yaml
+from ._model import create_network_yaml
+from ._data import create_dataloader_yaml
