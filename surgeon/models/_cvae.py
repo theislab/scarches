@@ -264,6 +264,17 @@ class CVAE:
 
         return loss
 
+    def freeze_condition_irrelevant(self, freeze):
+        for encoder_layer in self.encoder_model.layers:
+            if encoder_layer.name != 'first_layer':
+                encoder_layer.trainable = freeze
+
+        for decoder_layer in self.decoder_model.layers:
+            if decoder_layer.name != 'first_layer':
+                decoder_layer.trainable = freeze
+
+        self.compile_models()
+
     def compile_models(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
