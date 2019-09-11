@@ -264,14 +264,14 @@ class CVAE:
 
         return loss
 
-    def freeze_condition_irrelevant(self, freeze):
+    def freeze_condition_irrelevant_parts(self, trainable):
         for encoder_layer in self.encoder_model.layers:
             if encoder_layer.name != 'first_layer':
-                encoder_layer.trainable = freeze
+                encoder_layer.trainable = trainable
 
         for decoder_layer in self.decoder_model.layers:
             if decoder_layer.name != 'first_layer':
-                decoder_layer.trainable = freeze
+                decoder_layer.trainable = trainable
 
         self.compile_models()
 
