@@ -9,7 +9,6 @@ from shutil import copyfile
 
 def create_kipoi_model(model_name: str,
                        model: CVAE,
-                       model_path: str,
                        data_path: str,
                        access_token=None):
     path_to_save = os.path.join("~/.kipoi/models/", model_name)
@@ -20,6 +19,8 @@ def create_kipoi_model(model_name: str,
         raise Exception("You have to enter access token")
 
     os.makedirs(path_to_save, exist_ok=True)
+
+    model_path = os.path.join(model.model_path, "cvae.h5")
     model_url, model_md5 = upload_file_to_zenodo(model_path, access_token=access_token, publish=True)
     data_url, data_md5 = upload_file_to_zenodo(data_path, access_token=access_token, publish=True)
 
@@ -27,3 +28,5 @@ def create_kipoi_model(model_name: str,
     create_dataloader_yaml(model, data_url, data_md5, path_to_save)
 
     copyfile("./surgeon/kipoi/dataloader.py", f"~/.kipoi/models/{model_name}/")
+
+

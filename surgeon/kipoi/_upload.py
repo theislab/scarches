@@ -2,6 +2,7 @@ import json
 
 import requests
 
+
 def upload_file_to_zenodo(file_path, access_token=None,
                           publish=True):
     if access_token is None:
