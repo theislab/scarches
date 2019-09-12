@@ -96,6 +96,13 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
 
+        batch_adata = surgeon.tl.normalize(batch_adata,
+                                           filter_min_counts=False,
+                                           normalize_input=False,
+                                           size_factors=True,
+                                           logtrans_input=True,
+                                           n_top_genes=2000)
+
         new_network = surgeon.operate(new_network,
                                       new_conditions=[new_batch],
                                       remove_dropout=True,
