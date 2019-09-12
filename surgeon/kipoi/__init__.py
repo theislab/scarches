@@ -48,3 +48,6 @@ def create_kipoi_model(model_name: str,
     create_dataloader_yaml(model, data_url, data_md5, path_to_save)
 
     copyfile("./surgeon/kipoi/dataloader.py", f"~/.kipoi/models/{model_name}/dataloader.py")
+
+    print("model is ready to submit!")
+    print("sumitting model...")
