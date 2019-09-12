@@ -78,4 +78,4 @@ def create_network_yaml(network: CVAE,
     with open(os.path.join(path_to_save, "model.yaml"), 'w') as outfile:
         yaml.dump(data, outfile, default_flow_style=False)
 
-    print(f"Model YAML has been saved to {os.path.abspath(path_to_save)}!")
+    print(f"Model YAML has been saved to {os.path.abspath(path_to_save)}")

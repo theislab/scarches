@@ -47,4 +47,4 @@ def create_kipoi_model(model_name: str,
     create_network_yaml(model, model_url, model_md5, path_to_save)
     create_dataloader_yaml(model, data_url, data_md5, path_to_save)
 
-    copyfile("./surgeon/kipoi/dataloader.py", f"~/.kipoi/models/{model_name}/")
+    copyfile("./surgeon/kipoi/dataloader.py", f"~/.kipoi/models/{model_name}")
