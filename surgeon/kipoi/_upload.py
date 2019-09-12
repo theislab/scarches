@@ -6,7 +6,7 @@ import requests
 def upload_file_to_zenodo(file_path, access_token=None,
                           publish=True):
     if access_token is None:
-        raise Exception("You have to enter access token")
+        raise Exception("You have to feed access token")
     r = requests.get('https://zenodo.org/api/deposit/depositions',
                      params={'access_token': access_token})
     
