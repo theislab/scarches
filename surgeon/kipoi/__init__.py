@@ -18,12 +18,11 @@ def create_kipoi_model(model_name: str,
     if access_token is None:
         raise Exception("You have to enter access token")
 
-    os.makedirs(path_to_save, exist_ok=True)
-
     model_path = os.path.join(model.model_path, "cvae.h5")
     model_url, model_md5 = upload_file_to_zenodo(model_path, access_token=access_token, publish=True)
     data_url, data_md5 = upload_file_to_zenodo(data_path, access_token=access_token, publish=True)
-
+    
+    os.makedirs(path_to_save, exist_ok=True)
     create_network_yaml(model, model_url, model_md5, path_to_save)
     create_dataloader_yaml(model, data_url, data_md5, path_to_save)
 
