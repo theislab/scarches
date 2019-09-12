@@ -1,4 +1,5 @@
 import os
+import shutil
 from shutil import copyfile
 
 from surgeon.kipoi._data import create_dataloader_yaml
@@ -11,7 +12,7 @@ def create_kipoi_model(model_name: str,
                        model: CVAE,
                        upload=False,
                        **kwargs):
-    path_to_save = os.path.join("~/.kipoi/models/", model_name)
+    path_to_save = f"~/.kipoi/models/{model_name}/"
     model_path = os.path.join(model.model_path, "cvae.h5")
 
     if os.path.exists(path_to_save):
@@ -50,4 +51,7 @@ def create_kipoi_model(model_name: str,
     copyfile("./surgeon/kipoi/dataloader.py", f"~/.kipoi/models/{model_name}/dataloader.py")
 
     print("model is ready to submit!")
-    print("sumitting model...")
+    # os.chdir(path_to_save)
+    # process = os.subprocess.call("kipoi test .", shell=True)
+    # process = os.subprocess.call("kipoi test-source dir --all", shell=True)
+    # process = os.subprocess.call("git pull", shell=True)

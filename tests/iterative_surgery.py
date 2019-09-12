@@ -39,7 +39,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                      normalize_input=False,
                                                      size_factors=True,
                                                      logtrans_input=True,
-                                                     n_top_genes=5000,
+                                                     n_top_genes=2000,
                                                      )
 
         clip_value = 5.0
