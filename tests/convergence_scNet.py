@@ -12,6 +12,7 @@ DATASETS = {
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
 }
 
+
 def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
@@ -38,7 +39,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                      normalize_input=False,
                                                      size_factors=True,
                                                      logtrans_input=True,
-                                                     n_top_genes=5000,
+                                                     n_top_genes=2000,
                                                      )
 
         adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
@@ -46,25 +47,25 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                       normalize_input=False,
                                                       size_factors=True,
                                                       logtrans_input=True,
-                                                      n_top_genes=5000,
+                                                      n_top_genes=2000,
                                                       )
-        clip_value = 5.0
+        clip_value = 3.0
     else:
         clip_value = 1e6
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
+    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=5,
+                                 z_dimension=10,
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
-                                 eta=1.0,
+                                 scale_factor=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
                                  model_path=f"./models/CVAE/Convergence/before-{data_name}-{loss_fn}/",
-                                 dropout_rate=0.2,
+                                 dropout_rate=0.0,
                                  output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
@@ -107,19 +108,35 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     filename += "Freezed" if freeze else "UnFreezed"
     filename += "_count.log" if count_adata else "_normalized.log"
 
-    new_network.train(train_adata,
-                      valid_adata,
-                      condition_key=batch_key,
-                      cell_type_key=cell_type_key,
-                      le=new_network.condition_encoder,
-                      n_epochs=300,
-                      batch_size=32,
-                      early_stop_limit=50,
-                      lr_reducer=40,
-                      n_per_epoch=5,
-                      score_filename=filename,
-                      save=True,
-                      verbose=2)
+    if freeze:
+        new_network.train(train_adata,
+                          valid_adata,
+                          condition_key=batch_key,
+                          cell_type_key=cell_type_key,
+                          le=new_network.condition_encoder,
+                          n_epochs=300,
+                          batch_size=32,
+                          early_stop_limit=50,
+                          lr_reducer=40,
+                          n_per_epoch=5,
+                          score_filename=filename,
+                          save=True,
+                          verbose=2)
+    else:
+        new_network.train(train_adata,
+                          valid_adata,
+                          condition_key=batch_key,
+                          cell_type_key=cell_type_key,
+                          le=new_network.condition_encoder,
+                          n_epochs=300,
+                          n_epochs_warmup=400,
+                          batch_size=32,
+                          early_stop_limit=50,
+                          lr_reducer=40,
+                          n_per_epoch=5,
+                          score_filename=filename,
+                          save=True,
+                          verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
                                                     condition_key=batch_key)
@@ -128,8 +145,9 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7,
+    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
                save="_latent_out_of_sample.pdf")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='scNet')
