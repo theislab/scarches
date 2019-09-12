@@ -547,7 +547,8 @@ class scVI:
         # Freeze old parts of cloned network
         if freeze:
             for encoder_layer in new_network.encoder_model.layers:
-                encoder_layer.trainable = False
+                if encoder_layer.name != 'first_layer':
+                    encoder_layer.trainable = False
 
             for decoder_layer in new_network.decoder_model.layers:
                 if decoder_layer.name != 'first_layer':

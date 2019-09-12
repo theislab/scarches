@@ -2,15 +2,11 @@ library(splatter)
 library(scater)
 
 params <- newSplatParams()
-params <- setParams(params, update = list(nGenes = 2000))
+params <- setParams(params, update = list(nGenes = 5000))
 
-params <- setParams(params, update = list(batchCells = c(5000, 5000, 5000, 5000)))
-# params <- setParams(params, update = list(batch.facLoc = c(0.1))
-
-params <- setParams(params, update = list(mean.shape = 0.6, mean.rate = 0.3))                    
-params <- setParams(params, update = list(de.prob = c(0.2)))
-# params <- setParams(params, update = list(de.facLoc = c(0.3, 0.3), 
-#                                           de.facScale = c(0.1, 0.1)))
+params <- setParams(params, update = list(batchCells = c(4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000)))
+params <- setParams(params, update = list(batch.facLoc = c(0.5))
+params <- setParams(params, update = list(batch.facScaler = c(0.5))
 
 params <- setParams(params, update = list(group.prob = c(0.2, 0.2, 0.2, 0.2, 0.2)))
 

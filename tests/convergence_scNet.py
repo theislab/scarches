@@ -7,7 +7,7 @@ import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas Celseq", "Pancreas CelSeq2"]},
+                 "target": ["Pancreas SS2", "Pancreas Celseq", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
 }
@@ -19,7 +19,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     target_conditions = data_dict['target']
 
     path_to_save = f"./results/convergence/{data_name}/"
-    sc.settings.figdir = path_to_save
+    sc.settings.figdir = os.path.abspath(path_to_save)
     os.makedirs(path_to_save, exist_ok=True)
 
     if count_adata:
@@ -56,7 +56,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=20,
+                                 z_dimension=5,
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
@@ -81,7 +81,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                   lr_reducer=40,
                   n_per_epoch=0,
                   save=True,
-                  retrain=False,
+                  retrain=True,
                   verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
