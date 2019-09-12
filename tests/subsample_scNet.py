@@ -112,20 +112,35 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
             new_network.model_path = f"./models/CVAE/subsample/after-{data_name}-{loss_fn}-{subsample_frac}-{freeze}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.85)
-
-            new_network.train(train_adata,
-                              valid_adata,
-                              condition_key=condition_key,
-                              cell_type_key=cell_type_key,
-                              le=new_network.condition_encoder,
-                              n_epochs=5000,
-                              batch_size=32,
-                              early_stop_limit=50,
-                              lr_reducer=40,
-                              n_per_epoch=0,
-                              save=True,
-                              retrain=True,
-                              verbose=2)
+            if not freeze:
+                new_network.train(train_adata,
+                                  valid_adata,
+                                  condition_key=condition_key,
+                                  cell_type_key=cell_type_key,
+                                  le=new_network.condition_encoder,
+                                  n_epochs=5000,
+                                  batch_size=32,
+                                  n_epochs_warmup=500,
+                                  early_stop_limit=50,
+                                  lr_reducer=40,
+                                  n_per_epoch=0,
+                                  save=True,
+                                  retrain=True,
+                                  verbose=2)
+            else:
+                new_network.train(train_adata,
+                                  valid_adata,
+                                  condition_key=condition_key,
+                                  cell_type_key=cell_type_key,
+                                  le=new_network.condition_encoder,
+                                  n_epochs=5000,
+                                  batch_size=32,
+                                  early_stop_limit=50,
+                                  lr_reducer=40,
+                                  n_per_epoch=0,
+                                  save=True,
+                                  retrain=True,
+                                  verbose=2)
 
             encoder_labels, _ = surgeon.utils.label_encoder(
                 adata_out_of_sample_subsampled, label_encoder=network.condition_encoder, condition_key=condition_key)
