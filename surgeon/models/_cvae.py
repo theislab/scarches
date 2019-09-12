@@ -392,8 +392,8 @@ class CVAE:
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
-              n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, score_filename="./scores.log",
-              lr_reducer=10, save=True, verbose=2, retrain=True):
+              n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, n_epochs_warmup=0,
+              score_filename="./scores.log", lr_reducer=10, save=True, verbose=2, retrain=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -487,7 +487,17 @@ class CVAE:
 
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-
+        if n_epochs_warmup:
+            self.freeze_condition_irrelevant_parts(False)
+            self.cvae_model.fit(x=x_train,
+                                y=y_train,
+                                validation_data=(x_valid, y_valid),
+                                epochs=n_epochs_warmup,
+                                batch_size=batch_size,
+                                verbose=verbose,
+                                callbacks=[],
+                                )
+            self.freeze_condition_irrelevant_parts(True)
         self.cvae_model.fit(x=x_train,
                             y=y_train,
                             validation_data=(x_valid, y_valid),
