@@ -37,19 +37,19 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                                  normalize_input=False,
                                                  size_factors=True,
                                                  logtrans_input=True,
-                                                 n_top_genes=2000,
+                                                 n_top_genes=-1,
                                                  )
     if count_adata:
-        clip_value = 5.0
+        clip_value = 3.0
     else:
         clip_value = 1e6
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.85)
+    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                  z_dimension=20,
-                                 architecture=[128, 128],
+                                 architecture=[128],
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.00001,
@@ -70,7 +70,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=32,
+                  batch_size=128,
                   early_stop_limit=150,
                   lr_reducer=120,
                   n_per_epoch=0,
@@ -85,7 +85,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
+    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
                save="_latent_first.pdf")
 
     new_network = network
@@ -99,7 +99,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                            normalize_input=False,
                                            size_factors=True,
                                            logtrans_input=True,
-                                           n_top_genes=2000)
+                                           n_top_genes=-1)
 
         new_network = surgeon.operate(new_network,
                                       new_conditions=[new_batch],
@@ -118,7 +118,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                           le=new_network.condition_encoder,
                           n_epochs=400,
                           n_epochs_warmup=300 if not freeze else 0,
-                          batch_size=32,
+                          batch_size=128,
                           early_stop_limit=50,
                           lr_reducer=40,
                           n_per_epoch=0,
@@ -134,7 +134,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
         sc.pp.neighbors(latent_adata)
         sc.tl.umap(latent_adata)
-        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
+        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
                    save=f"_latent_({idx}:{new_batch}).pdf")
 
         adata_vis_old = adata_vis[adata_vis.obs[batch_key] != new_batch]
@@ -145,7 +145,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
         sc.pp.neighbors(latent_adata)
         sc.tl.umap(latent_adata)
-        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
+        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
                    save=f"_latent_old_{idx}.pdf")
 
 
