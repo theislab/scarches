@@ -32,16 +32,14 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     adata_for_training = adata[adata.obs[batch_key].isin(source_conditions)]
     other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
-
+    adata_for_training = surgeon.utils.normalize(adata_for_training,
+                                                 filter_min_counts=False,
+                                                 normalize_input=False,
+                                                 size_factors=True,
+                                                 logtrans_input=True,
+                                                 n_top_genes=2000,
+                                                 )
     if count_adata:
-        adata_for_training = surgeon.utils.normalize(adata_for_training,
-                                                     filter_min_counts=False,
-                                                     normalize_input=False,
-                                                     size_factors=True,
-                                                     logtrans_input=True,
-                                                     n_top_genes=2000,
-                                                     )
-
         clip_value = 5.0
     else:
         clip_value = 1e6
