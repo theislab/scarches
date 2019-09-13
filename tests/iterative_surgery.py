@@ -91,7 +91,6 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                save="_latent_first.pdf")
 
     new_network = network
-    adata_vis = adata_for_training.copy()
     for idx, new_batch in enumerate(other_batches):
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
@@ -126,8 +125,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                           save=True,
                           retrain=False,
                           verbose=2)
-
-        adata_vis = adata_vis.concatenate(batch_adata)
+        conditions += [new_batch]
+        adata_vis = adata[adata.obs[batch_key].isin(conditions)]
 
         encoder_labels, _ = surgeon.utils.label_encoder(adata_vis, label_encoder=new_network.condition_encoder,
                                                         condition_key=batch_key)
