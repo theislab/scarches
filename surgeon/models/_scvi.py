@@ -6,8 +6,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, ReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
@@ -122,10 +121,9 @@ class scVI:
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1)(h)
-            h = LeakyReLU()(h)
-            if self.dr_rate > 0:
-                h = Dropout(self.dr_rate)(h)
+                h = BatchNormalization(axis=1, trainable=True)(h)
+            h = ReLU()(h)
+            h = Dropout(self.dr_rate)(h)
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -206,10 +204,9 @@ class scVI:
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1)(h)
-            h = LeakyReLU()(h)
-            if self.dr_rate > 0:
-                h = Dropout(self.dr_rate)(h)
+                h = BatchNormalization(axis=1, trainable=True)(h)
+            h = ReLU()(h)
+            h = Dropout(self.dr_rate)(h)
 
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
