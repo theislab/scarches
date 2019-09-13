@@ -5,7 +5,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, ReLU
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
@@ -129,7 +129,7 @@ class CVAE:
                           kernel_regularizer=self.regularizer)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True, momentum=0.01, epsilon=0.001)(h)
-            h = LeakyReLU()(h)
+            h = ReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -214,7 +214,7 @@ class CVAE:
                           use_bias=False)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True, momentum=0.01, epsilon=0.001)(h)
-            h = LeakyReLU()(h)
+            h = ReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
         model_inputs, model_outputs = self._output_decoder(h)
