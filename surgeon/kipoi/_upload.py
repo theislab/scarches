@@ -24,7 +24,8 @@ def upload_file_to_zenodo(file_path, access_token=None,
 
     r = requests.post(f'https://zenodo.org/api/deposit/depositions/{deposition_id}/files',
                       params={'access_token': access_token}, data=data, files=files)
-
+    print(r)
+    print(r.json())
     r_status = r.json()
 
     md5 = r_status['checksum']

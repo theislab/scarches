@@ -8,7 +8,7 @@ import surgeon
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "source": ["Pancreas Celseq", "Pancreas CelSeq2"]},
-    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch8", "Batch9"]},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
 }
 
@@ -48,11 +48,11 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=10,
-                                 architecture=[128],
+                                 z_dimension=20,
+                                 architecture=[128, 128],
                                  n_conditions=n_conditions,
                                  lr=0.001,
-                                 alpha=0.001,
+                                 alpha=0.00001,
                                  use_batchnorm=True,
                                  eta=1.0,
                                  clip_value=clip_value,
@@ -71,8 +71,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                   le=condition_encoder,
                   n_epochs=10000,
                   batch_size=32,
-                  early_stop_limit=50,
-                  lr_reducer=40,
+                  early_stop_limit=150,
+                  lr_reducer=120,
                   n_per_epoch=0,
                   save=True,
                   retrain=False,
@@ -115,13 +115,14 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                           condition_key=batch_key,
                           cell_type_key=cell_type_key,
                           le=new_network.condition_encoder,
-                          n_epochs=10000,
+                          n_epochs=400,
+                          n_epochs_warmup=300 if not freeze else 0,
                           batch_size=32,
                           early_stop_limit=50,
                           lr_reducer=40,
                           n_per_epoch=0,
                           save=True,
-                          retrain=False,
+                          retrain=True,
                           verbose=2)
         conditions += [new_batch]
         adata_vis = adata[adata.obs[batch_key].isin(conditions)]
@@ -140,6 +141,28 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
         sc.tl.umap(latent_adata)
         sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
                    save=f"_latent_({idx}:{new_batch}).pdf")
+        
+        encoder_labels, _ = surgeon.utils.label_encoder(batch_adata, label_encoder=new_network.condition_encoder,
+                                                        condition_key=batch_key)
+
+        latent_adata = new_network.to_latent(batch_adata, encoder_labels)
+
+        sc.pp.neighbors(latent_adata)
+        sc.tl.umap(latent_adata)
+        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
+                   save=f"_latent_only_{new_batch}.pdf")
+
+        adata_vis_old = adata_vis[adata_vis.obs[batch_key] != new_batch]
+        encoder_labels, _ = surgeon.utils.label_encoder(adata_vis_old, label_encoder=new_network.condition_encoder,
+                                                        condition_key=batch_key)
+        
+        
+        latent_adata = new_network.to_latent(adata_vis_old, encoder_labels)
+
+        sc.pp.neighbors(latent_adata)
+        sc.tl.umap(latent_adata)
+        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
+                   save=f"_latent_old_{idx}.pdf")
 
 
 if __name__ == '__main__':
