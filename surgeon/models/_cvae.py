@@ -59,6 +59,8 @@ class CVAE:
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get("scale_factor", 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
+        self.epsilon = kwargs.get('epsilon', 0.01)
+        self.lambda_l2 = kwargs.get('lambda_l2', 1e-6)
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.architecture = kwargs.get("architecture", [128])
@@ -94,6 +96,7 @@ class CVAE:
         }
 
         self.init_w = keras.initializers.glorot_normal()
+        self.regularizer = keras.regularizers.l2(self.lambda_l2)
         self._create_networks()
         self.compile_models()
 
@@ -119,9 +122,11 @@ class CVAE:
         xy = concatenate([self.x, self.encoder_labels], axis=1)
         for idx, n_neuron in enumerate(self.architecture):
             if idx == 0:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(xy)
+                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False, name="first_layer")(xy)
             else:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False,
+                          kernel_regularizer=self.regularizer)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
@@ -136,11 +141,11 @@ class CVAE:
     def _output_decoder(self, h):
         if self.loss_fn == 'nb':
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
+                           kernel_regularizer=self.regularizer, use_bias=True)(h)
             h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
+                           kernel_regularizer=self.regularizer, use_bias=True)(h)
             h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             h_mean = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
@@ -156,11 +161,11 @@ class CVAE:
             h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
+                           kernel_regularizer=self.regularizer, use_bias=True)(h)
             h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
+                           kernel_regularizer=self.regularizer, use_bias=True)(h)
             h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
@@ -178,7 +183,7 @@ class CVAE:
                                           output=h_pi)
 
         else:
-            h = Dense(self.x_dim, activation=None,
+            h = Dense(self.x_dim, activation=None, kernel_regularizer=self.regularizer,
                       kernel_initializer=self.init_w,
                       use_bias=True)(h)
             h = ACTIVATIONS[self.output_activation](h)
@@ -202,9 +207,11 @@ class CVAE:
 
         for idx, n_neuron in enumerate(self.architecture[::-1]):
             if idx == 0:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False, name="first_layer")(zy)
+                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False, name="first_layer")(zy)
             else:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
+                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
@@ -286,7 +293,7 @@ class CVAE:
             # Returns
                 Nothing will be returned.
         """
-        optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
+        optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
         loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
