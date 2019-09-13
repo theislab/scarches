@@ -6,7 +6,7 @@ import scanpy as sc
 import surgeon
 
 DATASETS = {
-    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
+    "pancreas": {"name": "pancreas_hvg", "batch_key": "study", "cell_type_key": "cell_type",
                  "source": ["Pancreas Celseq", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
@@ -89,6 +89,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                save="_latent_first.pdf")
 
     new_network = network
+    adata_vis = adata_for_training
     for idx, new_batch in enumerate(other_batches):
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
@@ -124,14 +125,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                           save=True,
                           retrain=True,
                           verbose=2)
-        conditions += [new_batch]
-        adata_vis = adata[adata.obs[batch_key].isin(conditions)]
-        adata_vis = surgeon.tl.normalize(adata_vis,
-                                         filter_min_counts=False,
-                                         normalize_input=False,
-                                         size_factors=True,
-                                         logtrans_input=True,
-                                         n_top_genes=2000)
+        adata_vis = adata_vis.concatenate(batch_adata)
+
         encoder_labels, _ = surgeon.utils.label_encoder(adata_vis, label_encoder=new_network.condition_encoder,
                                                         condition_key=batch_key)
 
@@ -141,22 +136,11 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
         sc.tl.umap(latent_adata)
         sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
                    save=f"_latent_({idx}:{new_batch}).pdf")
-        
-        encoder_labels, _ = surgeon.utils.label_encoder(batch_adata, label_encoder=new_network.condition_encoder,
-                                                        condition_key=batch_key)
-
-        latent_adata = new_network.to_latent(batch_adata, encoder_labels)
-
-        sc.pp.neighbors(latent_adata)
-        sc.tl.umap(latent_adata)
-        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False, title="",
-                   save=f"_latent_only_{new_batch}.pdf")
 
         adata_vis_old = adata_vis[adata_vis.obs[batch_key] != new_batch]
         encoder_labels, _ = surgeon.utils.label_encoder(adata_vis_old, label_encoder=new_network.condition_encoder,
                                                         condition_key=batch_key)
-        
-        
+
         latent_adata = new_network.to_latent(adata_vis_old, encoder_labels)
 
         sc.pp.neighbors(latent_adata)
