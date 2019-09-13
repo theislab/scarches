@@ -80,6 +80,8 @@ class scVI:
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
+            "architecture": self.architecture,
+            "use_batchnorm": self.use_batchnorm,
         }
 
         self.training_kwargs = {
