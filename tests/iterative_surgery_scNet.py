@@ -39,6 +39,9 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                                     n_top_genes=1000,
                                     )
 
+    adata.obs['study'] = adata.obs[batch_key].values
+    batch_key = 'study'
+
     adata_for_training = adata[adata.obs[batch_key].isin(source_conditions)]
     other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
 
