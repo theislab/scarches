@@ -16,7 +16,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     condition_key = data_dict['batch_key']
@@ -34,7 +34,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     adata = surgeon.utils.normalize(adata,
                                     batch_key=condition_key,
-                                    target_sum=1e6,
+                                    target_sum=target_sum,
                                     filter_min_counts=False,
                                     size_factors=True,
                                     logtrans_input=True,
@@ -155,6 +155,8 @@ if __name__ == '__main__':
                                  help='if 1 will freeze the network after surgery')
     arguments_group.add_argument('-c', '--count', type=int, default=1, required=False,
                                  help='if 1 will use count adata')
+    arguments_group.add_argument('-t', '--target_sum', type=int, default=None, required=False,
+                                 help='target sum')
     args = vars(parser.parse_args())
 
     data_name = args['data']
@@ -162,4 +164,4 @@ if __name__ == '__main__':
     count_adata = True if args['count'] > 0 else False
     data_dict = DATASETS[data_name]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata, target_sum=args['target_sum'])
