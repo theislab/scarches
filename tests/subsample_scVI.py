@@ -16,7 +16,7 @@ from surgeon.utils import remove_sparsity
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas Celseq", "Pancreas CelSeq2"], "HV": True},
+                 "target": ["Pancreas SS2", "Pancreas CelSeq2"], "HV": True},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Drop-seq", "inDrops"],
              "HV": False},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"],
@@ -29,6 +29,8 @@ parser = argparse.ArgumentParser(description='scNet')
 arguments_group = parser.add_argument_group("Parameters")
 arguments_group.add_argument('-d', '--data', type=str, required=True,
                              help='data name')
+arguments_group.add_argument('-t', '--target_sum', type=float, required=False, default=None,
+                             help='target sum')
 args = vars(parser.parse_args())
 
 data_dict = DATASETS[args['data']]
@@ -37,6 +39,7 @@ batch_key = data_dict['batch_key']
 cell_type_key = data_dict['cell_type_key']
 target_batches = data_dict['target']
 highly_variable = data_dict['HV']
+target_sum = args['target_sum']
 
 adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
 adata = remove_sparsity(adata)
@@ -44,7 +47,7 @@ adata = remove_sparsity(adata)
 if highly_variable:
     adata = surgeon.tl.normalize(adata,
                                  batch_key=batch_key,
-                                 target_sum=1e6,
+                                 target_sum=target_sum,
                                  filter_min_counts=False,
                                  size_factors=True,
                                  logtrans_input=True,
