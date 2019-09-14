@@ -31,6 +31,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
         loss_fn = "mse"
 
     adata = surgeon.utils.normalize(adata,
+                                    batch_key=batch_key,
                                     filter_min_counts=False,
                                     target_sum=target_sum,
                                     size_factors=True,
@@ -97,6 +98,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
         batch_adata = adata[adata.obs[batch_key] == new_batch]
 
         # batch_adata = surgeon.tl.normalize(batch_adata,
+        #                                    batch_key=batch_key,
         #                                    filter_min_counts=False,
         #                                    size_factors=True,
         #                                    logtrans_input=True,
