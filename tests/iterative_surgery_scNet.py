@@ -78,7 +78,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                   lr_reducer=80,
                   n_per_epoch=0,
                   save=True,
-                  retrain=True,
+                  retrain=False,
                   verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
@@ -120,7 +120,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                           condition_key=batch_key,
                           cell_type_key=cell_type_key,
                           le=new_network.condition_encoder,
-                          n_epochs=400,
+                          n_epochs=10000,
                           n_epochs_warmup=300 if not freeze else 0,
                           batch_size=128,
                           early_stop_limit=50,
