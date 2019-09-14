@@ -7,7 +7,7 @@ import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "source": ["Pancreas Celseq", "Pancreas inDrop"]},
+                 "source": ["Pancreas CelSeq", "Pancreas inDrop"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2", 'Batch3', 'Batch4', 'Batch5', 'Batch6', 'Batch7']},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
 }
@@ -23,11 +23,11 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
+    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+
     if count_adata:
-        adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
         loss_fn = "nb"
     else:
-        adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
         loss_fn = "mse"
 
     adata = surgeon.utils.normalize(adata,
@@ -50,9 +50,11 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
+    architecture = [128]
+    z_dim = 10
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=10,
-                                 architecture=[128],
+                                 z_dimension=z_dim,
+                                 architecture=architecture,
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.00001,
@@ -60,8 +62,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                                  eta=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/iterative_surgery/before-{data_name}-{loss_fn}/",
-                                 dropout_rate=0.2,
+                                 model_path=f"./models/CVAE/iterative_surgery/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
+                                 dropout_rate=0.1,
                                  output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
