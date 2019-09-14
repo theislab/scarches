@@ -63,8 +63,8 @@ def normalize(adata, batch_key=None, filter_min_counts=True, size_factors=True, 
     adata_count = adata.copy()
 
     if size_factors:
-        sc.pp.normalize_total(adata, target_sum=target_sum, exclude_highly_expressed=True)
-        adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
+        sc.pp.normalize_total(adata, target_sum=target_sum, exclude_highly_expressed=True, key_added='size_factors')
+        # adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
     else:
         adata.obs['size_factors'] = 1.0
 
