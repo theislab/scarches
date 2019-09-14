@@ -68,9 +68,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
+            z_dim = 10
+            architecture = [128]
+
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                         z_dimension=10,
-                                         architecture=[128],
+                                         z_dimension=z_dim,
+                                         architecture=architecture,
                                          use_batchnorm=True,
                                          n_conditions=n_conditions,
                                          lr=0.001,
@@ -78,7 +81,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                                          scale_factor=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/subsample/before-{data_name}-{loss_fn}/",
+                                         model_path=f"./models/CVAE/subsample/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
                                          dropout_rate=0.2,
                                          output_activation='relu')
 
@@ -96,7 +99,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                           lr_reducer=80,
                           n_per_epoch=0,
                           save=True,
-                          retrain=True,
+                          retrain=False,
                           verbose=2)
 
             new_network = surgeon.operate(network,
@@ -105,7 +108,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                                           init='Xavier',
                                           freeze=freeze)
 
-            new_network.model_path = f"./models/CVAE/subsample/after-{data_name}-{loss_fn}-{subsample_frac}-{freeze}/"
+            new_network.model_path = f"./models/CVAE/subsample/after-{data_name}-{loss_fn}-{architecture}-{z_dim}-{subsample_frac}-{freeze}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.80)
 
             new_network.train(train_adata,
