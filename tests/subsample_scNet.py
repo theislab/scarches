@@ -155,7 +155,7 @@ if __name__ == '__main__':
                                  help='if 1 will freeze the network after surgery')
     arguments_group.add_argument('-c', '--count', type=int, default=1, required=False,
                                  help='if 1 will use count adata')
-    arguments_group.add_argument('-t', '--target_sum', type=int, default=None, required=False,
+    arguments_group.add_argument('-t', '--target_sum', type=float, default=None, required=False,
                                  help='target sum')
     args = vars(parser.parse_args())
 
