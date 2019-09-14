@@ -72,9 +72,11 @@ def normalize(adata, batch_key=None, filter_min_counts=True, size_factors=True, 
         sc.pp.log1p(adata)
 
     if n_top_genes > 0 and adata.shape[1] > n_top_genes:
-        genes = hvg_batch(adata.copy(), batch_key=batch_key, adataOut=False, target_genes=n_top_genes)
-        # sc.pp.highly_variable_genes(adata, n_top_genes=n_top_genes, batch_key=batch_key)
-        # genes = adata.var['highly_variable']
+        if batch_key:
+            genes = hvg_batch(adata.copy(), batch_key=batch_key, adataOut=False, target_genes=n_top_genes)
+        else:
+            sc.pp.highly_variable_genes(adata, n_top_genes=n_top_genes)
+            genes = adata.var['highly_variable']
         adata = adata[:, genes]
         adata_count = adata_count[:, genes]
 
