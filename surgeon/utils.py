@@ -55,7 +55,7 @@ def train_test_split(adata, train_frac=0.85):
 
 
 def normalize(adata, batch_key=None, filter_min_counts=True, size_factors=True, logtrans_input=True,
-              counts_per_cell_after=None, n_top_genes=2000):
+              target_sum=None, n_top_genes=2000):
     if filter_min_counts:
         sc.pp.filter_genes(adata, min_counts=1)
         sc.pp.filter_cells(adata, min_counts=1)
@@ -63,7 +63,7 @@ def normalize(adata, batch_key=None, filter_min_counts=True, size_factors=True, 
     adata_count = adata.copy()
 
     if size_factors:
-        sc.pp.normalize_total(adata, counts_per_cell_after=counts_per_cell_after, exclude_highly_expressed=True)
+        sc.pp.normalize_total(adata, target_sum=target_sum, exclude_highly_expressed=True)
         adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
     else:
         adata.obs['size_factors'] = 1.0
