@@ -6,9 +6,9 @@ import scanpy as sc
 import surgeon
 
 DATASETS = {
-    "pancreas": {"name": "pancreas_hvg", "batch_key": "study", "cell_type_key": "cell_type",
-                 "source": ["Pancreas Celseq", "Pancreas CelSeq2"]},
-    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2"]},
+    "pancreas": {"name": "pancreas_hvg_br", "batch_key": "study", "cell_type_key": "cell_type",
+                 "source": ["Pancreas Celseq", "Pancreas inDrop"]},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2", 'Batch3']},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
 }
 
@@ -48,7 +48,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=20,
+                                 z_dimension=15,
                                  architecture=[128],
                                  n_conditions=n_conditions,
                                  lr=0.001,
@@ -75,7 +75,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                   lr_reducer=120,
                   n_per_epoch=0,
                   save=True,
-                  retrain=False,
+                  retrain=True,
                   verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
