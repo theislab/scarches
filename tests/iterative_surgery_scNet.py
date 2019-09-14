@@ -19,7 +19,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
     batch_key = data_dict['batch_key']
     source_conditions = data_dict['source']
 
-    path_to_save = f"./results/iterative_surgery/{data_name}-{'nb' if count_adata else 'mse'}/"
+    path_to_save = f"./results/iterative_surgery/{data_name}-{'nb' if count_adata else 'mse'}-{'freezed' if freeze else 'unfreezed'}/"
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
