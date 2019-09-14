@@ -1,5 +1,7 @@
 import sys
 
+import surgeon
+
 sys.path.append("../")
 
 import scanpy as sc
@@ -40,14 +42,16 @@ adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
 adata = remove_sparsity(adata)
 
 if highly_variable:
-    adata_normalized = adata.copy()
+    adata = surgeon.tl.normalize(adata,
+                                 batch_key=batch_key,
+                                 target_sum=1e6,
+                                 filter_min_counts=False,
+                                 size_factors=True,
+                                 logtrans_input=True,
+                                 n_top_genes=1000
+                                 )
 
-    sc.pp.normalize_per_cell(adata_normalized)
-    sc.pp.log1p(adata_normalized)
-    sc.pp.highly_variable_genes(adata_normalized, n_top_genes=2000)
-    highly_variable_genes = adata_normalized.var['highly_variable']
-
-    adata = adata[:, highly_variable_genes]
+    adata = adata.raw
 
 n_epochs = 300
 lr = 1e-3
