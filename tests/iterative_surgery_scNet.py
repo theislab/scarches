@@ -6,7 +6,7 @@ import scanpy as sc
 import surgeon
 
 DATASETS = {
-    "pancreas": {"name": "pancreas_hvg_br", "batch_key": "study", "cell_type_key": "cell_type",
+    "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "source": ["Pancreas Celseq", "Pancreas inDrop"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2", 'Batch3']},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
