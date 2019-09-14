@@ -30,15 +30,17 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, counts_per_cell
         adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
         loss_fn = "mse"
 
+    adata = surgeon.utils.normalize(adata,
+                                    filter_min_counts=False,
+                                    counts_per_cell_after=counts_per_cell_after,
+                                    size_factors=True,
+                                    logtrans_input=True,
+                                    n_top_genes=1000,
+                                    )
+
     adata_for_training = adata[adata.obs[batch_key].isin(source_conditions)]
     other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
-    adata_for_training = surgeon.utils.normalize(adata_for_training,
-                                                 filter_min_counts=False,
-                                                 counts_per_cell_after=counts_per_cell_after,
-                                                 size_factors=True,
-                                                 logtrans_input=True,
-                                                 n_top_genes=-1,
-                                                 )
+
     if count_adata:
         clip_value = 3.0
     else:
@@ -48,7 +50,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, counts_per_cell
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=15,
+                                 z_dimension=10,
                                  architecture=[128],
                                  n_conditions=n_conditions,
                                  lr=0.001,
@@ -71,8 +73,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, counts_per_cell
                   le=condition_encoder,
                   n_epochs=10000,
                   batch_size=128,
-                  early_stop_limit=150,
-                  lr_reducer=120,
+                  early_stop_limit=100,
+                  lr_reducer=80,
                   n_per_epoch=0,
                   save=True,
                   retrain=True,
@@ -94,12 +96,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, counts_per_cell
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
 
-        batch_adata = surgeon.tl.normalize(batch_adata,
-                                           filter_min_counts=False,
-                                           size_factors=True,
-                                           logtrans_input=True,
-                                           counts_per_cell_after=counts_per_cell_after,
-                                           n_top_genes=-1)
+        # batch_adata = surgeon.tl.normalize(batch_adata,
+        #                                    filter_min_counts=False,
+        #                                    size_factors=True,
+        #                                    logtrans_input=True,
+        #                                    counts_per_cell_after=counts_per_cell_after,
+        #                                    n_top_genes=-1)
 
         new_network = surgeon.operate(new_network,
                                       new_conditions=[new_batch],
