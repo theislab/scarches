@@ -13,7 +13,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze=True, count_adata=True, counts_per_cell_after=None):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -34,7 +34,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
     adata_for_training = surgeon.utils.normalize(adata_for_training,
                                                  filter_min_counts=False,
-                                                 normalize_input=False,
+                                                 counts_per_cell_after=counts_per_cell_after,
                                                  size_factors=True,
                                                  logtrans_input=True,
                                                  n_top_genes=-1,
@@ -96,9 +96,9 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
         batch_adata = surgeon.tl.normalize(batch_adata,
                                            filter_min_counts=False,
-                                           normalize_input=False,
                                            size_factors=True,
                                            logtrans_input=True,
+                                           counts_per_cell_after=counts_per_cell_after,
                                            n_top_genes=-1)
 
         new_network = surgeon.operate(new_network,
@@ -158,10 +158,13 @@ if __name__ == '__main__':
                                  help='freeze')
     arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
                                  help='latent space dimension')
+    arguments_group.add_argument('-p', '--counts_per_cell_after', type=float, default=1e6, required=False,
+                                 help='latent space dimension')
     args = vars(parser.parse_args())
 
     freeze = True if args['freeze'] > 0 else False
     count_adata = True if args['count'] > 0 else False
     data_dict = DATASETS[args['data']]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata,
+                       counts_per_cell_after=args['counts_per_cell_after'])
