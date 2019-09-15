@@ -7,7 +7,7 @@ import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas_hvg", "batch_key": "study", "cell_type_key": "cell_type",
-                 "source": ['Pancreas inDrop', 'Pancreas Celseq']},
+                 "source": ["Pancreas CelSeq", "Pancreas inDrop", "Pancreas Fluidigm C1"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
 }
