@@ -54,7 +54,12 @@ if highly_variable:
                                  n_top_genes=1000
                                  )
 
-    adata = adata.raw
+    new_adata = sc.AnnData(X=adata.raw.X)
+    new_adata.obs = adata.obs.copy(deep=True)
+    new_adata.var = adata.var.copy(deep=True)
+    new_adata.var_names = adata.var_names
+
+    adata = new_adata.copy()
 
 n_epochs = 300
 lr = 1e-3
