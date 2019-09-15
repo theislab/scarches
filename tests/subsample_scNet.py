@@ -104,7 +104,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
 
             new_network = surgeon.operate(network,
                                           new_conditions=target_conditions,
-                                          remove_dropout=True,
+                                          remove_dropout=True if freeze else False,
                                           init='Xavier',
                                           freeze=freeze)
 
@@ -118,7 +118,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
                               le=new_network.condition_encoder,
                               n_epochs=10000,
                               batch_size=128,
-                              n_epochs_warmup=500 if not freeze else 0,
+                              n_epochs_warmup=300 if not freeze else 0,
                               early_stop_limit=50,
                               lr_reducer=40,
                               n_per_epoch=0,
