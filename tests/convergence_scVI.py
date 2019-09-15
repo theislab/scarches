@@ -17,7 +17,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict):
+def train_and_evaluate(data_dict, target_sum=None):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -28,6 +28,22 @@ def train_and_evaluate(data_dict):
     os.makedirs(path_to_save, exist_ok=True)
 
     adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+
+    adata = surgeon.tl.normalize(adata,
+                                 batch_key=batch_key,
+                                 target_sum=target_sum,
+                                 filter_min_counts=False,
+                                 size_factors=True,
+                                 logtrans_input=True,
+                                 n_top_genes=1000
+                                 )
+
+    new_adata = sc.AnnData(X=adata.raw.X)
+    new_adata.obs = adata.obs.copy(deep=True)
+    new_adata.var = adata.var.copy(deep=True)
+    new_adata.var_names = adata.var_names
+
+    adata = new_adata.copy()
 
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
 
@@ -79,8 +95,11 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
+    arguments_group.add_argument('-t', '--target_sum', type=float, required=False, default=1e6,
+                                 help='Target sum')
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
+    target_sum = args['target_sum']
 
-    train_and_evaluate(data_dict=data_dict)
+    train_and_evaluate(data_dict=data_dict, target_sum=target_sum)

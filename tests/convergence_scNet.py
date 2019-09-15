@@ -13,7 +13,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -23,32 +23,24 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     sc.settings.figdir = os.path.abspath(path_to_save)
     os.makedirs(path_to_save, exist_ok=True)
 
+    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+    adata = surgeon.utils.normalize(adata,
+                                    batch_key=batch_key,
+                                    target_sum=target_sum,
+                                    filter_min_counts=False,
+                                    size_factors=True,
+                                    logtrans_input=True,
+                                    n_top_genes=1000,
+                                    )
     if count_adata:
-        adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
         loss_fn = "nb"
     else:
-        adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
         loss_fn = "mse"
 
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[batch_key].isin(target_conditions)]
 
     if count_adata:
-        adata_for_training = surgeon.utils.normalize(adata_for_training,
-                                                     filter_min_counts=False,
-                                                     normalize_input=False,
-                                                     size_factors=True,
-                                                     logtrans_input=True,
-                                                     n_top_genes=2000,
-                                                     )
-
-        adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
-                                                      filter_min_counts=False,
-                                                      normalize_input=False,
-                                                      size_factors=True,
-                                                      logtrans_input=True,
-                                                      n_top_genes=2000,
-                                                      )
         clip_value = 3.0
     else:
         clip_value = 1e6
@@ -58,6 +50,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                  z_dimension=10,
+                                 architecture=[128],
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
@@ -158,10 +151,14 @@ if __name__ == '__main__':
                                  help='freeze')
     arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
                                  help='latent space dimension')
+    arguments_group.add_argument('-t', '--target_sum', type=float, default=1e6, required=False,
+                                 help='latent space dimension')
     args = vars(parser.parse_args())
 
     freeze = True if args['freeze'] > 0 else False
     count_adata = True if args['count'] > 0 else False
+    target_sum = args['target_sum']
+
     data_dict = DATASETS[args['data']]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata, target_sum=target_sum)
