@@ -44,11 +44,13 @@ class CVAE:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=100, **kwargs):
+    def __init__(self, x_dimension, n_conditions, z_dimension=100, firstLayer_freeze = False, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
 
         self.n_conditions = n_conditions
+
+        self.firstLayer_freeze = firstLayer_freeze
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
@@ -119,11 +121,11 @@ class CVAE:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        xy = concatenate([self.x, self.encoder_labels], axis=1)
+
         for idx, n_neuron in enumerate(self.architecture):
             if idx == 0:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
-                          use_bias=False, name="first_layer")(xy)
+                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False, name="first_layer", freeze=self.firstLayer_freeze)([self.x, self.encoder_labels])
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False,
                           kernel_regularizer=self.regularizer)(h)
@@ -203,12 +205,11 @@ class CVAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        zy = concatenate([self.z, self.decoder_labels], axis=1)
 
         for idx, n_neuron in enumerate(self.architecture[::-1]):
             if idx == 0:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
-                          use_bias=False, name="first_layer")(zy)
+                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False, name="first_layer", freeze=self.firstLayer_freeze)([self.z, self.decoder_labels])
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
                           use_bias=False)(h)
