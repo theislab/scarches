@@ -16,11 +16,11 @@ from surgeon.utils import remove_sparsity
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas SS2", "Pancreas CelSeq2"], "HV": True},
+                 "target": ["Pancreas SS2", "Pancreas CelSeq2"], "HV": False},
     "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Drop-seq", "inDrops"],
-             "HV": True},
+             "HV": False},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"],
-            "HV": True},
+            "HV": False},
     "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
                     "target": ["Rosenberg", "Zeisel"], "HV": True}
 }
@@ -41,25 +41,8 @@ target_batches = data_dict['target']
 highly_variable = data_dict['HV']
 target_sum = args['target_sum']
 
-adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+adata = sc.read(f"./data/{data_name}/{data_name}_count_hvg.h5ad")
 adata = remove_sparsity(adata)
-
-if highly_variable:
-    adata = surgeon.tl.normalize(adata,
-                                 batch_key=batch_key,
-                                 target_sum=target_sum,
-                                 filter_min_counts=False,
-                                 size_factors=True,
-                                 logtrans_input=True,
-                                 n_top_genes=1000
-                                 )
-
-    new_adata = sc.AnnData(X=adata.raw.X)
-    new_adata.obs = adata.obs.copy(deep=True)
-    new_adata.var = adata.var.copy(deep=True)
-    new_adata.var_names = adata.var_names
-
-    adata = new_adata.copy()
 
 n_epochs = 300
 lr = 1e-3

@@ -16,7 +16,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None):
+def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     condition_key = data_dict['batch_key']
@@ -25,21 +25,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
     path_to_save = f"./results/subsample/{data_name}/"
     os.makedirs(path_to_save, exist_ok=True)
 
-    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
     if count_adata:
         loss_fn = "nb"
     else:
         loss_fn = "mse"
-
-    adata = surgeon.utils.normalize(adata,
-                                    batch_key=condition_key,
-                                    target_sum=target_sum,
-                                    filter_min_counts=False,
-                                    size_factors=True,
-                                    logtrans_input=True,
-                                    n_top_genes=1000,
-                                    )
 
     adata_out_of_sample = adata[adata.obs[condition_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[condition_key].isin(target_conditions)]
@@ -158,8 +149,6 @@ if __name__ == '__main__':
                                  help='if 1 will freeze the network after surgery')
     arguments_group.add_argument('-c', '--count', type=int, default=1, required=False,
                                  help='if 1 will use count adata')
-    arguments_group.add_argument('-t', '--target_sum', type=float, default=None, required=False,
-                                 help='target sum')
     args = vars(parser.parse_args())
 
     data_name = args['data']
@@ -167,4 +156,4 @@ if __name__ == '__main__':
     count_adata = True if args['count'] > 0 else False
     data_dict = DATASETS[data_name]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata, target_sum=args['target_sum'])
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
