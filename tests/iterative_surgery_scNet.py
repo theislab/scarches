@@ -13,7 +13,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None):
+def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -23,21 +23,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True, target_sum=None
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
-    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
+    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
     if count_adata:
         loss_fn = "nb"
     else:
         loss_fn = "mse"
-
-    adata = surgeon.utils.normalize(adata,
-                                    batch_key=batch_key,
-                                    filter_min_counts=False,
-                                    target_sum=target_sum,
-                                    size_factors=True,
-                                    logtrans_input=True,
-                                    n_top_genes=1000,
-                                    )
 
     adata.obs['study'] = adata.obs[batch_key].values
     batch_key = 'study'
@@ -167,13 +158,10 @@ if __name__ == '__main__':
                                  help='freeze')
     arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
                                  help='latent space dimension')
-    arguments_group.add_argument('-t', '--target_sum', type=float, default=1e6, required=False,
-                                 help='target sum')
     args = vars(parser.parse_args())
 
     freeze = True if args['freeze'] > 0 else False
     count_adata = True if args['count'] > 0 else False
     data_dict = DATASETS[args['data']]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata,
-                       target_sum=args['target_sum'])
+    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)

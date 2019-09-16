@@ -2,12 +2,11 @@ import argparse
 import os
 
 import scanpy as sc
+import torch
+from scvi.models.vae import VAE
 from sklearn.preprocessing import LabelEncoder
 
-import surgeon
 from _scVI import ADataset, scVI_Trainer
-from scvi.models.vae import VAE
-import torch
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
@@ -17,7 +16,7 @@ DATASETS = {
 }
 
 
-def train_and_evaluate(data_dict, target_sum=None):
+def train_and_evaluate(data_dict):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -27,33 +26,10 @@ def train_and_evaluate(data_dict, target_sum=None):
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
-    adata = sc.read(f"./data/{data_name}/{data_name}_count.h5ad")
-
-    adata = surgeon.tl.normalize(adata,
-                                 batch_key=batch_key,
-                                 target_sum=target_sum,
-                                 filter_min_counts=False,
-                                 size_factors=True,
-                                 logtrans_input=True,
-                                 n_top_genes=1000
-                                 )
-
-    new_adata = sc.AnnData(X=adata.raw.X)
-    new_adata.obs = adata.obs.copy(deep=True)
-    new_adata.var = adata.var.copy(deep=True)
-    new_adata.var_names = adata.var_names
-
-    adata = new_adata.copy()
+    adata = sc.read(f"./data/{data_name}/{data_name}_count_hvg.h5ad")
 
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
 
-    adata_out_of_sample = surgeon.utils.normalize(adata_out_of_sample,
-                                                  filter_min_counts=False,
-                                                  normalize_input=False,
-                                                  size_factors=True,
-                                                  logtrans_input=True,
-                                                  n_top_genes=5000,
-                                                  )
     use_batches = True
     n_epochs = 300
     lr = 1e-3
@@ -77,10 +53,10 @@ def train_and_evaluate(data_dict, target_sum=None):
 
     adata_out_of_sample = ADataset(adata_out_of_sample)
 
-    vae = VAE(adata_out_of_sample.nb_genes, n_batch=adata_out_of_sample.n_batches * use_batches, n_layers = 2)
+    vae = VAE(adata_out_of_sample.nb_genes, n_batch=adata_out_of_sample.n_batches * use_batches)
 
     model = scVI_Trainer(vae, adata_out_of_sample,
-                         train_size=0.85,
+                         train_size=0.80,
                          frequency=5,
                          early_stopping_kwargs=early_stopping_kwargs)
 
@@ -95,11 +71,8 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
-    arguments_group.add_argument('-t', '--target_sum', type=float, required=False, default=1e6,
-                                 help='Target sum')
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
-    target_sum = args['target_sum']
 
-    train_and_evaluate(data_dict=data_dict, target_sum=target_sum)
+    train_and_evaluate(data_dict=data_dict)
