@@ -62,7 +62,7 @@ class FirstLayer(Layer):
 
         self.genes_kernel = self.add_weight(shape=(input_shape[0][-1], self.units),
                                       initializer=self.kernel_initializer,
-                                      name='genes_kernel',
+                                      name='input_kernel',
                                       regularizer=self.kernel_regularizer,
                                       trainable=not self.freeze)
 
@@ -94,8 +94,6 @@ class FirstLayer(Layer):
         if self.use_bias:
             output = K.bias_add(output, self.bias, data_format='channels_last')
 
-        self.out_shape = output.shape
-
         return output
 
     def compute_output_shape(self, input_shape):
@@ -104,7 +102,7 @@ class FirstLayer(Layer):
 
         assert len(input_shape) == 2
 
-        return self.out_shape
+        return (input_shape[0][0], self.units)
 
 
 LAYERS = {

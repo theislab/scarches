@@ -1,6 +1,8 @@
 import numpy as np
 from typing import TypeVar
 
+from keras import backend as K
+
 from . import metrics
 from . import models as archs
 from . import plotting as pl
@@ -40,19 +42,33 @@ def operate(network: archs.CVAE,
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
     used_bias_decoder = network.cvae_model.get_layer("decoder").get_layer("first_layer").use_bias
 
+    prev_weights = {}
+    for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+        if "condition_kernel" in w.name:
+            prev_weights['c'] = K.batch_get_value(w)
+        elif "input_kernel" in w.name:
+            prev_weights['i'] = K.batch_get_value(w)
+        else:
+            prev_weights['b'] = K.batch_get_value(w)
+
     if used_bias_encoder:
-        prev_genes_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = network.cvae_model.get_layer("encoder").get_layer(
-            "first_layer").get_weights()
+        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], prev_weights['c'], prev_weights['b']
     else:
-        prev_weights = network.cvae_model.get_layer("encoder").get_layer("first_layer").get_weights()
-        prev_genes_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights[0], prev_weights[1], None
+        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], prev_weights['c'], None
+
+    prev_weights = {}
+    for w in network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+        if "condition_kernel" in w.name:
+            prev_weights['c'] = K.batch_get_value(w)
+        elif "input_kernel" in w.name:
+            prev_weights['i'] = K.batch_get_value(w)
+        else:
+            prev_weights['b'] = K.batch_get_value(w)
 
     if used_bias_decoder:
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = network.cvae_model.get_layer("decoder").get_layer(
-            "first_layer").get_weights()
+        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], prev_weights['c'], prev_weights['b']
     else:
-        prev_weights = network.cvae_model.get_layer("decoder").get_layer("first_layer").get_weights()
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights[0], prev_weights[1], None
+        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], prev_weights['c'], None
 
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
@@ -69,23 +85,25 @@ def operate(network: archs.CVAE,
     else:
         raise Exception("Invalid initialization for new weights")
 
-    # new_weights_encoder = np.concatenate([prev_weights_encoder, to_be_added_weights_encoder], axis=0)
-    # new_weights_decoder = np.concatenate([prev_weights_decoder, to_be_added_weights_decoder], axis=0)
+    new_condition_weights_encoder = np.concatenate([prev_condition_weights_encoder, to_be_added_weights_encoder], axis=0)
+    new_condition_weights_decoder = np.concatenate([prev_condition_weights_decoder, to_be_added_weights_decoder], axis=0)
 
     # Set new model's weights
-    if used_bias_encoder:
-        new_network.cvae_model.get_layer("encoder").get_layer("first_layer").set_weights(
-            [prev_genes_weights_encoder, to_be_added_weights_encoder, prev_biases_encoder])
-    else:
-        new_network.cvae_model.get_layer("encoder").get_layer("first_layer").set_weights(
-            [prev_genes_weights_encoder, to_be_added_weights_encoder])
+    for w in new_network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+        if "condition_kernel" in w.name:
+            K.set_value(w, new_condition_weights_encoder)
+        elif "input_kernel" in w.name:
+            K.set_value(w, prev_input_weights_encoder)
+        else:
+            K.set_value(w, prev_biases_encoder)
 
-    if used_bias_decoder:
-        new_network.cvae_model.get_layer("decoder").get_layer("first_layer").set_weights(
-            [prev_latent_weights_decoder, to_be_added_weights_decoder, prev_biases_decoder])
-    else:
-        new_network.cvae_model.get_layer("decoder").get_layer("first_layer").set_weights(
-            [prev_latent_weights_decoder, to_be_added_weights_decoder])
+    for w in new_network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+        if "condition_kernel" in w.name:
+            K.set_value(w, new_condition_weights_decoder)
+        elif "input_kernel" in w.name:
+            K.set_value(w, prev_latent_weights_decoder)
+        else:
+            K.set_value(w, prev_biases_decoder)
 
     # set weights of other parts of model
     for idx, encoder_layer in enumerate(new_network.encoder_model.layers):
