@@ -94,6 +94,8 @@ class FirstLayer(Layer):
         if self.use_bias:
             output = K.bias_add(output, self.bias, data_format='channels_last')
 
+        self.out_shape = output.shape
+
         return output
 
     def compute_output_shape(self, input_shape):
@@ -102,7 +104,7 @@ class FirstLayer(Layer):
 
         assert len(input_shape) == 2
 
-        return (1, self.units)
+        return self.out_shape
 
 
 LAYERS = {
