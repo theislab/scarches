@@ -108,4 +108,5 @@ class FirstLayer(Layer):
 LAYERS = {
     "SliceLayer": SliceLayer,
     "ColWiseMultLayer": ColwiseMultLayer,
+    "FirstLayer": FirstLayer,
 }
