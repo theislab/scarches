@@ -102,7 +102,7 @@ class FirstLayer(Layer):
 
         assert len(input_shape) == 2
 
-        return (self.units, )
+        return (1, self.units)
 
 
 LAYERS = {
