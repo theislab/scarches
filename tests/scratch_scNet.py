@@ -33,8 +33,6 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
     else:
         clip_value = 3.0
 
-
-
     for i in range(5):
         scores = []
         for subsample_frac in [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]:
@@ -50,9 +48,7 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                     condition_adata_subsampled.raw.X) if raw_out_of_sample is None else raw_out_of_sample.concatenate(
                     sc.AnnData(condition_adata_subsampled.raw.X))
             final_adata.raw = raw_out_of_sample
-            
-            
-            
+
             train_adata, valid_adata = surgeon.utils.train_test_split(final_adata, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
@@ -90,18 +86,18 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                           retrain=False,
                           verbose=2)
 
-            encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder, condition_key=condition_key)
+            encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
+                                                            condition_key=condition_key)
             latent_adata = network.to_latent(final_adata, encoder_labels)
-
 
             ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
             asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
             ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
             nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            knn_purity = surgeon.metrics.knn_purity(final_adata, label_key=cell_type_key)
+            knn_purity = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key)
 
             scores.append([subsample_frac, ebm, asw, ari, nmi, knn_purity])
-            print([subsample_frac, ebm, asw, ari, nmi])
+            print([subsample_frac, ebm, asw, ari, nmi, knn_purity])
 
         scores = np.array(scores)
 

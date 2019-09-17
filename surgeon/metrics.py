@@ -77,7 +77,7 @@ def nmi(adata, label_key):
 
 def knn_purity(adata, label_key, n_neighbors=30):
     adata = remove_sparsity(adata)
-    labels = adata.obs[label_key].values
+    labels = LabelEncoder().fit_transform(adata.obs[label_key].to_numpy())
 
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
     indices = nbrs.kneighbors(adata.X, return_distance=False)[:, 1:]
