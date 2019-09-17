@@ -1,5 +1,4 @@
 import numpy as np
-import scanpy as sc
 from scipy.stats import itemfreq, entropy
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, adjusted_rand_score, normalized_mutual_info_score
@@ -68,9 +67,26 @@ def nmi(adata, label_key):
 
     n_labels = len(adata.obs[label_key].unique().tolist())
     kmeans = KMeans(n_labels, n_init=200)
-    
+
     labels_pred = kmeans.fit_predict(adata.X)
     labels = adata.obs[label_key].values
     labels_encoded = LabelEncoder().fit_transform(labels)
 
     return normalized_mutual_info_score(labels_encoded, labels_pred)
+
+
+def knn_purity(adata, label_key, n_neighbors=30):
+    adata = remove_sparsity(adata)
+    labels = adata.obs[label_key].values
+
+    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
+    indices = nbrs.kneighbors(adata.X, return_distance=False)[:, 1:]
+    neighbors_labels = np.vectorize(lambda i: labels[i])(indices)
+
+    # pre cell purity scores
+    scores = ((neighbors_labels - labels.reshape(-1, 1)) == 0).mean(axis=1)
+    res = [
+        np.mean(scores[labels == i]) for i in np.unique(labels)
+    ]  # per cell-type purity
+
+    return np.mean(res)

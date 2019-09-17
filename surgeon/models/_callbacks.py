@@ -1,9 +1,9 @@
 import os
-import time
 from typing import TypeVar
 
 import numpy as np
 import pandas as pd
+import time
 from keras.callbacks import Callback
 from keras.models import Model
 from keras.utils import to_categorical
@@ -47,7 +47,8 @@ class ScoreCallback(Callback):
         self.score_computers = {"asw": self.asw,
                                 "ari": self.ari,
                                 "nmi": self.nmi,
-                                "ebm": self.entropy_of_batch_mixing}
+                                "ebm": self.entropy_of_batch_mixing,
+                                "knn": self.knn_purity}
 
         self.kmeans_batch = KMeans(self.n_batch_labels, n_init=200)
         self.kmeans_celltype = KMeans(self.n_celltype_labels, n_init=200)
@@ -62,7 +63,7 @@ class ScoreCallback(Callback):
 
         self.scores_np = np.array(self.scores)
         if self.clustering_scores == 'all':
-            self.clustering_scores = ['ASW', 'ARI', 'NMI', 'EBM']
+            self.clustering_scores = ['ASW', 'ARI', 'NMI', 'EBM', 'KNN']
         for i, clustering_score in enumerate(self.clustering_scores):
             computed_scores = self.scores_np[:, i]
             scores_df[clustering_score] = computed_scores
@@ -84,9 +85,11 @@ class ScoreCallback(Callback):
                 ari, ari_time = self.ari(latent_X)
                 nmi, nmi_time = self.nmi(latent_X)
                 ebm, ebm_time = self.entropy_of_batch_mixing(latent_X)
+                knn, knn_time = self.knn_purity(latent_X)
                 self.scores.append([asw, ari, nmi, ebm])
-                print(f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f}")
-                computation_times = asw_time + ari_time + nmi_time + ebm_time
+                print(
+                    f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f} - KNN_Purity: {knn: .4f}")
+                computation_times = asw_time + ari_time + nmi_time + ebm_time + knn_time
             else:
                 scores = []
                 computation_times = 0
@@ -148,3 +151,15 @@ class ScoreCallback(Callback):
             ])
         end_time = time.time()
         return score, end_time - start_time
+
+    def knn_purity(self, latent, n_neighbors=30):
+        nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)
+        indices = nbrs.kneighbors(latent, return_distance=False)[:, 1:]
+        neighbors_labels = np.vectorize(lambda i: self.celltype_labels[i])(indices)
+
+        # pre cell purity scores
+        scores = ((neighbors_labels - self.celltype_labels.reshape(-1, 1)) == 0).mean(axis=1)
+        res = [
+            np.mean(scores[self.celltype_labels == i]) for i in np.unique(self.celltype_labels)
+        ]  # per cell-type purity
+        return np.mean(res)
