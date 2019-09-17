@@ -153,6 +153,8 @@ class ScoreCallback(Callback):
         return score, end_time - start_time
 
     def knn_purity(self, latent, n_neighbors=30):
+        start_time = time.time()
+
         nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)
         indices = nbrs.kneighbors(latent, return_distance=False)[:, 1:]
         neighbors_labels = np.vectorize(lambda i: self.celltype_labels[i])(indices)
@@ -162,4 +164,7 @@ class ScoreCallback(Callback):
         res = [
             np.mean(scores[self.celltype_labels == i]) for i in np.unique(self.celltype_labels)
         ]  # per cell-type purity
-        return np.mean(res)
+
+        end_time = time.time()
+
+        return np.mean(res), end_time - start_time
