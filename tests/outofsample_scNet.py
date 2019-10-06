@@ -127,7 +127,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
                                                     condition_key=batch_key)
 
-    latent_adata = network.to_latent(adata_out_of_sample, encoder_labels)
+    latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
