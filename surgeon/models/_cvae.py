@@ -258,7 +258,8 @@ class CVAE:
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
                                'SliceLayer': LAYERS['SliceLayer'],
-                               'ColwiseMultLayer': LAYERS['ColWiseMultLayer']}
+                               'ColwiseMultLayer': LAYERS['ColWiseMultLayer'],
+                               'FirstLayer': LAYERS['FirstLayer']}
 
         get_custom_objects().update(self.custom_objects)
 
