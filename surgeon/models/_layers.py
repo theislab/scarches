@@ -41,7 +41,7 @@ class ColwiseMultLayer(Layer):
 
 
 class FirstLayer(Layer):
-    def __init__(self, units, kernel_initializer='glorot_uniform', kernel_regularizer=None, use_bias=False,
+    def __init__(self, units=128, kernel_initializer='glorot_uniform', kernel_regularizer=None, use_bias=False,
                  freeze=False, bias_initializer='zeros', bias_regularizer=None, bias_constraint=None, **kwargs):
         self.units = units
         self.kernel_initializer = kernel_initializer
