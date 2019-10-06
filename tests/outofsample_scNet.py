@@ -142,9 +142,12 @@ if __name__ == '__main__':
                                  help='data name')
     arguments_group.add_argument('-f', '--freeze_level', type=int, default=1, required=True,
                                  help='freeze')
+    arguments_group.add_argument('-c', '--count_adata', type=int, default=1, required=True,
+                                 help='freeze')
     args = vars(parser.parse_args())
 
     freeze_level = args['freeze_level']
+    loss_fn = 'nb' if args['count_adata'] > 0 else 'mse'
     data_dict = DATASETS[args['data']]
 
-    train(data_dict=data_dict, freeze_level=freeze_level)
+    train(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)
