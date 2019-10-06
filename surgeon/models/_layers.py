@@ -60,17 +60,17 @@ class FirstLayer(Layer):
 
         assert len(input_shape) == 2
 
-        self.genes_kernel = self.add_weight(shape=(input_shape[0][-1], self.units),
-                                      initializer=self.kernel_initializer,
-                                      name='input_kernel',
-                                      regularizer=self.kernel_regularizer,
-                                      trainable=not self.freeze)
+        self.expression_kernel = self.add_weight(shape=(input_shape[0][-1], self.units),
+                                                 initializer=self.kernel_initializer,
+                                                 name='expression_kernel',
+                                                 regularizer=self.kernel_regularizer,
+                                                 trainable=not self.freeze)
 
         self.condition_kernel = self.add_weight(shape=(input_shape[1][-1], self.units),
-                                            initializer=self.kernel_initializer,
-                                            name='condition_kernel',
-                                            regularizer=self.kernel_regularizer,
-                                            trainable=True)
+                                                initializer=self.kernel_initializer,
+                                                name='condition_kernel',
+                                                regularizer=self.kernel_regularizer,
+                                                trainable=True)
 
         if self.use_bias:
             self.bias = self.add_weight(shape=(self.units,),
@@ -81,14 +81,13 @@ class FirstLayer(Layer):
         else:
             self.bias = None
 
-
         super().build(input_shape)
 
     def call(self, inputs, **kwargs):
         if not isinstance(inputs, list):
             raise ValueError('Inputs should be a list')
 
-        genes_output = K.dot(inputs[0], self.genes_kernel)
+        genes_output = K.dot(inputs[0], self.expression_kernel)
         condition_output = K.dot(inputs[1], self.condition_kernel)
         output = genes_output + condition_output
         if self.use_bias:

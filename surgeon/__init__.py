@@ -17,11 +17,10 @@ def operate(network: archs.CVAE,
             new_conditions: list_str,
             init: str = 'Xavier',
             freeze: bool = True,
-            firstLayer_freeze: bool = False,
+            freeze_expression_input: bool = False,
             remove_dropout: bool = True,
             print_summary: bool = True,
             ) -> archs.CVAE:
-
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
@@ -31,12 +30,14 @@ def operate(network: archs.CVAE,
     training_kwargs = network.training_kwargs
 
     network_kwargs['n_conditions'] += n_new_conditions
+    network_kwargs['freeze_expression_input'] = freeze_expression_input
 
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = archs.CVAE(**network_kwargs, **training_kwargs, firstLayer_freeze=firstLayer_freeze, print_summary=False)
+    new_network = archs.CVAE(**network_kwargs, **training_kwargs,
+                             print_summary=False)
 
     # Get Previous Model's weights
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
@@ -46,29 +47,35 @@ def operate(network: archs.CVAE,
     for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             prev_weights['c'] = K.batch_get_value(w)
-        elif "input_kernel" in w.name:
+        elif "expression_kernel" in w.name:
             prev_weights['i'] = K.batch_get_value(w)
         else:
             prev_weights['b'] = K.batch_get_value(w)
 
     if used_bias_encoder:
-        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], prev_weights['c'], prev_weights['b']
+        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], \
+                                                                                          prev_weights['c'], \
+                                                                                          prev_weights['b']
     else:
-        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], prev_weights['c'], None
+        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = prev_weights['i'], \
+                                                                                          prev_weights['c'], None
 
     prev_weights = {}
     for w in network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             prev_weights['c'] = K.batch_get_value(w)
-        elif "input_kernel" in w.name:
+        elif "expression_kernel" in w.name:
             prev_weights['i'] = K.batch_get_value(w)
         else:
             prev_weights['b'] = K.batch_get_value(w)
 
     if used_bias_decoder:
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], prev_weights['c'], prev_weights['b']
+        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], \
+                                                                                           prev_weights['c'], \
+                                                                                           prev_weights['b']
     else:
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], prev_weights['c'], None
+        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = prev_weights['i'], \
+                                                                                           prev_weights['c'], None
 
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
@@ -78,21 +85,25 @@ def operate(network: archs.CVAE,
         to_be_added_weights_encoder = np.zeros(shape=(n_new_conditions, prev_condition_weights_encoder.shape[1]))
         to_be_added_weights_decoder = np.zeros(shape=(n_new_conditions, prev_condition_weights_decoder.shape[1]))
     elif init == "Xavier":
-        to_be_added_weights_encoder = np.random.randn(n_new_conditions, prev_condition_weights_encoder.shape[1]) * np.sqrt(
+        to_be_added_weights_encoder = np.random.randn(n_new_conditions,
+                                                      prev_condition_weights_encoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_encoder.shape[0] + 1 + prev_condition_weights_encoder.shape[1]))
-        to_be_added_weights_decoder = np.random.randn(n_new_conditions, prev_condition_weights_decoder.shape[1]) * np.sqrt(
+        to_be_added_weights_decoder = np.random.randn(n_new_conditions,
+                                                      prev_condition_weights_decoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_decoder.shape[0] + 1 + prev_condition_weights_decoder.shape[1]))
     else:
         raise Exception("Invalid initialization for new weights")
 
-    new_condition_weights_encoder = np.concatenate([prev_condition_weights_encoder, to_be_added_weights_encoder], axis=0)
-    new_condition_weights_decoder = np.concatenate([prev_condition_weights_decoder, to_be_added_weights_decoder], axis=0)
+    new_condition_weights_encoder = np.concatenate([prev_condition_weights_encoder, to_be_added_weights_encoder],
+                                                   axis=0)
+    new_condition_weights_decoder = np.concatenate([prev_condition_weights_decoder, to_be_added_weights_decoder],
+                                                   axis=0)
 
     # Set new model's weights
     for w in new_network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_encoder)
-        elif "input_kernel" in w.name:
+        elif "expression_kernel" in w.name:
             K.set_value(w, prev_input_weights_encoder)
         else:
             K.set_value(w, prev_biases_encoder)
@@ -100,7 +111,7 @@ def operate(network: archs.CVAE,
     for w in new_network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_decoder)
-        elif "input_kernel" in w.name:
+        elif "expression_kernel" in w.name:
             K.set_value(w, prev_latent_weights_decoder)
         else:
             K.set_value(w, prev_biases_decoder)

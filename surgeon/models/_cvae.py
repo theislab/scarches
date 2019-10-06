@@ -44,13 +44,11 @@ class CVAE:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=100, firstLayer_freeze = False, **kwargs):
+    def __init__(self, x_dimension, n_conditions, z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
 
         self.n_conditions = n_conditions
-
-        self.firstLayer_freeze = firstLayer_freeze
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
@@ -66,6 +64,7 @@ class CVAE:
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.architecture = kwargs.get("architecture", [128])
+        self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
@@ -85,6 +84,7 @@ class CVAE:
             "output_activation": self.output_activation,
             "architecture": self.architecture,
             "use_batchnorm": self.use_batchnorm,
+            "freeze_expression_input": self.freeze_expression_input,
         }
 
         self.training_kwargs = {
@@ -125,13 +125,14 @@ class CVAE:
         for idx, n_neuron in enumerate(self.architecture):
             if idx == 0:
                 h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
-                          use_bias=False, name="first_layer", freeze=self.firstLayer_freeze)([self.x, self.encoder_labels])
+                                         use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
+                    [self.x, self.encoder_labels])
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False,
                           kernel_regularizer=self.regularizer)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
-            h = ReLU()(h)
+            h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -209,13 +210,14 @@ class CVAE:
         for idx, n_neuron in enumerate(self.architecture[::-1]):
             if idx == 0:
                 h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
-                          use_bias=False, name="first_layer", freeze=self.firstLayer_freeze)([self.z, self.decoder_labels])
+                                         use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
+                    [self.z, self.decoder_labels])
             else:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
                           use_bias=False)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
-            h = ReLU()(h)
+            h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
         model_inputs, model_outputs = self._output_decoder(h)
@@ -273,11 +275,11 @@ class CVAE:
         return loss
 
     def freeze_condition_irrelevant_parts(self, trainable):
-        for encoder_layer in self.encoder_model.layers:
+        for encoder_layer in self.cvae_model.get_layer("encoder").layers:
             if encoder_layer.name != 'first_layer':
                 encoder_layer.trainable = trainable
 
-        for decoder_layer in self.decoder_model.layers:
+        for decoder_layer in self.cvae_model.get_layer("decoder").layers:
             if decoder_layer.name != 'first_layer':
                 decoder_layer.trainable = trainable
 
