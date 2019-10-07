@@ -10,13 +10,14 @@ DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
-    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type",
+             "target": ["inDrops", "Drop-seq"]},
     "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
                     "target": ["Rosenberg", "Zeisel"]},
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     condition_key = data_dict['batch_key']
@@ -27,18 +28,25 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
-    if count_adata:
-        loss_fn = "nb"
-    else:
-        loss_fn = "mse"
-
-    adata_out_of_sample = adata[adata.obs[condition_key].isin(target_conditions)]
-    adata_for_training = adata[~adata.obs[condition_key].isin(target_conditions)]
-
-    if count_adata:
+    if loss_fn == 'nb':
         clip_value = 3.0
     else:
         clip_value = 1e6
+
+    if freeze_level == 0:
+        freeze = False
+        freeze_expression = False
+    elif freeze_level == 1:
+        freeze = True
+        freeze_expression = False
+    elif freeze_level == 2:
+        freeze = True
+        freeze_expression = True
+    else:
+        raise Exception("Invalid freeze level")
+
+    adata_out_of_sample = adata[adata.obs[condition_key].isin(target_conditions)]
+    adata_for_training = adata[~adata.obs[condition_key].isin(target_conditions)]
 
     for i in range(5):
         scores = []
@@ -59,7 +67,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
-            z_dim = 10
+            z_dim = 15
             architecture = [128]
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
@@ -70,6 +78,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                          lr=0.001,
                                          alpha=0.00001,
                                          scale_factor=1.0,
+                                         eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
                                          model_path=f"./models/CVAE/subsample/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
@@ -95,9 +104,10 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
             new_network = surgeon.operate(network,
                                           new_conditions=target_conditions,
-                                          remove_dropout=True if freeze else False,
+                                          remove_dropout=True,
                                           init='Xavier',
-                                          freeze=freeze)
+                                          freeze=freeze,
+                                          freeze_expression_input=freeze_expression)
 
             new_network.model_path = f"./models/CVAE/subsample/after-{data_name}-{loss_fn}-{architecture}-{z_dim}-{subsample_frac}-{freeze}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.80)
@@ -109,7 +119,7 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                               le=new_network.condition_encoder,
                               n_epochs=10000,
                               batch_size=128,
-                              n_epochs_warmup=300 if not freeze else 0,
+                              n_epochs_warmup=0,
                               early_stop_limit=50,
                               lr_reducer=40,
                               n_per_epoch=0,
@@ -133,8 +143,8 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
         scores = np.array(scores)
 
         filename = "scores_scNet"
-        filename += "Freezed" if freeze else "UnFreezed"
-        filename += "_count" if count_adata else "_normalized"
+        filename += f"_freeze_level={freeze_level}"
+        filename += "_count" if loss_fn == 'nb' else "_normalized"
         filename += f"_{i}.log"
 
         np.savetxt(os.path.join(path_to_save, filename), X=scores, delimiter=",")
@@ -145,15 +155,15 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
-    arguments_group.add_argument('-f', '--freeze', type=int, default=1, required=True,
+    arguments_group.add_argument('-f', '--freeze_level', type=int, default=1, required=True,
                                  help='if 1 will freeze the network after surgery')
     arguments_group.add_argument('-c', '--count', type=int, default=1, required=False,
                                  help='if 1 will use count adata')
     args = vars(parser.parse_args())
 
     data_name = args['data']
-    freeze = True if args['freeze'] > 0 else False
-    count_adata = True if args['count'] > 0 else False
+    freeze_level = args['freeze_level']
+    loss_fn = 'nb' if args['count'] > 0 else 'mse'
     data_dict = DATASETS[data_name]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)
