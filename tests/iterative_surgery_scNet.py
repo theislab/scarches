@@ -8,27 +8,41 @@ import surgeon
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "source": ["Pancreas CelSeq", "Pancreas inDrop", "Pancreas Fluidigm C1"]},
-    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "source": ["Batch1", "Batch2", 'Batch3', 'Batch4', 'Batch5', 'Batch6', 'Batch7']},
-    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "source": ["inDrops", "Drop-seq"]},
+    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype",
+            "source": ["Batch1", "Batch2", 'Batch3', 'Batch4', 'Batch5', 'Batch6', 'Batch7']},
+    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type",
+             "source": ["inDrops", "Drop-seq"]},
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
     source_conditions = data_dict['source']
 
-    path_to_save = f"./results/iterative_surgery/{data_name}-{'nb' if count_adata else 'mse'}-{'freezed' if freeze else 'unfreezed'}/"
+    path_to_save = f"./results/iterative_surgery/{data_name}-{loss_fn}-freeze_level={freeze_level}/"
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
-    if count_adata:
-        loss_fn = "nb"
+    if loss_fn == 'nb':
+        clip_value = 3.0
     else:
-        loss_fn = "mse"
+        clip_value = 1e6
+
+    if freeze_level == 0:
+        freeze = False
+        freeze_expression = False
+    elif freeze_level == 1:
+        freeze = True
+        freeze_expression = False
+    elif freeze_level == 2:
+        freeze = True
+        freeze_expression = True
+    else:
+        raise Exception("Invalid freeze level")
 
     adata.obs['study'] = adata.obs[batch_key].values
     batch_key = 'study'
@@ -36,16 +50,11 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     adata_for_training = adata[adata.obs[batch_key].isin(source_conditions)]
     other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
 
-    if count_adata:
-        clip_value = 3.0
-    else:
-        clip_value = 1e6
-
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     architecture = [128]
-    z_dim = 10
+    z_dim = 15
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                  z_dimension=z_dim,
                                  architecture=architecture,
@@ -93,19 +102,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
 
-        # batch_adata = surgeon.tl.normalize(batch_adata,
-        #                                    batch_key=batch_key,
-        #                                    filter_min_counts=False,
-        #                                    size_factors=True,
-        #                                    logtrans_input=True,
-        #                                    target_sum=target_sum,
-        #                                    n_top_genes=-1)
-
         new_network = surgeon.operate(new_network,
                                       new_conditions=[new_batch],
                                       remove_dropout=True,
                                       init='Xavier',
-                                      freeze=freeze)
+                                      freeze=freeze,
+                                      freeze_expression_input=freeze_expression)
 
         new_network.model_path = f"./models/CVAE/iterative_surgery/after-({idx}:{new_batch})-{data_name}-{loss_fn}-{freeze}/"
 
@@ -154,14 +156,14 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
-    arguments_group.add_argument('-f', '--freeze', type=int, default=1, required=True,
+    arguments_group.add_argument('-f', '--freeze_level', type=int, default=1, required=True,
                                  help='freeze')
     arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
                                  help='latent space dimension')
     args = vars(parser.parse_args())
 
-    freeze = True if args['freeze'] > 0 else False
-    count_adata = True if args['count'] > 0 else False
+    freeze_level = args['freeze_level']
+    loss_fn = 'nb' if args['count'] > 0 else 'mse'
     data_dict = DATASETS[args['data']]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)
