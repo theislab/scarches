@@ -120,7 +120,7 @@ class NNClassifier:
             for idx, layer in enumerate(self.cvae.encoder_model.layers[2:]):
                 if layer.name == "first_layer":
                     weights = layer.get_weights()[0]
-                    self.classifier_modexl.layers[idx + 1].set_weights([weights])
+                    self.classifier_model.layers[idx + 1].set_weights([weights])
                 else:
                     weights = layer.get_weights()
                     self.classifier_model.layers[idx + 1].set_weights(weights)
