@@ -81,7 +81,7 @@ class NNClassifier:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        for idx, n_neuron in enumerate(self.architecture[::-1]):
+        for idx, n_neuron in enumerate(self.architecture):
             if idx == 0:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
                           use_bias=False, name="first_layer")(self.x)
