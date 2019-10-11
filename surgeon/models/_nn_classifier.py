@@ -28,6 +28,10 @@ class NNClassifier:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./models/NNClassifier/")
         self.clip_value = kwargs.get('clip_value', 1e6)
+        self.use_batchnorm = kwargs.get("use_batchnorm", False)
+        self.lambda_l1 = kwargs.get("lambda_l1", 0.0)
+        self.lambda_l2 = kwargs.get("lambda_l2", 0.0)
+        self.architecture = self.cvae.architecture
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
@@ -39,6 +43,10 @@ class NNClassifier:
             "x_dimension": self.x_dim,
             "z_dimension": self.z_dim,
             "dropout_rate": self.dr_rate,
+            "architecture": self.architecture,
+            "lambda_l1": self.lambda_l1,
+            "lambda_l2": self.lambda_l2,
+            "use_batchnorm": self.use_batchnorm
         }
 
         self.training_kwargs = {
@@ -48,6 +56,8 @@ class NNClassifier:
         }
 
         self.init_w = keras.initializers.glorot_normal()
+        self.regularizer = keras.regularizers.l1_l2(self.lambda_l1, self.lambda_l2)
+
         self._create_networks()
         self.compile_models()
 
@@ -68,19 +78,24 @@ class NNClassifier:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        h = Dense(512, kernel_initializer=self.init_w, use_bias=False, name='first_layer')(self.x)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        for idx, n_neuron in enumerate(self.architecture[::-1]):
+            if idx == 0:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False, name="first_layer")(self.x)
+            else:
+                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                          use_bias=False)(h)
+            if self.use_batchnorm:
+                h = BatchNormalization(axis=1, trainable=True)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
 
-        probs = Dense(self.n_labels, activation='softmax', kernel_initializer=self.init_w)(z)
+        probs = Dense(self.n_labels, activation='softmax', kernel_initializer=self.init_w,
+                      kernel_regularizer=self.regularizer)(z)
         model = Model(inputs=self.x, outputs=probs, name=name)
         return model
 
@@ -99,9 +114,9 @@ class NNClassifier:
         self.classifier_model = self._network(name="classifier")
 
         if self.cvae is not None:
-            for idx, layer in enumerate(self.cvae.encoder_model.layers[3:]):
+            for idx, layer in enumerate(self.cvae.encoder_model.layers[2:]):
                 if layer.name == "first_layer":
-                    weights = layer.get_weights()[0][:self.x_dim, :]
+                    weights = layer.get_weights()[0]
                     self.classifier_model.layers[idx + 1].set_weights([weights])
                 else:
                     weights = layer.get_weights()
