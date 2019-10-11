@@ -31,7 +31,10 @@ class NNClassifier:
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.lambda_l1 = kwargs.get("lambda_l1", 0.0)
         self.lambda_l2 = kwargs.get("lambda_l2", 0.0)
-        self.architecture = self.cvae.architecture
+        if self.cvae is not None:
+            self.architecture = self.cvae.architecture
+        else:
+            self.architecture = kwargs.get("architecture", [128])
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
@@ -117,7 +120,7 @@ class NNClassifier:
             for idx, layer in enumerate(self.cvae.encoder_model.layers[2:]):
                 if layer.name == "first_layer":
                     weights = layer.get_weights()[0]
-                    self.classifier_model.layers[idx + 1].set_weights([weights])
+                    self.classifier_modexl.layers[idx + 1].set_weights([weights])
                 else:
                     weights = layer.get_weights()
                     self.classifier_model.layers[idx + 1].set_weights(weights)
