@@ -2,16 +2,13 @@ import argparse
 import os
 
 import scanpy as sc
+from scanpy.plotting import palettes
 
 import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "source": ["Pancreas CelSeq", "Pancreas inDrop", "Pancreas Fluidigm C1"]},
-    "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype",
-            "source": ["Batch1", "Batch2", 'Batch3', 'Batch4', 'Batch5', 'Batch6', 'Batch7']},
-    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type",
-             "source": ["inDrops", "Drop-seq"]},
+                 "target": ["Pancreas SS2", "Pancreas inDrop"]},
 }
 
 
@@ -19,7 +16,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
-    source_conditions = data_dict['source']
+    target_conditions = data_dict['target']
 
     path_to_save = f"./results/iterative_surgery/{data_name}-{loss_fn}-freeze_level={freeze_level}/"
     sc.settings.figdir = path_to_save
@@ -30,7 +27,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     if loss_fn == 'nb':
         clip_value = 3.0
     else:
-        clip_value = 1e6
+        clip_value = 1000
 
     if freeze_level == 0:
         freeze = False
@@ -45,10 +42,23 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
         raise Exception("Invalid freeze level")
 
     adata.obs['study'] = adata.obs[batch_key].values
+    
+    n_batches = len(adata.obs[batch_key].unique().tolist())
+    n_cell_types = len(adata.obs[cell_type_key].unique().tolist())
+
     batch_key = 'study'
 
-    adata_for_training = adata[adata.obs[batch_key].isin(source_conditions)]
-    other_batches = [batch for batch in adata.obs[batch_key].unique().tolist() if not batch in source_conditions]
+    batch_colors = palettes.vega_20_scanpy[:n_batches]
+    cell_type_colors = palettes.godsnot_64[:n_cell_types]
+
+    sc.pp.neighbors(adata)
+    sc.tl.umap(adata)
+    sc.pl.umap(adata, color=[batch_key], title="", wspace=0.7, frameon=False, palette=batch_colors,
+               save="_latent_orig_condition.pdf")
+    sc.pl.umap(adata, color=[cell_type_key], title="", wspace=0.7, frameon=False, palette=cell_type_colors,
+               save="_latent_orig_celltype.pdf")
+
+    adata_for_training = adata[~adata.obs[batch_key].isin(target_conditions)]
 
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
@@ -60,12 +70,13 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                  architecture=architecture,
                                  n_conditions=n_conditions,
                                  lr=0.001,
-                                 alpha=0.00001,
+                                 alpha=0.001,
+                                 beta=1.0,
                                  use_batchnorm=True,
                                  eta=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/iterative_surgery/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
+                                 model_path=f"./models/CVAE/iterative_surgery/MMD/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
                                  dropout_rate=0.1,
                                  output_activation='relu')
 
@@ -78,7 +89,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=128,
+                  batch_size=512,
                   early_stop_limit=100,
                   lr_reducer=80,
                   n_per_epoch=0,
@@ -90,15 +101,20 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                                     condition_key=batch_key)
 
     latent_adata = network.to_latent(adata_for_training, encoder_labels)
+    latent_adata.uns[f'{batch_key}_colors'] = adata_for_training.uns[f'{batch_key}_colors']
+    latent_adata.uns[f'{cell_type_key}_colors'] = adata_for_training.uns[f'{cell_type_key}_colors']
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
-               save="_latent_first.pdf")
+    sc.pl.umap(latent_adata, color=[batch_key], title="", wspace=0.7, frameon=False,
+               save="_latent_first_condition.pdf")
+    sc.pl.umap(latent_adata, color=[cell_type_key], title="", wspace=0.7, frameon=False,
+               save="_latent_first_celltype.pdf")
+
 
     new_network = network
     adata_vis = adata_for_training
-    for idx, new_batch in enumerate(other_batches):
+    for idx, new_batch in enumerate(target_conditions):
         print(f"Operating surgery for {new_batch}")
         batch_adata = adata[adata.obs[batch_key] == new_batch]
 
@@ -109,7 +125,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                       freeze=freeze,
                                       freeze_expression_input=freeze_expression)
 
-        new_network.model_path = f"./models/CVAE/iterative_surgery/after-({idx}:{new_batch})-{data_name}-{loss_fn}-{freeze}/"
+        new_network.model_path = f"./models/CVAE/iterative_surgery/MMD/after-({idx}:{new_batch})-{data_name}-{loss_fn}-{freeze}/"
 
         train_adata, valid_adata = surgeon.utils.train_test_split(batch_adata, 0.80)
 
@@ -120,35 +136,36 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                           le=new_network.condition_encoder,
                           n_epochs=10000,
                           n_epochs_warmup=300 if not freeze else 0,
-                          batch_size=128,
-                          early_stop_limit=50,
-                          lr_reducer=40,
+                          batch_size=512,
+                          early_stop_limit=100,
+                          lr_reducer=80,
                           n_per_epoch=0,
                           save=True,
-                          retrain=True,
+                          retrain=False,
                           verbose=2)
+        if not isinstance(adata_vis.uns[f'{batch_key}_colors'], list):
+            prev_batch_colors = adata_vis.uns[f'{batch_key}_colors'].tolist()
+            prev_cell_type_colors = adata_vis.uns[f'{cell_type_key}_colors'].tolist()
+        else:
+            prev_batch_colors = adata_vis.uns[f'{batch_key}_colors']
+            prev_cell_type_colors = adata_vis.uns[f'{cell_type_key}_colors']
         adata_vis = adata_vis.concatenate(batch_adata)
-
+        adata_vis.uns[f'{batch_key}_colors'] = prev_batch_colors + batch_adata.uns[f'{batch_key}_colors'].tolist()
+        adata_vis.uns[f'{cell_type_key}_colors'] = prev_cell_type_colors + batch_adata.uns[f'{cell_type_key}_colors'].tolist()
+        
         encoder_labels, _ = surgeon.utils.label_encoder(adata_vis, label_encoder=new_network.condition_encoder,
                                                         condition_key=batch_key)
 
         latent_adata = new_network.to_latent(adata_vis, encoder_labels)
+        latent_adata.uns[f'{batch_key}_colors'] = adata_vis.uns[f'{batch_key}_colors']
+        latent_adata.uns[f'{cell_type_key}_colors'] = adata_vis.uns[f'{cell_type_key}_colors']
 
         sc.pp.neighbors(latent_adata)
         sc.tl.umap(latent_adata)
-        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
-                   save=f"_latent_({idx}:{new_batch}).pdf")
-
-        adata_vis_old = adata_vis[adata_vis.obs[batch_key] != new_batch]
-        encoder_labels, _ = surgeon.utils.label_encoder(adata_vis_old, label_encoder=new_network.condition_encoder,
-                                                        condition_key=batch_key)
-
-        latent_adata = new_network.to_latent(adata_vis_old, encoder_labels)
-
-        sc.pp.neighbors(latent_adata)
-        sc.tl.umap(latent_adata)
-        sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
-                   save=f"_latent_old_{idx}.pdf")
+        sc.pl.umap(latent_adata, color=[batch_key], title="", wspace=0.7, frameon=False,
+                   save=f"_latent_({idx}:{new_batch})_condition.pdf")
+        sc.pl.umap(latent_adata, color=[cell_type_key], title="", wspace=0.7, frameon=False,
+                   save=f"_latent_({idx}:{new_batch})_celltype.pdf")
 
 
 if __name__ == '__main__':

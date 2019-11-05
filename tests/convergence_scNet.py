@@ -7,13 +7,13 @@ import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas SS2", "Pancreas Celseq", "Pancreas CelSeq2"]},
+                 "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
-    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
 }
 
 
-def train_and_evaluate(data_dict, freeze=True, count_adata=True):
+def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     data_name = data_dict['name']
     cell_type_key = data_dict['cell_type_key']
     batch_key = data_dict['batch_key']
@@ -25,15 +25,10 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
-    if count_adata:
-        loss_fn = "nb"
-    else:
-        loss_fn = "mse"
-
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[batch_key].isin(target_conditions)]
 
-    if count_adata:
+    if loss_fn == 'nb':
         clip_value = 3.0
     else:
         clip_value = 1e6
@@ -47,10 +42,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
+                                 beta=1.0,
+                                 eta=1.0,
                                  scale_factor=1.0,
-                                 clip_value=clip_value,
+                                 clip_value=10000,
                                  loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/Convergence/before-{data_name}-{loss_fn}/",
+                                 model_path=f"./models/CVAE/Convergence/MMD/before-{data_name}-{loss_fn}/",
                                  dropout_rate=0.0,
                                  output_activation='relu')
 
@@ -63,12 +60,12 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=32,
-                  early_stop_limit=50,
-                  lr_reducer=40,
+                  batch_size=512,
+                  early_stop_limit=100,
+                  lr_reducer=80,
                   n_per_epoch=0,
                   save=True,
-                  retrain=True,
+                  retrain=False,
                   verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
@@ -81,48 +78,45 @@ def train_and_evaluate(data_dict, freeze=True, count_adata=True):
     sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7,
                save="_latent_training.pdf")
 
+    if freeze_level == 0:
+        freeze = False
+        freeze_expression_input = False
+    elif freeze_level == 1:
+        freeze = True
+        freeze_expression_input = False
+    elif freeze_level == 2:
+        freeze = True
+        freeze_expression_input = True
+
+
     new_network = surgeon.operate(network,
                                   new_conditions=target_conditions,
                                   init='Xavier',
-                                  freeze=freeze)
+                                  freeze=freeze,
+                                  freeze_expression_input=freeze_expression_input,
+                                  remove_dropout=True)
 
-    new_network.model_path = f"./models/CVAE/Convergence/after-{data_name}-{loss_fn}-{freeze}/"
+    new_network.model_path = f"./models/CVAE/Convergence/MMD/after-{data_name}-{loss_fn}-{freeze}/"
 
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
 
-    filename = path_to_save + "scores_scNet"
-    filename += "Freezed" if freeze else "UnFreezed"
-    filename += "_count.log" if count_adata else "_normalized.log"
+    filename = path_to_save + f"scores_scNet_freeze_level={freeze_level}"
+    filename += "_count.log" if loss_fn == 'nb' else "_normalized.log"
 
-    if freeze:
-        new_network.train(train_adata,
-                          valid_adata,
-                          condition_key=batch_key,
-                          cell_type_key=cell_type_key,
-                          le=new_network.condition_encoder,
-                          n_epochs=300,
-                          batch_size=32,
-                          early_stop_limit=50,
-                          lr_reducer=40,
-                          n_per_epoch=5,
-                          score_filename=filename,
-                          save=True,
-                          verbose=2)
-    else:
-        new_network.train(train_adata,
-                          valid_adata,
-                          condition_key=batch_key,
-                          cell_type_key=cell_type_key,
-                          le=new_network.condition_encoder,
-                          n_epochs=300,
-                          n_epochs_warmup=400,
-                          batch_size=32,
-                          early_stop_limit=50,
-                          lr_reducer=40,
-                          n_per_epoch=5,
-                          score_filename=filename,
-                          save=True,
-                          verbose=2)
+    new_network.train(train_adata,
+                    valid_adata,
+                    condition_key=batch_key,
+                    cell_type_key=cell_type_key,
+                    le=new_network.condition_encoder,
+                    n_epochs=10000,
+                    n_epochs_warmup=500 if not freeze else 0,
+                    batch_size=512,
+                    early_stop_limit=100,
+                    lr_reducer=80,
+                    n_per_epoch=5,
+                    score_filename=filename,
+                    save=True,
+                    verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
                                                     condition_key=batch_key)
@@ -140,16 +134,15 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
-    arguments_group.add_argument('-f', '--freeze', type=int, default=1, required=True,
-                                 help='freeze')
+    arguments_group.add_argument('-f', '--freeze_level', type=int, default=1, required=True,
+                                 help='freeze_level')
     arguments_group.add_argument('-c', '--count', type=int, default=0, required=False,
                                  help='latent space dimension')
     args = vars(parser.parse_args())
 
-    freeze = True if args['freeze'] > 0 else False
-    count_adata = True if args['count'] > 0 else False
-    target_sum = args['target_sum']
+    freeze_level = args['freeze_level']
+    loss_fn = 'nb' if args['count'] > 0 else 'mse'
 
     data_dict = DATASETS[args['data']]
 
-    train_and_evaluate(data_dict=data_dict, freeze=freeze, count_adata=count_adata)
+    train_and_evaluate(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)

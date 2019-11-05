@@ -10,9 +10,9 @@ from _scVI import ADataset, scVI_Trainer
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas SS2", "Pancreas Celseq", "Pancreas CelSeq2"]},
+                 "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
-    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
 }
 
 
@@ -26,9 +26,10 @@ def train_and_evaluate(data_dict):
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 
-    adata = sc.read(f"./data/{data_name}/{data_name}_count_hvg.h5ad")
+    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
+    adata_out_of_sample.X = adata_out_of_sample.raw.X
 
     use_batches = True
     n_epochs = 300
@@ -36,10 +37,10 @@ def train_and_evaluate(data_dict):
     early_stopping_kwargs = {
         "early_stopping_metric": "elbo",
         "save_best_state_metric": "elbo",
-        "patience": 50,
+        "patience": 100,
         "threshold": 0,
         "reduce_lr_on_plateau": True,
-        "lr_patience": 40,
+        "lr_patience": 80,
         "lr_factor": 0.1,
     }
 

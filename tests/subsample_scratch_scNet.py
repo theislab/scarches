@@ -90,19 +90,38 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                                                             condition_key=condition_key)
             latent_adata = network.to_latent(final_adata, encoder_labels)
 
-            ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1)
             asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
             ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
             nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            knn_purity = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key)
+            knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
+            knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
+            knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
+            knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
+            knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
+            knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
+            ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=15)
+            ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=25)
+            ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=50)
+            ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=100)
+            ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=200)
+            ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=300)
 
-            scores.append([subsample_frac, ebm, asw, ari, nmi, knn_purity])
-            print([subsample_frac, ebm, asw, ari, nmi, knn_purity])
+            scores.append(
+                [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+                 ebm_50, ebm_100, ebm_200, ebm_300])
+            print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+                   ebm_50, ebm_100, ebm_200, ebm_300])
 
         scores = np.array(scores)
 
-        filename = "scores_scNet"
-        filename += loss_fn
+        filename = "scores_scratch_scNet"
+        filename += "_count" if loss_fn == 'nb' else "_normalized"
         filename += f"_{i}.log"
 
         np.savetxt(os.path.join(path_to_save, filename), X=scores, delimiter=",")

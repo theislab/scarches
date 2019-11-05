@@ -24,7 +24,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     if loss_fn == 'nb':
         clip_value = 3.0
     else:
-        clip_value = 1e6
+        clip_value = 1000
 
     path_to_save = f"./results/outofsample/{data_name}-{loss_fn}-freeze_level={freeze_level}/"
     sc.settings.figdir = path_to_save
@@ -50,14 +50,15 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                                  architecture=architecture,
                                  n_conditions=n_conditions,
                                  lr=0.001,
-                                 alpha=0.00001,
+                                 alpha=0.001,
+                                 beta=1.0,
                                  use_batchnorm=True,
                                  eta=1.0,
                                  scale_factor=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/outofsample/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
-                                 dropout_rate=0.1,
+                                 model_path=f"./models/CVAE/outofsample/MMD/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
+                                 dropout_rate=0.0,
                                  output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
@@ -69,7 +70,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=128,
+                  batch_size=512,
                   early_stop_limit=100,
                   lr_reducer=80,
                   n_per_epoch=0,
@@ -84,8 +85,10 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
-               save="_latent_first.pdf")
+    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False, title="",
+               save="_latent_first_condition.pdf")
+    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="",
+               save="_latent_first_celltype.pdf")
 
     if freeze_level == 0:
         freeze = False
@@ -106,7 +109,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                                   freeze_expression_input=freeze_expression_input,
                                   remove_dropout=True)
 
-    new_network.model_path = f"./models/CVAE/outofsample/after-{data_name}-{loss_fn}-{architecture}-{z_dim}/"
+    new_network.model_path = f"./models/CVAE/outofsample/MMD/after-{data_name}-{loss_fn}-{architecture}-{z_dim}/"
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.80)
 
     new_network.train(train_adata,
@@ -115,13 +118,13 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                       cell_type_key=cell_type_key,
                       le=new_network.condition_encoder,
                       n_epochs=10000,
-                      batch_size=128,
+                      batch_size=512,
                       n_epochs_warmup=0,
-                      early_stop_limit=50,
-                      lr_reducer=40,
+                      early_stop_limit=100,
+                      lr_reducer=80,
                       n_per_epoch=0,
                       save=True,
-                      retrain=True,
+                      retrain=False,
                       verbose=2)
 
     encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
@@ -131,8 +134,11 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key, cell_type_key], wspace=0.7, frameon=False,
-               save="_latent_out_of_sample.pdf")
+    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False,
+               save="_latent_out_of_sample_condition.pdf")
+
+    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False,
+               save="_latent_out_of_sample_celltype.pdf")
 
 
 if __name__ == '__main__':

@@ -21,16 +21,12 @@ DATASETS = {
              "HV": False},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"],
             "HV": False},
-    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
-                    "target": ["Rosenberg", "Zeisel"], "HV": True}
 }
 
 parser = argparse.ArgumentParser(description='scNet')
 arguments_group = parser.add_argument_group("Parameters")
 arguments_group.add_argument('-d', '--data', type=str, required=True,
                              help='data name')
-arguments_group.add_argument('-t', '--target_sum', type=float, required=False, default=None,
-                             help='target sum')
 args = vars(parser.parse_args())
 
 data_dict = DATASETS[args['data']]
@@ -39,9 +35,9 @@ batch_key = data_dict['batch_key']
 cell_type_key = data_dict['cell_type_key']
 target_batches = data_dict['target']
 highly_variable = data_dict['HV']
-target_sum = args['target_sum']
 
-adata = sc.read(f"./data/{data_name}/{data_name}_count_hvg.h5ad")
+adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
+adata.X = adata.raw.X
 adata = remove_sparsity(adata)
 
 n_epochs = 300
@@ -73,6 +69,7 @@ for i in range(5):
 
         final_adata.obs['labels'] = LabelEncoder().fit_transform(final_adata.obs[cell_type_key])
         final_adata.obs['batch_indices'] = LabelEncoder().fit_transform(final_adata.obs[batch_key])
+
         scvi_dataset = ADataset(final_adata)
 
         print(scvi_dataset.n_batches, scvi_dataset.n_labels)
@@ -81,7 +78,7 @@ for i in range(5):
 
         model = scVI_Trainer(vae, scvi_dataset,
                              train_size=0.80,
-                             frequency=5,
+                             frequency=n_epochs,
                              early_stopping_kwargs=early_stopping_kwargs)
         os.makedirs(f"./results/subsample/{data_name}", exist_ok=True)
         model.train(f"./results/subsample/{data_name}/scVI_frac={subsample_frac}-{i}.csv", n_epochs=n_epochs, lr=lr)
