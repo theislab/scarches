@@ -195,6 +195,8 @@ class NNClassifier:
         probs = self.classifier_model.predict(adata.X)
         predictions = np.argmax(probs, axis=1)
 
+        predictions = self.label_encoder.inverse_transform(predictions)
+
         return predictions
 
     def restore_model(self):

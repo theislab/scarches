@@ -6,7 +6,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, ReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
@@ -124,7 +124,7 @@ class scVI:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
-            h = ReLU()(h)
+            h = Activation('relu')(h)
             h = Dropout(self.dr_rate)(h)
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)

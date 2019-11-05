@@ -84,9 +84,9 @@ class ScoreCallback(Callback):
                 asw, asw_time = self.asw(latent_X)
                 ari, ari_time = self.ari(latent_X)
                 nmi, nmi_time = self.nmi(latent_X)
-                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X)
-                knn, knn_time = self.knn_purity(latent_X)
-                self.scores.append([asw, ari, nmi, ebm])
+                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15)
+                knn, knn_time = self.knn_purity(latent_X, n_neighbors=15)
+                self.scores.append([asw, ari, nmi, ebm, knn])
                 print(
                     f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f} - KNN_Purity: {knn: .4f}")
                 computation_times = asw_time + ari_time + nmi_time + ebm_time + knn_time

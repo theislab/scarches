@@ -5,7 +5,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, ReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
@@ -52,6 +52,7 @@ class CVAE:
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
+        self.beta = kwargs.get('beta', 0.0)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./models/trVAE/")
@@ -65,6 +66,7 @@ class CVAE:
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.architecture = kwargs.get("architecture", [128])
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
+        self.n_mmd_conditions = kwargs.get("n_mmd_conditions", n_conditions)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
@@ -79,6 +81,7 @@ class CVAE:
             "x_dimension": self.x_dim,
             "z_dimension": self.z_dim,
             "n_conditions": self.n_conditions,
+            "n_mmd_conditions": self.n_mmd_conditions,
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
@@ -90,6 +93,7 @@ class CVAE:
         self.training_kwargs = {
             "learning_rate": self.lr,
             "alpha": self.alpha,
+            "beta": self.beta,
             "eta": self.eta,
             "ridge": self.ridge,
             "scale_factor": self.scale_factor,
@@ -124,7 +128,7 @@ class CVAE:
 
         for idx, n_neuron in enumerate(self.architecture):
             if idx == 0:
-                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w,
                                          use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
                     [self.x, self.encoder_labels])
             else:
@@ -209,7 +213,7 @@ class CVAE:
 
         for idx, n_neuron in enumerate(self.architecture[::-1]):
             if idx == 0:
-                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                h = LAYERS['FirstLayer'](n_neuron, kernel_initializer=self.init_w,
                                          use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
                     [self.z, self.decoder_labels])
             else:
@@ -218,11 +222,14 @@ class CVAE:
             if self.use_batchnorm:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
+            if idx == 0:
+                h_mmd = h
             h = Dropout(self.dr_rate)(h)
-
+            
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
-        return model
+        mmd_model = Model(inputs=model_inputs, outputs=h_mmd, name='mmd_decoder')
+        return model, mmd_model
 
     def _create_networks(self):
         """
@@ -238,22 +245,28 @@ class CVAE:
         """
 
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
-        self.decoder_model = self._decoder(name="decoder")
+        self.decoder_model, self.decoder_mmd_model = self._decoder(name="decoder")
 
         if self.loss_fn in ['nb', 'zinb']:
             inputs = [self.x, self.encoder_labels, self.decoder_labels, self.size_factor]
-            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.size_factor]
+            encoder_outputs = self.encoder_model(inputs[:2])[2]
+            decoder_inputs = [encoder_outputs, self.decoder_labels, self.size_factor]
             self.disp_output = self.aux_models['disp'](decoder_inputs)
             if self.loss_fn == 'zinb':
                 self.pi_output = self.aux_models['pi'](decoder_inputs)
         else:
             inputs = [self.x, self.encoder_labels, self.decoder_labels]
-            decoder_inputs = [self.encoder_model(inputs[:2])[2], self.decoder_labels]
-
+            encoder_outputs = self.encoder_model(inputs[:2])[2]
+            decoder_inputs = [encoder_outputs, self.decoder_labels]
+        
         decoder_outputs = self.decoder_model(decoder_inputs)
+        decoder_mmd_outputs = self.decoder_mmd_model(decoder_inputs)
+
+        reconstruction_output = Lambda(lambda x: x, name="reconstruction")(decoder_outputs)
+        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_mmd_outputs)
 
         self.cvae_model = Model(inputs=inputs,
-                                outputs=decoder_outputs,
+                                outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
@@ -267,13 +280,16 @@ class CVAE:
         if self.loss_fn == 'nb':
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
+            mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
+            mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
+            mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
 
-        return loss
+        return loss, mmd_loss
 
     def freeze_condition_irrelevant_parts(self, trainable):
         for encoder_layer in self.cvae_model.get_layer("encoder").layers:
@@ -298,17 +314,32 @@ class CVAE:
                 Nothing will be returned.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
-        loss = self._calculate_loss()
+        loss, mmd_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
-                                loss=loss,
-                                metrics=[loss],
+                                loss=[loss, mmd_loss],
+                                metrics={self.cvae_model.outputs[0].name: loss,
+                                         self.cvae_model.outputs[1].name: mmd_loss}
                                 )
 
     def get_summary_of_networks(self):
         self.encoder_model.summary()
         self.decoder_model.summary()
         self.cvae_model.summary()
+
+    def to_mmd_layer(self, adata, encoder_labels, decoder_labels):
+        adata = remove_sparsity(adata)
+
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        mmd = self.cvae.predict([adata.X, encoder_labels])[1]
+        mmd = np.nan_to_num(mmd, nan=0.0, posinf=0.0, neginf=0.0)
+
+        adata_mmd = anndata.AnnData(X=mmd)
+        adata_mmd.obs = adata.obs.copy(deep=True)
+
+        return adata_mmd
 
     def to_latent(self, adata, encoder_labels):
         """
@@ -329,10 +360,10 @@ class CVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
         latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
-        latent = np.nan_to_num(latent)
+        latent = np.nan_to_num(latent, nan=0.0, posinf=0.0, neginf=0.0)
 
         adata_latent = anndata.AnnData(X=latent)
-        adata_latent.obs = adata.obs
+        adata_latent.obs = adata.obs.copy(deep=True)
 
         return adata_latent
 
@@ -363,7 +394,7 @@ class CVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        x_hat = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])
+        x_hat = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
 
         adata_pred = anndata.AnnData(X=x_hat)
         adata_pred.obs = adata.obs
@@ -388,8 +419,10 @@ class CVAE:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_path, 'cvae.h5'), compile=False,
-                                     custom_objects=self.custom_objects)
+        # self.cvae_model = load_model(os.path.join(self.model_path, 'cvae.h5'), compile=False,
+                                    #  custom_objects=self.custom_objects)
+        self.cvae_model.load_weights(os.path.join(self.model_path, 'cvae.h5'))
+        self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
         self.encoder_model = self.cvae_model.get_layer("encoder")
 
         self.decoder_model = self.cvae_model.get_layer("decoder")
@@ -399,7 +432,7 @@ class CVAE:
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
+        self.cvae_model.save_weights(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
@@ -443,9 +476,9 @@ class CVAE:
 
         if self.loss_fn in ['nb', 'zinb']:
             if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
-                train_adata.raw.X = train_adata.raw.X.A
+                train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
-                valid_adata.raw.X = valid_adata.raw.X.A
+                valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
         train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
                                                          condition_key=condition_key)
@@ -465,17 +498,17 @@ class CVAE:
         if self.loss_fn in ['nb', 'zinb']:
             x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
                        train_adata.obs['size_factors'].values]
-            y_train = train_adata.raw.X
+            y_train = [train_adata.raw.X, train_conditions_encoded]
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
                        valid_adata.obs['size_factors'].values]
-            y_valid = valid_adata.raw.X
+            y_valid = [valid_adata.raw.X, valid_conditions_encoded]
         else:
             x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-            y_train = train_adata.X
+            y_train = [train_adata.X, train_conditions_encoded]
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = valid_adata.X
+            y_valid = [valid_adata.X, valid_conditions_encoded]
 
         callbacks = [
             History(),

@@ -1,6 +1,7 @@
 from keras import backend as K
 from keras.engine import Layer
 from keras.layers import Dense
+from keras import initializers, regularizers, constraints
 
 
 class SliceLayer(Layer):
@@ -53,12 +54,13 @@ class FirstLayer(Layer):
         self.bias_regularizer = bias_regularizer
         self.bias_constraint = bias_constraint
         super().__init__(**kwargs)
+        Dense
 
     def build(self, input_shape):
         if not isinstance(input_shape, list):
             raise ValueError('Input shape should be a list')
 
-        assert len(input_shape) == 2
+        assert len(input_shape) >= 2
 
         self.expression_kernel = self.add_weight(shape=(input_shape[0][-1], self.units),
                                                  initializer=self.kernel_initializer,
@@ -71,6 +73,13 @@ class FirstLayer(Layer):
                                                 name='condition_kernel',
                                                 regularizer=self.kernel_regularizer,
                                                 trainable=True)
+
+        if len(input_shape) == 3:
+            self.cell_type_kernel = self.add_weight(shape=(input_shape[2][-1], self.units),
+                                                    initializer=self.kernel_initializer,
+                                                    name='cell_type_kernel',
+                                                    regularizer=self.kernel_regularizer,
+                                                    trainable=True)
 
         if self.use_bias:
             self.bias = self.add_weight(shape=(self.units,),
@@ -89,7 +98,13 @@ class FirstLayer(Layer):
 
         genes_output = K.dot(inputs[0], self.expression_kernel)
         condition_output = K.dot(inputs[1], self.condition_kernel)
-        output = genes_output + condition_output
+        
+        if len(inputs) == 3:
+            cell_type_output = K.dot(inputs[2], self.cell_type_kernel)
+        else:
+            cell_type_output = K.zeros_like(condition_output)
+        
+        output = genes_output + condition_output + cell_type_output
         if self.use_bias:
             output = K.bias_add(output, self.bias, data_format='channels_last')
 
@@ -99,10 +114,22 @@ class FirstLayer(Layer):
         if not isinstance(input_shape, list):
             raise ValueError('Input shape should be a list')
 
-        assert len(input_shape) == 2
+        assert len(input_shape) >= 2
 
         return (input_shape[0][0], self.units)
 
+    def get_config(self):
+        base_config = super(FirstLayer, self).get_config()
+        config = {}
+        config['units'] = self.units
+        config['kernel_initializer'] = initializers.serialize(self.kernel_initializer)
+        config['kernel_regularizer'] = regularizers.serialize(self.kernel_regularizer)
+        config['use_bias'] = self.use_bias
+        config['bias_initializer'] = self.bias_initializer
+        config['bias_regularizer'] = self.bias_regularizer
+        config['bias_constraint'] = constraints.serialize(self.bias_constraint)
+        return dict(list(base_config.items()) + list(config.items()))
+        
 
 LAYERS = {
     "SliceLayer": SliceLayer,
