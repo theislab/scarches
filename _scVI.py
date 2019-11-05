@@ -59,6 +59,7 @@ class scVI_Trainer(UnsupervisedTrainer):
         self.writing_time = 0
         
         self.file_name = None
+        self.ks = [15, 25, 50, 100, 200, 300]
         
                
     def on_epoch_end(self):
@@ -72,14 +73,22 @@ class scVI_Trainer(UnsupervisedTrainer):
                 asw_score, nmi_score , ari_score  = clus
                 
                 latent, batch_ind, labels = p.get_latent()
-                ebm_score = entropy_batch_mixing(latent, batch_ind)
+                ebm_scores, knn_scores = [], []
+                
+                for k in self.ks:
+                    ebm_score = entropy_batch_mixing(latent, batch_ind, n_neighbors=k)
+                    ebm_scores.append(ebm_score)
+
+                    knn_score = knn_purity(latent, labels, n_neighbors=k)
+                    knn_scores.append(knn_score)
+
                 end = time.time()
                 self.scores_time += end - begin
                 self.elapsed_time = (time.time() - self.start_time) - (self.compute_metrics_time + self.scores_time + self.writing_time)
 
                 begin = time.time()
                 
-                row = [epoch, self.elapsed_time, asw_score, nmi_score , ari_score , ebm_score]
+                row = [epoch, self.elapsed_time, asw_score, nmi_score , ari_score] + ebm_scores + knn_scores
                 with open(self.file_name, 'a') as csvFile:
                     writer = csv.writer(csvFile)
                     writer.writerow(row)
@@ -92,7 +101,7 @@ class scVI_Trainer(UnsupervisedTrainer):
     
     def train(self,file_name, n_epochs=20, lr=1e-3, eps=0.01, params=None):
         self.file_name = file_name
-        row = ["Epoch", "Elapsed Time", "ASW", "NMI" , "ARI" , "EBM"]
+        row = ["Epoch", "Elapsed Time", "ASW", "NMI" , "ARI"] + [f"EBM_{k}" for k in self.ks] + [f'KNN_{k}' for k in self.ks]
         with open(self.file_name, 'w+') as csvFile:
             writer = csv.writer(csvFile)
             writer.writerow(row)
@@ -101,7 +110,7 @@ class scVI_Trainer(UnsupervisedTrainer):
         self.start_time = time.time()
         super().train(n_epochs, lr, eps, params)
         
-
+@torch.no_grad()
 def entropy_batch_mixing(latent, labels, n_neighbors=50, n_pools=50, n_samples_per_pool=100):
     
     def entropy_from_indices(indices):
@@ -123,6 +132,21 @@ def entropy_batch_mixing(latent, labels, n_neighbors=50, n_pools=50, n_samples_p
         ])    
     
     return score
+
+@torch.no_grad()
+def knn_purity(latent, labels, n_neighbors=30):
+    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)
+    indices = nbrs.kneighbors(latent, return_distance=False)[:, 1:]
+    neighbors_labels = np.vectorize(lambda i: labels[i])(indices)
+
+    # pre cell purity scores
+    scores = ((neighbors_labels - labels.reshape(-1, 1)) == 0).mean(axis=1)
+    res = [
+        np.mean(scores[labels == i]) for i in np.unique(labels)
+    ]  # per cell-type purity
+
+    return np.mean(res)
+
 
 @torch.no_grad()
 def clustering_scores(pos, prediction_algorithm="knn"):
