@@ -70,10 +70,10 @@ class CVAEFair:
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
-        self.encoder_conditions = Input(shape=(self.n_datasets,), name="encoder_conditions")
-        self.encoder_cell_types = Input(shape=(self.n_conditions,), name="encoder_cell_types")
-        self.decoder_conditions = Input(shape=(self.n_datasets,), name="decoder_conditions")
-        self.decoder_cell_types = Input(shape=(self.n_conditions,), name="decoder_cell_types")
+        self.encoder_conditions = Input(shape=(self.n_datasets,), name="encoder_datasets")
+        self.encoder_cell_types = Input(shape=(self.n_conditions,), name="encoder_conditions")
+        self.decoder_conditions = Input(shape=(self.n_datasets,), name="decoder_datasets")
+        self.decoder_cell_types = Input(shape=(self.n_conditions,), name="decoder_conditions")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.dataset_encoder = None
