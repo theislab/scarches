@@ -64,7 +64,7 @@ class scVI_Trainer(UnsupervisedTrainer):
                
     def on_epoch_end(self):
         epoch = self.epoch
-        if self.frequency and (epoch == 0 or epoch == self.n_epochs - 1 or (epoch % self.frequency == 0)):
+        if self.file_name is not None and self.frequency and (epoch == 0 or epoch == self.n_epochs - 1 or (epoch % self.frequency == 0)):
             begin = time.time()
 
             p = self.create_posterior(self.model, self.gene_dataset, indices=np.arange(len(self.gene_dataset)))
@@ -101,11 +101,12 @@ class scVI_Trainer(UnsupervisedTrainer):
     
     def train(self,file_name, n_epochs=20, lr=1e-3, eps=0.01, params=None):
         self.file_name = file_name
-        row = ["Epoch", "Elapsed Time", "ASW", "NMI" , "ARI"] + [f"EBM_{k}" for k in self.ks] + [f'KNN_{k}' for k in self.ks]
-        with open(self.file_name, 'w+') as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerow(row)
-        csvFile.close()
+        if self.file_name is not None:
+            row = ["Epoch", "Elapsed Time", "ASW", "NMI" , "ARI"] + [f"EBM_{k}" for k in self.ks] + [f'KNN_{k}' for k in self.ks]
+            with open(self.file_name, 'w+') as csvFile:
+                writer = csv.writer(csvFile)
+                writer.writerow(row)
+            csvFile.close()
         self.scores_time = 0
         self.start_time = time.time()
         super().train(n_epochs, lr, eps, params)

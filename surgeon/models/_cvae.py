@@ -121,7 +121,7 @@ class CVAE:
                 No parameters are needed.
             # Returns
                 mean: Tensor
-                    A dense layer consists of means of gaussian distributions of latent space dimensions.
+                    A dense layer consists f means of gaussian distributions of latent space dimensions.
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
@@ -135,7 +135,7 @@ class CVAE:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False,
                           kernel_regularizer=self.regularizer)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1, trainable=True)(h)
+                h = BatchNormalization(axis=1, trainable=False)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
@@ -220,12 +220,12 @@ class CVAE:
                 h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
                           use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1, trainable=True)(h)
+                h = BatchNormalization(axis=1, trainable=False)(h)
             h = LeakyReLU()(h)
             if idx == 0:
                 h_mmd = h
             h = Dropout(self.dr_rate)(h)
-            
+        # h_mmd = self.z
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
         mmd_model = Model(inputs=model_inputs, outputs=h_mmd, name='mmd_decoder')
@@ -291,17 +291,6 @@ class CVAE:
 
         return loss, mmd_loss
 
-    def freeze_condition_irrelevant_parts(self, trainable):
-        for encoder_layer in self.cvae_model.get_layer("encoder").layers:
-            if encoder_layer.name != 'first_layer':
-                encoder_layer.trainable = trainable
-
-        for decoder_layer in self.cvae_model.get_layer("decoder").layers:
-            if decoder_layer.name != 'first_layer':
-                decoder_layer.trainable = trainable
-
-        self.compile_models()
-
     def compile_models(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
@@ -333,7 +322,7 @@ class CVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        mmd = self.cvae.predict([adata.X, encoder_labels])[1]
+        mmd = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[1]
         mmd = np.nan_to_num(mmd, nan=0.0, posinf=0.0, neginf=0.0)
 
         adata_mmd = anndata.AnnData(X=mmd)
@@ -488,7 +477,7 @@ class CVAE:
         if self.condition_encoder is None:
             self.condition_encoder = new_le
 
-        if not retrain and os.path.exists(self.model_path):
+        if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
             self.restore_model()
             return
 
@@ -531,17 +520,17 @@ class CVAE:
 
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-        if n_epochs_warmup:
-            self.freeze_condition_irrelevant_parts(False)
-            self.cvae_model.fit(x=x_train,
-                                y=y_train,
-                                validation_data=(x_valid, y_valid),
-                                epochs=n_epochs_warmup,
-                                batch_size=batch_size,
-                                verbose=verbose,
-                                callbacks=[],
-                                )
-            self.freeze_condition_irrelevant_parts(True)
+        # if n_epochs_warmup:
+        #     self.freeze_condition_irrelevant_parts(False)
+        #     self.cvae_model.fit(x=x_train,
+        #                         y=y_train,
+        #                         validation_data=(x_valid, y_valid),
+        #                         epochs=n_epochs_warmup,
+        #                         batch_size=batch_size,
+        #                         verbose=verbose,
+        #                         callbacks=[],
+        #                         )
+        #     self.freeze_condition_irrelevant_parts(True)
         self.cvae_model.fit(x=x_train,
                             y=y_train,
                             validation_data=(x_valid, y_valid),

@@ -15,7 +15,7 @@ def data():
         "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                      "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
         "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
-        "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+        "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
         "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
                         "target": ["Rosenberg", "Zeisel"]},
     }
@@ -44,29 +44,29 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
                  batch_key, cell_type_key, target_conditions):
     n_conditions = len(train_adata_for_training.obs[batch_key].unique().tolist())
 
-    z_dim_choices = {{choice([10, 15, 20, 30, 40, 50, 75, 100])}}
+    # z_dim_choices = {{choice([10, 15, 20, 30, 40, 50, 75, 100])}}
 
     alpha_choices = {{choice([0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([0.0, 0.01, 0.1, 1.0, 10.0, 100.0])}}
     eta_choices = {{choice([0.1, 1.0, 5.0, 10, 50, 100, 1000])}}
     clip_value_choices = {{choice([3, 100, 500, 1e3, 1e4, 1e5, 1e6])}}
-    batch_size_choices_before = {{choice([32, 64, 128, 256, 512, 1024])}}
+    # batch_size_choices_before = {{choice([32, 64, 128, 256, 512, 1024])}}
     batch_size_choices_after = {{choice([32, 64, 128, 256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])}}
-    architecture_choices = {{choice([[128], [512, 128], [512, 256, 128]])}}
-    use_batchnorm_choices = {{choice([True, False])}}
+    # architecture_choices = {{choice([[128], [512, 128], [512, 256, 128]])}}
+    # use_batchnorm_choices = {{choice([True, False])}}
     network = surgeon.archs.CVAE(x_dimension=train_adata_for_training.shape[1],
-                                 z_dimension=z_dim_choices,
+                                 z_dimension=10,
                                  n_conditions=n_conditions,
-                                 use_batchnorm=use_batchnorm_choices,
+                                 use_batchnorm=True,
                                  lr=0.001,
                                  alpha=alpha_choices,
                                  beta=beta_choices,
                                  eta=eta_choices,
                                  clip_value=clip_value_choices,
                                  loss_fn='mse',
-                                 architecture=architecture_choices,
-                                 model_path=f"./models/CVAE/hyperopt/before/",
+                                 architecture=[128],
+                                 model_path=f"./models/CVAE/pbmc/before/",
                                  dropout_rate=dropout_rate_choices,
                                  )
 
@@ -79,19 +79,19 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=batch_size_choices_before,
+                  batch_size=512,
                   early_stop_limit=100,
                   lr_reducer=80,
                   n_per_epoch=0,
                   save=False,
-                  retrain=True,
+                  retrain=False,
                   verbose=2)
 
     new_network = surgeon.operate(network,
                                   new_conditions=target_conditions,
                                   init='Xavier',
                                   freeze=True,
-                                  freeze_expression_input=False,
+                                  freeze_expression_input=True,
                                   remove_dropout=True)
     
     new_network.model_path = f"./models/CVAE/hyperopt/after/"
@@ -113,18 +113,19 @@ def create_model(adata_out_of_sample, train_adata_for_training, valid_adata_for_
     encoder_labels, _ = surgeon.utils.label_encoder(
         adata_out_of_sample, label_encoder=network.condition_encoder, condition_key=batch_key)
 
-    latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
+    latent_adata = new_network.to_mmd_layer(adata_out_of_sample, encoder_labels, encoder_labels)
 
     ebm = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=batch_key, n_neighbors=15, n_pools=1)
     asw = surgeon.metrics.asw(latent_adata, label_key=batch_key)
     ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
     nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
+    knn = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
 
-    objective = ari + ebm
+    objective = knn + ebm
 
-    print(f'EBM: {ebm:.4f} - ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f}')
+    print(f'EBM: {ebm:.4f} - ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - KNN: {knn:.4f}')
     print(
-        f'alpha = {new_network.alpha}, beta = {new_network.beta}, eta = {new_network.eta}, arch = {new_network.architecture}, z_dim = {new_network.z_dim}, clip_value = {new_network.clip_value}, batch_size_before = {batch_size_choices_before}, batch_size_after = {batch_size_choices_after}, dropout_rate = {new_network.dr_rate}, lr = {new_network.lr}')
+        f'alpha = {new_network.alpha}, beta = {new_network.beta}, eta = {new_network.eta}, arch = {new_network.architecture}, z_dim = {new_network.z_dim}, clip_value = {new_network.clip_value}, batch_size_after = {batch_size_choices_after}, dropout_rate = {new_network.dr_rate}, lr = {new_network.lr}')
 
     return {'loss': -objective, 'status': STATUS_OK}
 

@@ -7,7 +7,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 DATASETS = {
     "panorama": {"name": "panorama", "batch_key": "study", "cell_type_key": "cell_type", 
-                 "target": ["Pancreas inDrop", "PBMC 68K", "Macrophage Mixed", "Jurkat"]},
+                 "target": ["Pancreas SS2", "PBMC 68K", "Macrophage Mixed", "Jurkat"]},
 }
 
 
@@ -22,7 +22,7 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     else:
         clip_value = 1000
 
-    path_to_save = f"./results/classification/{data_name}-{loss_fn}-freeze_level={freeze_level}/"
+    path_to_save = f"./results/classification/{data_name}/freeze_level={freeze_level}/"
     sc.settings.figdir = path_to_save
     os.makedirs(path_to_save, exist_ok=True)
 

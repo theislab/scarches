@@ -8,7 +8,7 @@ import surgeon
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
-                 "target": ["Pancreas SS2", "Pancreas inDrop"]},
+                 "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
 }
 
 
@@ -48,7 +48,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
 
     batch_key = 'study'
 
-    batch_colors = palettes.vega_20_scanpy[:n_batches]
+    batch_colors = palettes.zeileis_26[:n_batches]
     cell_type_colors = palettes.godsnot_64[:n_cell_types]
 
     sc.pp.neighbors(adata)
@@ -63,16 +63,16 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
-    architecture = [128]
-    z_dim = 15
+    architecture = [128, 64, 32]
+    z_dim = 10
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                  z_dimension=z_dim,
                                  architecture=architecture,
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
-                                 beta=1.0,
-                                 use_batchnorm=True,
+                                 beta=100.0,
+                                 use_batchnorm=False,
                                  eta=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
@@ -89,9 +89,9 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=512,
-                  early_stop_limit=100,
-                  lr_reducer=80,
+                  batch_size=1024,
+                  early_stop_limit=50,
+                  lr_reducer=40,
                   n_per_epoch=0,
                   save=True,
                   retrain=False,
@@ -112,6 +112,9 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                save="_latent_first_celltype.pdf")
 
 
+    network.beta = 0.0
+    network.eta = 0.1
+
     new_network = network
     adata_vis = adata_for_training
     for idx, new_batch in enumerate(target_conditions):
@@ -120,7 +123,6 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
 
         new_network = surgeon.operate(new_network,
                                       new_conditions=[new_batch],
-                                      remove_dropout=True,
                                       init='Xavier',
                                       freeze=freeze,
                                       freeze_expression_input=freeze_expression)

@@ -2,6 +2,7 @@ import argparse
 import os
 
 import scanpy as sc
+from scanpy.plotting import palettes
 
 import surgeon
 
@@ -35,6 +36,9 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     adata.obs['study'] = adata.obs[batch_key].values
     batch_key = 'study'
 
+    n_batches = len(adata.obs[batch_key].unique().tolist())
+    n_cell_types = len(adata.obs[cell_type_key].unique().tolist())
+
     adata_out_of_sample = adata[adata.obs[batch_key].isin(target_conditions)]
     adata_for_training = adata[~adata.obs[batch_key].isin(target_conditions)]
 
@@ -43,7 +47,10 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
-    architecture = [128]
+    batch_colors = palettes.zeileis_26[:n_batches]
+    cell_type_colors = palettes.godsnot_64[:n_cell_types]
+
+    architecture = [128, 64, 32]
     z_dim = 10
     network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                  z_dimension=z_dim,
@@ -51,13 +58,12 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                                  n_conditions=n_conditions,
                                  lr=0.001,
                                  alpha=0.001,
-                                 beta=1.0,
-                                 use_batchnorm=True,
+                                 beta=100.0,
+                                 use_batchnorm=False,
                                  eta=1.0,
-                                 scale_factor=1.0,
                                  clip_value=clip_value,
                                  loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/outofsample/MMD/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
+                                 model_path=f"./models/CVAE/outofsample/{data_name}/before-{architecture}-{z_dim}/",
                                  dropout_rate=0.0,
                                  output_activation='relu')
 
@@ -70,9 +76,9 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                   cell_type_key=cell_type_key,
                   le=condition_encoder,
                   n_epochs=10000,
-                  batch_size=512,
-                  early_stop_limit=100,
-                  lr_reducer=80,
+                  batch_size=1024,
+                  early_stop_limit=50,
+                  lr_reducer=40,
                   n_per_epoch=0,
                   save=True,
                   retrain=False,
@@ -85,9 +91,9 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False, title="",
+    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False, title="", palette=,
                save="_latent_first_condition.pdf")
-    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="",
+    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="", palette=,
                save="_latent_first_celltype.pdf")
 
     if freeze_level == 0:

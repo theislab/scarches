@@ -11,7 +11,7 @@ DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
                  "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
-    "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type",
+    "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type",
              "target": ["inDrops", "Drop-seq"]},
     "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
                     "target": ["Rosenberg", "Zeisel"]},
@@ -32,7 +32,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     if loss_fn == 'nb':
         clip_value = 3.0
     else:
-        clip_value = 1e6
+        clip_value = 1000
 
     if freeze_level == 0:
         freeze = False
@@ -60,58 +60,56 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                 condition_adata_subsampled = condition_adata[keep_idx, :]
                 adata_out_of_sample_subsampled = condition_adata_subsampled if adata_out_of_sample_subsampled is None \
                     else adata_out_of_sample_subsampled.concatenate(condition_adata_subsampled)
-                raw_out_of_sample = sc.AnnData(
-                    condition_adata_subsampled.raw.X) if raw_out_of_sample is None else raw_out_of_sample.concatenate(
-                    sc.AnnData(condition_adata_subsampled.raw.X))
-            adata_out_of_sample_subsampled.raw = raw_out_of_sample
 
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             z_dim = 10
-            architecture = [128]
+            architecture = [128, 64, 32]
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                          z_dimension=z_dim,
                                          architecture=architecture,
-                                         use_batchnorm=True,
+                                         use_batchnorm=False,
                                          n_conditions=n_conditions,
                                          lr=0.001,
-                                         alpha=0.001,
-                                         beta=1.0,
-                                         scale_factor=1.0,
+                                         alpha=0.0005,
+                                         beta=100.0,
                                          eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/subsample/MMD/before-{data_name}-{loss_fn}-{z_dim}/",
-                                         dropout_rate=0.0,
+                                         model_path=f"./models/CVAE/{data_name}/{loss_fn}/before/",
+                                         dropout_rate=0.05,
                                          output_activation='relu')
 
             conditions = adata_for_training.obs[condition_key].unique().tolist()
             condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
 
+            # network.restore_model()
             network.train(train_adata,
                           valid_adata,
                           condition_key=condition_key,
                           cell_type_key=cell_type_key,
                           le=condition_encoder,
                           n_epochs=10000,
-                          batch_size=512,
-                          early_stop_limit=100,
-                          lr_reducer=80,
+                          batch_size=1024,
+                          early_stop_limit=50,
+                          lr_reducer=40,
                           n_per_epoch=0,
                           save=True,
                           retrain=False,
                           verbose=2)
 
+            network.beta = 1000
+            network.eta = 0.1
+
             new_network = surgeon.operate(network,
                                           new_conditions=target_conditions,
-                                          remove_dropout=True,
                                           init='Xavier',
                                           freeze=freeze,
                                           freeze_expression_input=freeze_expression)
 
-            new_network.model_path = f"./models/CVAE/subsample/MMD/after-{data_name}-{loss_fn}-{z_dim}-{subsample_frac}-{freeze}/"
+            new_network.model_path = f"./models/CVAE/{data_name}/after-{z_dim}-{subsample_frac}-{freeze_level}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.80)
 
             new_network.train(train_adata,
@@ -122,8 +120,8 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                               n_epochs=10000,
                               batch_size=512,
                               n_epochs_warmup=0,
-                              early_stop_limit=100,
-                              lr_reducer=80,
+                              early_stop_limit=50,
+                              lr_reducer=40,
                               n_per_epoch=0,
                               save=True,
                               retrain=True,
@@ -132,7 +130,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
             encoder_labels, _ = surgeon.utils.label_encoder(
                 adata_out_of_sample_subsampled, label_encoder=network.condition_encoder, condition_key=condition_key)
 
-            latent_adata = new_network.to_latent(adata_out_of_sample_subsampled, encoder_labels)
+            latent_adata = new_network.to_mmd_layer(adata_out_of_sample_subsampled, encoder_labels, encoder_labels)
 
             asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
             ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
