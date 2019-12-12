@@ -5,7 +5,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, ReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
@@ -53,6 +53,7 @@ class CVAEFair:
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
+        self.beta = kwargs.get("beta", 1.0)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./models/trVAE/")
@@ -143,7 +144,8 @@ class CVAEFair:
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
-        model = Model(inputs=[self.x, self.encoder_conditions], outputs=[mean, log_var, z], name=name)
+        model = Model(inputs=[self.x, self.encoder_conditions, self.encoder_cell_types], outputs=[mean, log_var, z],
+                      name=name)
         return mean, log_var, model
 
     def _output_decoder(self, h):
@@ -160,11 +162,12 @@ class CVAEFair:
 
             model_outputs = LAYERS['SliceLayer'](0, name='kl_nb')([h_mean, h_disp])
 
-            model_inputs = [self.z, self.decoder_conditions, self.size_factor]
+            model_inputs = [self.z, self.decoder_conditions, self.decoder_cell_types, self.size_factor]
             model_outputs = [model_outputs]
 
-            self.aux_models['disp'] = Model(inputs=[self.z, self.decoder_conditions, self.size_factor],
-                                            output=h_disp)
+            self.aux_models['disp'] = Model(
+                inputs=[self.z, self.decoder_conditions, self.decoder_cell_types, self.size_factor],
+                output=h_disp)
         elif self.loss_fn == 'zinb':
             h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
@@ -181,21 +184,23 @@ class CVAEFair:
             model_outputs = LAYERS['SliceLayer'](0, name='kl_zinb')(
                 [mean_output, h_disp, h_pi])
 
-            model_inputs = [self.z, self.decoder_conditions, self.size_factor]
+            model_inputs = [self.z, self.decoder_conditions, self.decoder_cell_types, self.size_factor]
             model_outputs = [model_outputs]
 
-            self.aux_models['disp'] = Model(inputs=[self.z, self.decoder_conditions, self.size_factor],
-                                            output=h_disp)
+            self.aux_models['disp'] = Model(
+                inputs=[self.z, self.decoder_conditions, self.decoder_cell_types, self.size_factor],
+                output=h_disp)
 
-            self.aux_models['pi'] = Model(inputs=[self.z, self.decoder_conditions, self.size_factor],
-                                          output=h_pi)
+            self.aux_models['pi'] = Model(
+                inputs=[self.z, self.decoder_conditions, self.decoder_cell_types, self.size_factor],
+                output=h_pi)
 
         else:
             h = Dense(self.x_dim, activation=None, kernel_regularizer=self.regularizer,
                       kernel_initializer=self.init_w,
                       use_bias=True)(h)
             h = ACTIVATIONS[self.output_activation](h)
-            model_inputs = [self.z, self.decoder_conditions]
+            model_inputs = [self.z, self.decoder_conditions, self.decoder_cell_types]
             model_outputs = [h]
 
         return model_inputs, model_outputs
@@ -224,10 +229,13 @@ class CVAEFair:
                 h = BatchNormalization(axis=1, trainable=True)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
+            if idx == 0:
+                h_mmd = h
 
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
-        return model
+        mmd_model = Model(inputs=model_inputs, outputs=h_mmd, name="mmd_decoder")
+        return model, mmd_model
 
     def _create_networks(self):
         """
@@ -243,7 +251,7 @@ class CVAEFair:
         """
 
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
-        self.decoder_model = self._decoder(name="decoder")
+        self.decoder_model, self.decoder_mmd_model = self._decoder(name="decoder")
 
         if self.loss_fn in ['nb', 'zinb']:
             inputs = [self.x, self.encoder_conditions, self.encoder_cell_types, self.decoder_conditions,
@@ -259,9 +267,13 @@ class CVAEFair:
             decoder_inputs = [self.encoder_model(inputs[:3])[2], self.decoder_conditions, self.decoder_cell_types]
 
         decoder_outputs = self.decoder_model(decoder_inputs)
+        decoder_mmd_outputs = self.decoder_mmd_model(decoder_inputs)
+
+        reconstruction_output = Lambda(lambda x: x, name="reconstruction")(decoder_outputs)
+        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_mmd_outputs)
 
         self.cvae_model = Model(inputs=inputs,
-                                outputs=decoder_outputs,
+                                outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
@@ -275,13 +287,15 @@ class CVAEFair:
         if self.loss_fn == 'nb':
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
+            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
+            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
-
-        return loss
+            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
+        return loss, mmd_loss
 
     def freeze_condition_irrelevant_parts(self, trainable):
         for encoder_layer in self.cvae_model.get_layer("encoder").layers:
@@ -306,11 +320,12 @@ class CVAEFair:
                 Nothing will be returned.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
-        loss = self._calculate_loss()
+        loss, mmd_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
-                                loss=loss,
-                                metrics=[loss],
+                                loss=[loss, mmd_loss],
+                                metrics={self.cvae_model.outputs[0].name: loss,
+                                         self.cvae_model.outputs[1].name: mmd_loss},
                                 )
 
     def get_summary_of_networks(self):
@@ -338,6 +353,37 @@ class CVAEFair:
         encoder_cell_types = to_categorical(encoder_cell_types, num_classes=self.n_cell_types)
 
         latent = self.encoder_model.predict([adata.X, encoder_conditions, encoder_cell_types])[2]
+        latent = np.nan_to_num(latent)
+
+        adata_latent = anndata.AnnData(X=latent)
+        adata_latent.obs = adata.obs
+
+        return adata_latent
+
+    def to_mmd_layer(self, adata, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types):
+        """
+            Map `data` in to the latent space. This function will feed data
+            in encoder part of C-VAE and compute the latent space coordinates
+            for each sample in data.
+            # Parameters
+                data: `~anndata.AnnData`
+                    Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
+                labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as CVAE's condition array.
+            # Returns
+                latent: numpy nd-array
+                    returns array containing latent space encoding of 'data'
+        """
+        adata = remove_sparsity(adata)
+
+        encoder_conditions = to_categorical(encoder_conditions, num_classes=self.n_conditions)
+        decoder_conditions = to_categorical(decoder_conditions, num_classes=self.n_conditions)
+
+        encoder_cell_types = to_categorical(encoder_cell_types, num_classes=self.n_cell_types)
+        decoder_cell_types = to_categorical(decoder_cell_types, num_classes=self.n_cell_types)
+
+        latent = self.cvae_model.predict(
+            [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types])[1]
         latent = np.nan_to_num(latent)
 
         adata_latent = anndata.AnnData(X=latent)
@@ -376,10 +422,10 @@ class CVAEFair:
         if self.loss_fn in ['nb', 'zinb']:
             x_hat = self.cvae_model.predict(
                 [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types,
-                 adata.obs['size_factors'].values])
+                 adata.obs['size_factors'].values])[0]
         else:
             x_hat = self.cvae_model.predict(
-                [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types])
+                [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types])[0]
 
         adata_pred = anndata.AnnData(X=x_hat)
         adata_pred.obs = adata.obs
@@ -418,7 +464,8 @@ class CVAEFair:
         self.cvae_model.save(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
-    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
+    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', condition_encoder=None,
+              cell_type_encoder=None,
               n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, n_epochs_warmup=0,
               score_filename="./scores.log", lr_reducer=10, save=True, verbose=2, retrain=True):
         """
@@ -463,14 +510,14 @@ class CVAEFair:
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw.X = valid_adata.raw.X.A
 
-        train_conditions_encoded, new_le_condition = label_encoder(train_adata, label_encoder=le,
-                                                         condition_key=condition_key)
-        train_cell_types_encoded, new_le_cell_type = label_encoder(train_adata, label_encoder=None,
-                                                         condition_key=cell_type_key)
+        train_conditions_encoded, new_le_condition = label_encoder(train_adata, label_encoder=condition_encoder,
+                                                                   condition_key=condition_key)
+        train_cell_types_encoded, new_le_cell_type = label_encoder(train_adata, label_encoder=cell_type_encoder,
+                                                                   condition_key=cell_type_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le,
+        valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=condition_encoder,
                                                     condition_key=condition_key)
-        valid_cell_types_encoded, _ = label_encoder(valid_adata, label_encoder=None,
+        valid_cell_types_encoded, _ = label_encoder(valid_adata, label_encoder=cell_type_encoder,
                                                     condition_key=cell_type_key)
 
         if self.condition_encoder is None:
@@ -490,20 +537,20 @@ class CVAEFair:
             x_train = [train_adata.X, train_conditions_onehot, train_cell_types_onehot,
                        train_conditions_onehot, train_cell_types_encoded,
                        train_adata.obs['size_factors'].values]
-            y_train = train_adata.raw.X
+            y_train = [train_adata.raw.X, train_conditions_encoded]
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_cell_types_onehot,
                        valid_conditions_onehot, valid_cell_types_onehot,
                        valid_adata.obs['size_factors'].values]
-            y_valid = valid_adata.raw.X
+            y_valid = [valid_adata.raw.X, valid_conditions_encoded]
         else:
             x_train = [train_adata.X, train_conditions_onehot, train_cell_types_onehot,
                        train_conditions_onehot, train_cell_types_onehot]
-            y_train = train_adata.X
+            y_train = [train_adata.X, train_conditions_encoded]
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_cell_types_onehot,
                        valid_conditions_onehot, valid_cell_types_onehot]
-            y_valid = valid_adata.X
+            y_valid = [valid_adata.X, valid_conditions_encoded]
 
         callbacks = [
             History(),
