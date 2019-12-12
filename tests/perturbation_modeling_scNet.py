@@ -47,8 +47,8 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     network = surgeon.archs.CVAEFair(x_dimension=train_adata.shape[1],
                                      z_dimension=z_dim,
                                      architecture=architecture,
-                                     n_conditions=n_datasets,
-                                     n_cell_types=n_conditions,
+                                     n_datasets=n_datasets,
+                                     n_conditions=n_conditions,
                                      lr=0.001,
                                      alpha=0.00001,
                                      beta=0.0,
@@ -68,10 +68,10 @@ def train_scNet(data_dict, freeze_level, loss_fn):
 
     network.train(train_adata,
                   valid_adata,
-                  condition_key=dataset_key,
-                  cell_type_key=condition_key,
-                  condition_encoder=dataset_encoder,
-                  cell_type_encoder=condition_encoder,
+                  dataset_key=dataset_key,
+                  condition_key=condition_key,
+                  dataset_encoder=dataset_encoder,
+                  condition_encoder=condition_encoder,
                   n_epochs=10000,
                   batch_size=512,
                   early_stop_limit=100,
@@ -81,10 +81,10 @@ def train_scNet(data_dict, freeze_level, loss_fn):
                   retrain=True,
                   verbose=2)
 
-    encoder_conditions, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
-                                                    condition_key=dataset_key)
-    encoder_cell_types, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.cell_type_encoder,
-                                                    condition_key=condition_key)
+    encoder_conditions, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.dataset_encoder,
+                                                        condition_key=dataset_key)
+    encoder_cell_types, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
+                                                        condition_key=condition_key)
 
     latent_adata = network.to_latent(adata_for_training, encoder_conditions, encoder_cell_types)
 
@@ -106,10 +106,10 @@ def train_scNet(data_dict, freeze_level, loss_fn):
         raise Exception("Invalid freeze level.")
 
 
-    new_network = surgeon.operate_fair(network, 
-                                       new_conditions=target_dataset,
-                                       new_cell_types=target_condition, 
-                                       freeze=freeze, 
+    new_network = surgeon.operate_fair(network,
+                                       new_datasets=target_dataset,
+                                       new_conditions=target_condition,
+                                       freeze=freeze,
                                        freeze_expression_input=freeze_expression_input,
                                        remove_dropout=True,
                                        )
@@ -122,10 +122,10 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     
     new_network.train(net_train_adata,
                       net_valid_adata,
-                      condition_key=dataset_key,
-                      cell_type_key=condition_key,
+                      dataset_key=dataset_key,
+                      condition_key=condition_key,
+                      dataset_encoder=new_network.dataset_encoder,
                       condition_encoder=new_network.condition_encoder,
-                      cell_type_encoder=new_network.cell_type_encoder,
                       n_epochs=10000,
                       batch_size=512,
                       n_epochs_warmup=0,
@@ -141,13 +141,13 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     source_adata = cell_type_adata[cell_type_adata.obs[condition_key] != target_condition]
     target_adata = cell_type_adata[cell_type_adata.obs[condition_key] == target_condition]
     
-    encoder_conditions, _ = surgeon.utils.label_encoder(source_adata, label_encoder=new_network.condition_encoder,
-                                                    condition_key=dataset_key)
-    encoder_cell_types, _ = surgeon.utils.label_encoder(source_adata, label_encoder=new_network.cell_type_encoder,
-                                                    condition_key=condition_key)
+    encoder_conditions, _ = surgeon.utils.label_encoder(source_adata, label_encoder=new_network.dataset_encoder,
+                                                        condition_key=dataset_key)
+    encoder_cell_types, _ = surgeon.utils.label_encoder(source_adata, label_encoder=new_network.condition_encoder,
+                                                        condition_key=condition_key)
     
     decoder_conditions = encoder_conditions
-    decoder_cell_types = np.zeros_like(encoder_conditions) + new_network.cell_type_encoder[target_condition]
+    decoder_cell_types = np.zeros_like(encoder_conditions) + new_network.condition_encoder[target_condition]
 
     reconstructed_adata = new_network.predict(source_adata, encoder_conditions, decoder_cell_types, decoder_conditions, decoder_cell_types)
 

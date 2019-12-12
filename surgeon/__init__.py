@@ -154,27 +154,27 @@ def operate(network: archs.CVAE,
 
 
 def operate_fair(network: archs.CVAEFair,
+                 new_datasets: list_str,
                  new_conditions: list_str,
-                 new_cell_types: list_str,
                  init: str = 'Xavier',
                  freeze: bool = True,
                  freeze_expression_input: bool = False,
                  remove_dropout: bool = True,
                  print_summary: bool = True,
                  ) -> archs.CVAEFair:
+    if isinstance(new_datasets, str):
+        new_datasets = [new_datasets]
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
-    if isinstance(new_cell_types, str):
-        new_cell_types = [new_cell_types]
 
+    n_new_datasets = len(new_datasets)
     n_new_conditions = len(new_conditions)
-    n_new_cell_types = len(new_cell_types)
 
     network_kwargs = network.network_kwargs
     training_kwargs = network.training_kwargs
 
+    network_kwargs['n_datasets'] += n_new_datasets
     network_kwargs['n_conditions'] += n_new_conditions
-    network_kwargs['n_cell_types'] += n_new_cell_types
     network_kwargs['freeze_expression_input'] = freeze_expression_input
 
     if remove_dropout:
@@ -228,33 +228,33 @@ def operate_fair(network: archs.CVAEFair,
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
         to_be_added_weights_encoder_condition = np.ones(
-            shape=(n_new_conditions, prev_condition_weights_encoder.shape[1]))
+            shape=(n_new_datasets, prev_condition_weights_encoder.shape[1]))
         to_be_added_weights_encoder_cell_type = np.ones(
-            shape=(n_new_cell_types, prev_cell_type_weights_encoder.shape[1]))
+            shape=(n_new_conditions, prev_cell_type_weights_encoder.shape[1]))
         to_be_added_weights_decoder_condition = np.ones(
-            shape=(n_new_conditions, prev_condition_weights_decoder.shape[1]))
+            shape=(n_new_datasets, prev_condition_weights_decoder.shape[1]))
         to_be_added_weights_decoder_cell_type = np.ones(
-            shape=(n_new_cell_types, prev_cell_type_weights_decoder.shape[1]))
+            shape=(n_new_conditions, prev_cell_type_weights_decoder.shape[1]))
     elif init == "zeros":
         to_be_added_weights_encoder_condition = np.zeros(
-            shape=(n_new_conditions, prev_condition_weights_encoder.shape[1]))
+            shape=(n_new_datasets, prev_condition_weights_encoder.shape[1]))
         to_be_added_weights_encoder_cell_type = np.zeros(
-            shape=(n_new_cell_types, prev_cell_type_weights_encoder.shape[1]))
+            shape=(n_new_conditions, prev_cell_type_weights_encoder.shape[1]))
         to_be_added_weights_decoder_condition = np.zeros(
-            shape=(n_new_conditions, prev_condition_weights_decoder.shape[1]))
+            shape=(n_new_datasets, prev_condition_weights_decoder.shape[1]))
         to_be_added_weights_decoder_cell_type = np.zeros(
-            shape=(n_new_cell_types, prev_cell_type_weights_decoder.shape[1]))
+            shape=(n_new_conditions, prev_cell_type_weights_decoder.shape[1]))
     elif init == "Xavier":
-        to_be_added_weights_encoder_condition = np.random.randn(n_new_conditions,
+        to_be_added_weights_encoder_condition = np.random.randn(n_new_datasets,
                                                                 prev_condition_weights_encoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_encoder.shape[0] + 1 + prev_condition_weights_encoder.shape[1]))
-        to_be_added_weights_encoder_cell_type = np.random.randn(n_new_cell_types,
+        to_be_added_weights_encoder_cell_type = np.random.randn(n_new_conditions,
                                                                 prev_cell_type_weights_encoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_encoder.shape[0] + 1 + prev_condition_weights_encoder.shape[1]))
-        to_be_added_weights_decoder_condition = np.random.randn(n_new_conditions,
+        to_be_added_weights_decoder_condition = np.random.randn(n_new_datasets,
                                                                 prev_condition_weights_decoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_decoder.shape[0] + 1 + prev_condition_weights_decoder.shape[1]))
-        to_be_added_weights_decoder_cell_type = np.random.randn(n_new_cell_types,
+        to_be_added_weights_decoder_cell_type = np.random.randn(n_new_conditions,
                                                                 prev_cell_type_weights_decoder.shape[1]) * np.sqrt(
             2 / (prev_condition_weights_decoder.shape[0] + 1 + prev_condition_weights_decoder.shape[1]))
     else:
@@ -316,11 +316,11 @@ def operate_fair(network: archs.CVAEFair,
         new_network.get_summary_of_networks()
 
     # Add new condition to new network condition encoder
+    new_network.dataset_encoder = network.dataset_encoder
     new_network.condition_encoder = network.condition_encoder
-    new_network.cell_type_encoder = network.cell_type_encoder
-    for idx, new_condition in enumerate(new_conditions):
-        new_network.condition_encoder[new_condition] = network.n_conditions + idx
-    for idx, new_cell_type in enumerate(new_cell_types):
-        new_network.cell_type_encoder[new_cell_type] = network.n_cell_types + idx
+    for idx, new_condition in enumerate(new_datasets):
+        new_network.dataset_encoder[new_condition] = network.n_datasets + idx
+    for idx, new_cell_type in enumerate(new_conditions):
+        new_network.condition_encoder[new_cell_type] = network.n_conditions + idx
 
     return new_network

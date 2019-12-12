@@ -44,12 +44,12 @@ class CVAEFair:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, n_cell_types, z_dimension=100, **kwargs):
+    def __init__(self, x_dimension, n_datasets, n_conditions, z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
 
+        self.n_datasets = n_datasets
         self.n_conditions = n_conditions
-        self.n_cell_types = n_cell_types
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
@@ -70,21 +70,21 @@ class CVAEFair:
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
-        self.encoder_conditions = Input(shape=(self.n_conditions,), name="encoder_conditions")
-        self.encoder_cell_types = Input(shape=(self.n_cell_types,), name="encoder_cell_types")
-        self.decoder_conditions = Input(shape=(self.n_conditions,), name="decoder_conditions")
-        self.decoder_cell_types = Input(shape=(self.n_cell_types,), name="decoder_cell_types")
+        self.encoder_conditions = Input(shape=(self.n_datasets,), name="encoder_conditions")
+        self.encoder_cell_types = Input(shape=(self.n_conditions,), name="encoder_cell_types")
+        self.decoder_conditions = Input(shape=(self.n_datasets,), name="decoder_conditions")
+        self.decoder_cell_types = Input(shape=(self.n_conditions,), name="decoder_cell_types")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
+        self.dataset_encoder = None
         self.condition_encoder = None
-        self.cell_type_encoder = None
         self.aux_models = {}
 
         self.network_kwargs = {
             "x_dimension": self.x_dim,
             "z_dimension": self.z_dim,
+            "n_datasets": self.n_datasets,
             "n_conditions": self.n_conditions,
-            "n_cell_types": self.n_cell_types,
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
@@ -287,14 +287,14 @@ class CVAEFair:
         if self.loss_fn == 'nb':
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
-            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
-            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
-            mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
         return loss, mmd_loss
 
     def freeze_condition_irrelevant_parts(self, trainable):
@@ -333,7 +333,7 @@ class CVAEFair:
         self.decoder_model.summary()
         self.cvae_model.summary()
 
-    def to_latent(self, adata, encoder_conditions, encoder_cell_types):
+    def to_latent(self, adata, encoder_datasets, encoder_conditions):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -349,10 +349,10 @@ class CVAEFair:
         """
         adata = remove_sparsity(adata)
 
+        encoder_datasets = to_categorical(encoder_datasets, num_classes=self.n_datasets)
         encoder_conditions = to_categorical(encoder_conditions, num_classes=self.n_conditions)
-        encoder_cell_types = to_categorical(encoder_cell_types, num_classes=self.n_cell_types)
 
-        latent = self.encoder_model.predict([adata.X, encoder_conditions, encoder_cell_types])[2]
+        latent = self.encoder_model.predict([adata.X, encoder_datasets, encoder_conditions])[2]
         latent = np.nan_to_num(latent)
 
         adata_latent = anndata.AnnData(X=latent)
@@ -360,7 +360,7 @@ class CVAEFair:
 
         return adata_latent
 
-    def to_mmd_layer(self, adata, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types):
+    def to_mmd_layer(self, adata, encoder_datasets, encoder_conditions, decoder_datasets, decoder_conditions):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -375,15 +375,15 @@ class CVAEFair:
                     returns array containing latent space encoding of 'data'
         """
         adata = remove_sparsity(adata)
+
+        encoder_datasets = to_categorical(encoder_datasets, num_classes=self.n_datasets)
+        decoder_datasets = to_categorical(decoder_datasets, num_classes=self.n_datasets)
 
         encoder_conditions = to_categorical(encoder_conditions, num_classes=self.n_conditions)
         decoder_conditions = to_categorical(decoder_conditions, num_classes=self.n_conditions)
 
-        encoder_cell_types = to_categorical(encoder_cell_types, num_classes=self.n_cell_types)
-        decoder_cell_types = to_categorical(decoder_cell_types, num_classes=self.n_cell_types)
-
         latent = self.cvae_model.predict(
-            [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types])[1]
+            [adata.X, encoder_datasets, encoder_conditions, decoder_datasets, decoder_conditions])[1]
         latent = np.nan_to_num(latent)
 
         adata_latent = anndata.AnnData(X=latent)
@@ -391,7 +391,7 @@ class CVAEFair:
 
         return adata_latent
 
-    def predict(self, adata, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types):
+    def predict(self, adata, encoder_datasets, encoder_conditions, decoder_datasets, decoder_conditions):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -415,17 +415,19 @@ class CVAEFair:
         """
         adata = remove_sparsity(adata)
 
+        encoder_datasets = to_categorical(encoder_datasets, num_classes=self.n_datasets)
         encoder_conditions = to_categorical(encoder_conditions, num_classes=self.n_conditions)
-        encoder_cell_types = to_categorical(encoder_cell_types, num_classes=self.n_cell_types)
+
+        decoder_datasets = to_categorical(decoder_datasets, num_classes=self.n_datasets)
         decoder_conditions = to_categorical(decoder_conditions, num_classes=self.n_conditions)
-        decoder_cell_types = to_categorical(decoder_cell_types, num_classes=self.n_cell_types)
+
         if self.loss_fn in ['nb', 'zinb']:
             x_hat = self.cvae_model.predict(
-                [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types,
+                [adata.X, encoder_datasets, encoder_conditions, decoder_datasets, decoder_conditions,
                  adata.obs['size_factors'].values])[0]
         else:
             x_hat = self.cvae_model.predict(
-                [adata.X, encoder_conditions, encoder_cell_types, decoder_conditions, decoder_cell_types])[0]
+                [adata.X, encoder_datasets, encoder_conditions, decoder_datasets, decoder_conditions])[0]
 
         adata_pred = anndata.AnnData(X=x_hat)
         adata_pred.obs = adata.obs
@@ -464,10 +466,10 @@ class CVAEFair:
         self.cvae_model.save(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
-    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', condition_encoder=None,
-              cell_type_encoder=None,
-              n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, n_epochs_warmup=0,
-              score_filename="./scores.log", lr_reducer=10, save=True, verbose=2, retrain=True):
+    def train(self, train_adata, valid_adata, dataset_key, condition_key='condition',
+              dataset_encoder=None, condition_encoder=None,
+              n_epochs=25, batch_size=32, early_stop_limit=20,
+              lr_reducer=10, save=True, verbose=2, retrain=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -510,80 +512,58 @@ class CVAEFair:
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw.X = valid_adata.raw.X.A
 
-        train_conditions_encoded, new_le_condition = label_encoder(train_adata, label_encoder=condition_encoder,
+        train_conditions_encoded, new_le_condition = label_encoder(train_adata, label_encoder=dataset_encoder,
+                                                                   condition_key=dataset_key)
+        train_cell_types_encoded, new_le_cell_type = label_encoder(train_adata, label_encoder=condition_encoder,
                                                                    condition_key=condition_key)
-        train_cell_types_encoded, new_le_cell_type = label_encoder(train_adata, label_encoder=cell_type_encoder,
-                                                                   condition_key=cell_type_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=condition_encoder,
+        valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=dataset_encoder,
+                                                    condition_key=dataset_key)
+        valid_cell_types_encoded, _ = label_encoder(valid_adata, label_encoder=condition_encoder,
                                                     condition_key=condition_key)
-        valid_cell_types_encoded, _ = label_encoder(valid_adata, label_encoder=cell_type_encoder,
-                                                    condition_key=cell_type_key)
 
-        if self.condition_encoder is None:
-            self.condition_encoder = new_le_condition
-            self.cell_type_encoder = new_le_cell_type
+        if self.dataset_encoder is None:
+            self.dataset_encoder = new_le_condition
+            self.condition_encoder = new_le_cell_type
 
         if not retrain and os.path.exists(self.model_path):
             self.restore_model()
             return
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        train_cell_types_onehot = to_categorical(train_cell_types_encoded, num_classes=self.n_cell_types)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-        valid_cell_types_onehot = to_categorical(valid_cell_types_encoded, num_classes=self.n_cell_types)
+        train_datasets_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_datasets)
+        train_conditions_onehot = to_categorical(train_cell_types_encoded, num_classes=self.n_conditions)
+        valid_datasets_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_datasets)
+        valid_conditions_onehot = to_categorical(valid_cell_types_encoded, num_classes=self.n_conditions)
 
         if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_adata.X, train_conditions_onehot, train_cell_types_onehot,
-                       train_conditions_onehot, train_cell_types_encoded,
+            x_train = [train_adata.X, train_datasets_onehot, train_conditions_onehot,
+                       train_datasets_onehot, train_cell_types_encoded,
                        train_adata.obs['size_factors'].values]
             y_train = [train_adata.raw.X, train_conditions_encoded]
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_cell_types_onehot,
-                       valid_conditions_onehot, valid_cell_types_onehot,
+            x_valid = [valid_adata.X, valid_datasets_onehot, valid_conditions_onehot,
+                       valid_datasets_onehot, valid_conditions_onehot,
                        valid_adata.obs['size_factors'].values]
             y_valid = [valid_adata.raw.X, valid_conditions_encoded]
         else:
-            x_train = [train_adata.X, train_conditions_onehot, train_cell_types_onehot,
-                       train_conditions_onehot, train_cell_types_onehot]
+            x_train = [train_adata.X, train_datasets_onehot, train_conditions_onehot,
+                       train_datasets_onehot, train_conditions_onehot]
             y_train = [train_adata.X, train_conditions_encoded]
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_cell_types_onehot,
-                       valid_conditions_onehot, valid_cell_types_onehot]
+            x_valid = [valid_adata.X, valid_datasets_onehot, valid_conditions_onehot,
+                       valid_datasets_onehot, valid_conditions_onehot]
             y_valid = [valid_adata.X, valid_conditions_encoded]
 
         callbacks = [
             History(),
         ]
 
-        if n_per_epoch > 0:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
-            batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.encoder_model,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
 
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-        if n_epochs_warmup:
-            self.freeze_condition_irrelevant_parts(False)
-            self.cvae_model.fit(x=x_train,
-                                y=y_train,
-                                validation_data=(x_valid, y_valid),
-                                epochs=n_epochs_warmup,
-                                batch_size=batch_size,
-                                verbose=verbose,
-                                callbacks=[],
-                                )
-            self.freeze_condition_irrelevant_parts(True)
+
         self.cvae_model.fit(x=x_train,
                             y=y_train,
                             validation_data=(x_valid, y_valid),
