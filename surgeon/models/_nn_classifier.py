@@ -193,7 +193,7 @@ class NNClassifier:
         adata = remove_sparsity(adata)
 
         probs = self.classifier_model.predict(adata.X)
-        predictions = np.argmax(probs, axis=1)
+        predictions = self.label_encoder.inverse_transform(np.argmax(probs, axis=1))
 
         predictions = self.label_encoder.inverse_transform(predictions)
 
