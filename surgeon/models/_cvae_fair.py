@@ -273,7 +273,7 @@ class CVAEFair:
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_mmd_outputs)
 
         self.cvae_model = Model(inputs=inputs,
-                                outputs=[reconstruction_output, mmd_output, mmd_output],
+                                outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
@@ -287,18 +287,15 @@ class CVAEFair:
         if self.loss_fn == 'nb':
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
-            mmd_loss_datasets = LOSSES['mmd'](self.n_datasets, self.beta)
-            mmd_loss_conditions = LOSSES['mmd'](self.n_conditions, self.beta)
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
-            mmd_loss_datasets = LOSSES['mmd'](self.n_datasets, self.beta)
-            mmd_loss_conditions = LOSSES['mmd'](self.n_conditions, self.beta)
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
-            mmd_loss_datasets = LOSSES['mmd'](self.n_datasets, self.beta)
-            mmd_loss_conditions = LOSSES['mmd'](self.n_conditions, self.beta)
-        return loss, mmd_loss_datasets, mmd_loss_conditions
+            mmd_loss = LOSSES['mmd'](self.n_datasets, self.beta)
+        return loss, mmd_loss
 
     def freeze_condition_irrelevant_parts(self, trainable):
         for encoder_layer in self.cvae_model.get_layer("encoder").layers:
@@ -323,13 +320,12 @@ class CVAEFair:
                 Nothing will be returned.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
-        loss, mmd_loss_datasets, mmd_loss_conditions = self._calculate_loss()
+        loss, mmd_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=[loss, mmd_loss_datasets, mmd_loss_conditions],
                                 metrics={self.cvae_model.outputs[0].name: loss,
-                                         self.cvae_model.outputs[1].name: mmd_loss_datasets,
-                                         self.cvae_model.outputs[2].name: mmd_loss_conditions},
+                                         self.cvae_model.outputs[1].name: mmd_loss},
                                 )
 
     def get_summary_of_networks(self):
@@ -471,6 +467,7 @@ class CVAEFair:
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, dataset_key, condition_key='condition',
+              mmd_calculation="datasets",
               dataset_encoder=None, condition_encoder=None,
               n_epochs=25, batch_size=32, early_stop_limit=20,
               lr_reducer=10, save=True, verbose=2, retrain=True):
@@ -540,24 +537,29 @@ class CVAEFair:
         valid_datasets_onehot = to_categorical(valid_datasets_encoded, num_classes=self.n_datasets)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
+        if mmd_calculation == "datasets":
+            train_mmd_target, valid_mmd_target = train_datasets_encoded, valid_datasets_encoded
+        else:
+            train_mmd_target, valid_mmd_target = train_conditions_encoded, valid_conditions_encoded
+
         if self.loss_fn in ['nb', 'zinb']:
             x_train = [train_adata.X, train_datasets_onehot, train_conditions_onehot,
                        train_datasets_onehot, train_conditions_onehot,
                        train_adata.obs['size_factors'].values]
-            y_train = [train_adata.raw.X, train_datasets_encoded, train_conditions_encoded]
+            y_train = [train_adata.raw.X, train_mmd_target]
 
             x_valid = [valid_adata.X, valid_datasets_onehot, valid_conditions_onehot,
                        valid_datasets_onehot, valid_conditions_onehot,
                        valid_adata.obs['size_factors'].values]
-            y_valid = [valid_adata.raw.X, valid_datasets_encoded, valid_conditions_encoded]
+            y_valid = [valid_adata.raw.X, valid_mmd_target]
         else:
             x_train = [train_adata.X, train_datasets_onehot, train_conditions_onehot,
                        train_datasets_onehot, train_conditions_onehot]
-            y_train = [train_adata.X, train_datasets_encoded, train_conditions_encoded]
+            y_train = [train_adata.X, train_mmd_target]
 
             x_valid = [valid_adata.X, valid_datasets_onehot, valid_conditions_onehot,
                        valid_datasets_onehot, valid_conditions_onehot]
-            y_valid = [valid_adata.X, valid_datasets_encoded, valid_conditions_encoded]
+            y_valid = [valid_adata.X, valid_mmd_target]
 
         callbacks = [
             History(),
