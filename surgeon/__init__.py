@@ -161,6 +161,7 @@ def operate_fair(network: archs.CVAEFair,
                  freeze_expression_input: bool = False,
                  remove_dropout: bool = True,
                  print_summary: bool = True,
+                 new_training_kwargs: dict = None,
                  ) -> archs.CVAEFair:
     if isinstance(new_datasets, str):
         new_datasets = [new_datasets]
@@ -176,6 +177,10 @@ def operate_fair(network: archs.CVAEFair,
     network_kwargs['n_datasets'] += n_new_datasets
     network_kwargs['n_conditions'] += n_new_conditions
     network_kwargs['freeze_expression_input'] = freeze_expression_input
+
+    if new_training_kwargs:
+        for key in new_training_kwargs.keys():
+            training_kwargs[key] = new_training_kwargs[key]
 
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
