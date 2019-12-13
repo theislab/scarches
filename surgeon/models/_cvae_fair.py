@@ -323,7 +323,7 @@ class CVAEFair:
         loss, mmd_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
-                                loss=[loss, mmd_loss_datasets, mmd_loss_conditions],
+                                loss=[loss, mmd_loss],
                                 metrics={self.cvae_model.outputs[0].name: loss,
                                          self.cvae_model.outputs[1].name: mmd_loss},
                                 )
