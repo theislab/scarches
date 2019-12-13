@@ -452,8 +452,7 @@ class CVAEFair:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_path, 'cvae.h5'), compile=False,
-                                     custom_objects=self.custom_objects)
+        self.cvae_model.load_weights(os.path.join(self.model_path, 'cvae.h5'))
         self.encoder_model = self.cvae_model.get_layer("encoder")
 
         self.decoder_model = self.cvae_model.get_layer("decoder")
@@ -463,7 +462,7 @@ class CVAEFair:
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
+        self.cvae_model.save_weights(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, dataset_key, condition_key='condition',
