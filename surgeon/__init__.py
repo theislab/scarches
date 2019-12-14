@@ -20,6 +20,7 @@ def operate(network: archs.CVAE,
             freeze_expression_input: bool = False,
             remove_dropout: bool = True,
             print_summary: bool = True,
+            new_training_kwargs: dict = None,
             ) -> archs.CVAE:
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
@@ -35,6 +36,9 @@ def operate(network: archs.CVAE,
 
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
+
+    for key in new_training_kwargs.keys():
+        training_kwargs[key] = new_training_kwargs[key]
 
     # Instantiate new model with old parameters except `n_conditions`
     new_network = archs.CVAE(**network_kwargs, **training_kwargs,
