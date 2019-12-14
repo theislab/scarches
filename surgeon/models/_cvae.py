@@ -4,7 +4,7 @@ import os
 import anndata
 import keras
 import numpy as np
-from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -16,7 +16,7 @@ from surgeon.models._activations import ACTIVATIONS
 from surgeon.models._callbacks import ScoreCallback
 from surgeon.models._layers import LAYERS
 from surgeon.models._losses import LOSSES
-from surgeon.models._utils import sample_z
+from surgeon.models._utils import sample_z, print_message
 from surgeon.utils import label_encoder, remove_sparsity
 
 log = logging.getLogger(__file__)
@@ -503,6 +503,13 @@ class CVAE:
             History(),
         ]
 
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
+
         if n_per_epoch > 0:
             adata = train_adata.concatenate(valid_adata)
 
@@ -520,23 +527,13 @@ class CVAE:
 
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-        # if n_epochs_warmup:
-        #     self.freeze_condition_irrelevant_parts(False)
-        #     self.cvae_model.fit(x=x_train,
-        #                         y=y_train,
-        #                         validation_data=(x_valid, y_valid),
-        #                         epochs=n_epochs_warmup,
-        #                         batch_size=batch_size,
-        #                         verbose=verbose,
-        #                         callbacks=[],
-        #                         )
-        #     self.freeze_condition_irrelevant_parts(True)
+
         self.cvae_model.fit(x=x_train,
                             y=y_train,
                             validation_data=(x_valid, y_valid),
                             epochs=n_epochs,
                             batch_size=batch_size,
-                            verbose=verbose,
+                            verbose=fit_verbose,
                             callbacks=callbacks,
                             )
         if save:
