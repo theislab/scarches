@@ -20,7 +20,7 @@ def operate(network: archs.CVAE,
             freeze_expression_input: bool = False,
             remove_dropout: bool = True,
             print_summary: bool = True,
-            new_training_kwargs: dict = None,
+            new_training_kwargs: dict = {},
             ) -> archs.CVAE:
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]

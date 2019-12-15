@@ -119,7 +119,8 @@ class NNClassifier:
         if self.cvae is not None:
             for idx, layer in enumerate(self.cvae.encoder_model.layers[2:]):
                 if layer.name == "first_layer":
-                    weights = layer.get_weights()[0]
+                    weights_idx = 0 if layer.get_weights()[0].shape == (self.x_dim, self.architecture[1]) else 1
+                    weights = layer.get_weights()[weights_idx]
                     self.classifier_model.layers[idx + 1].set_weights([weights])
                 else:
                     weights = layer.get_weights()
