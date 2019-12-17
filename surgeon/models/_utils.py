@@ -101,6 +101,6 @@ def _reduce_mean(x):
 def print_message(epoch, logs, n_epochs=10000, duration=50):
     if epoch % duration == 0:
         print(f"Epoch {epoch + 1}/{n_epochs}:")
-        print(f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_mse_loss']:.4f}"
+        print(f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_reconstruction_loss']:.4f}"
               f" - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f}"
-              f" - val_kl_sse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
+              f" - val_kl_sse_loss: {logs['val_kl_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
