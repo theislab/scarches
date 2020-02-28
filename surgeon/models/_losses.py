@@ -13,13 +13,14 @@ def kl_recon(mu, log_var, alpha=0.1, eta=1.0):
     return kl_recon_loss
 
 
-def kl_loss(mu, log_var, alpha=0.1):
-    def kl_recon_loss(y_true, y_pred):
-        kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
-        return alpha * kl_loss
+def pure_kl_loss(mu, log_var, alpha=0.1):
+    def kl_loss(y_true, y_pred):
+        kl_div = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
+        return alpha * kl_div
+    return kl_loss
 
-    return kl_recon_loss
-
+def sse_loss(y_true, y_pred):
+    return K.sum(K.square(y_true - y_pred), axis=1)
 
 def mmd(n_conditions, beta, kernel_method='multi-scale-rbf'):
     def mmd_loss(real_labels, y_pred):
@@ -116,8 +117,8 @@ class ZINB(NB):
         return result
 
 
-def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
-    kl = kl_loss(mu, log_var, alpha=alpha)
+def nb_kl_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
+    kl = pure_kl_loss(mu, log_var, alpha=alpha)
 
     def nb(y_true, y_pred):
         nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
@@ -125,9 +126,16 @@ def nb_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
 
     return nb
 
+def nb_loss(disp, scale_factor=1.0, eta=1.0):
+    def nb(y_true, y_pred):
+        nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
+        return eta * nb_obj.loss(y_true, y_pred, mean=True)
 
-def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
-    kl = kl_loss(mu, log_var, alpha=alpha)
+    return nb
+
+
+def zinb_kl_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
+    kl = pure_kl_loss(mu, log_var, alpha=alpha)
 
     def zinb(y_true, y_pred):
         zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
@@ -135,11 +143,24 @@ def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
 
     return zinb
 
+def zinb_loss(pi, disp, ridge=0.1, eta=1.0):
+    def zinb(y_true, y_pred):
+        zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
+        return eta * zinb_obj.loss(y_true, y_pred)
+
+    return zinb
+
 
 LOSSES = {
     "mse": kl_recon,
     "mmd": mmd,
-    "nb": nb_loss,
-    "zinb": zinb_loss,
+    "nb": nb_kl_loss,
+    "zinb": zinb_kl_loss,
     "cce": 'categorical_crossentropy',
+    "kl": pure_kl_loss,
+    "recon": sse_loss,
+    "nb_wo_kl": nb_loss,
+    "zinb_wo_kl": zinb_loss,
+
+    
 }
