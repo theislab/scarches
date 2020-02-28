@@ -510,7 +510,7 @@ class CVAE:
         else:
             fit_verbose = verbose
 
-        if n_per_epoch > 0:
+        if n_per_epoch > 0 or n_per_epoch == -1:
             adata = train_adata.concatenate(valid_adata)
 
             train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
@@ -518,7 +518,7 @@ class CVAE:
             batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
             celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
-            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.encoder_model,
+            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.cvae_model,
                                            n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
                                            n_celltype_labels=len(np.unique(celltype_labels))))
 

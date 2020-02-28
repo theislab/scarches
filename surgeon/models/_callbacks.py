@@ -1,4 +1,5 @@
 import os
+import csv
 from typing import TypeVar
 
 import numpy as np
@@ -31,10 +32,10 @@ class ScoreCallback(Callback):
         self.X = data
 
         self.batch_labels = np.reshape(batch_labels, (-1,))
-        self.batch_labels_onehot = to_categorical(self.batch_labels)
+        self.batch_labels_onehot = to_categorical(self.batch_labels, num_classes=n_batch_labels)
 
         self.celltype_labels = np.reshape(celltype_labels, (-1,))
-        self.celltype_labels_onehot = to_categorical(self.celltype_labels)
+        self.celltype_labels_onehot = to_categorical(self.celltype_labels, num_classes=n_celltype_labels)
 
         self.filename = filename
         self.encoder_model = encoder_model
@@ -58,24 +59,54 @@ class ScoreCallback(Callback):
         self.epochs = []
         self.times = []
 
+        if self.clustering_scores == 'all':
+            clustering_scores_columns = ['epoch', 'time', 'ASW', 'ARI', 'NMI', 'EBM', 'KNN']
+
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
+        if not os.path.exists(self.filename):
+            with open(self.filename, 'a') as f:
+                writer = csv.writer(f)
+                writer.writerow(clustering_scores_columns)
+
     def on_train_end(self, logs=None):
+        latent_X = self.encoder_model.predict([self.X, self.batch_labels_onehot, self.batch_labels_onehot])[1]
+        self.epochs.append(-1)
+        last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
+        print(f"Last Epoch: ", end="\t")
+        asw, asw_time = self.asw(latent_X)
+        ari, ari_time = self.ari(latent_X)
+        nmi, nmi_time = self.nmi(latent_X)
+        ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15, n_pools=1)
+        knn, knn_time = self.knn_purity(latent_X, n_neighbors=15)
+        self.scores.append([asw, ari, nmi, ebm, knn])
+        print(
+            f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f} - KNN_Purity: {knn: .4f} - {latent_X.shape}")
+        computation_times = asw_time + ari_time + nmi_time + ebm_time + knn_time
+
+        self.times.append(time.time() - self.epoch_time_start + last_time_record - computation_times)
+
         scores_df = pd.DataFrame({"epoch": self.epochs, "time": self.times})
 
         self.scores_np = np.array(self.scores)
+
         if self.clustering_scores == 'all':
             self.clustering_scores = ['ASW', 'ARI', 'NMI', 'EBM', 'KNN']
         for i, clustering_score in enumerate(self.clustering_scores):
             computed_scores = self.scores_np[:, i]
             scores_df[clustering_score] = computed_scores
-        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
-        scores_df.to_csv(self.filename, index=False)
+        
+        with open(self.filename, 'a') as f:
+            writer = csv.writer(f)
+            for i in range(scores_df.shape[0]):
+                writer.writerow(scores_df.values[i, :])
+        # scores_df.to_csv(self.filename, index=False)
 
     def on_epoch_begin(self, epoch, logs=None):
         self.epoch_time_start = time.time()
 
     def on_epoch_end(self, epoch, logs=None):
-        if epoch % self.n_per_epoch == 0:
-            latent_X = self.encoder_model.predict([self.X, self.batch_labels_onehot])[2]
+        if epoch % self.n_per_epoch == 0 and self.n_per_epoch > 0:
+            latent_X = self.encoder_model.predict([self.X, self.batch_labels_onehot, self.batch_labels_onehot])[1]
 
             self.epochs.append(epoch)
             last_time_record = self.times[-1] if len(self.times) > 0 else 0.0
@@ -84,11 +115,11 @@ class ScoreCallback(Callback):
                 asw, asw_time = self.asw(latent_X)
                 ari, ari_time = self.ari(latent_X)
                 nmi, nmi_time = self.nmi(latent_X)
-                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15)
+                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15, n_pools=1)
                 knn, knn_time = self.knn_purity(latent_X, n_neighbors=15)
                 self.scores.append([asw, ari, nmi, ebm, knn])
                 print(
-                    f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f} - KNN_Purity: {knn: .4f}")
+                    f"ASW: {asw:.4f} - ARI: {ari:.4f} - NMI: {nmi:.4f} - EBM: {ebm:.4f} - KNN_Purity: {knn: .4f} - {latent_X.shape}")
                 computation_times = asw_time + ari_time + nmi_time + ebm_time + knn_time
             else:
                 scores = []
