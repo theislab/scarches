@@ -13,8 +13,8 @@ DATASETS = {
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
     "pbmc": {"name": "pbmc", "batch_key": "study", "cell_type_key": "cell_type",
              "target": ["inDrops", "Drop-seq"]},
-    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
-                    "target": ["Rosenberg", "Zeisel"]},
+    "mouse_brain": {"name": "mouse_brain", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Tabula_muris", "Zeisel"]},
 }
 
 
@@ -73,12 +73,12 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                          use_batchnorm=False,
                                          n_conditions=n_conditions,
                                          lr=0.001,
-                                         alpha=0.0005,
-                                         beta=100.0,
+                                         alpha=0.00005,
+                                         beta=1000.0,
                                          eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/{data_name}/{loss_fn}/before/",
+                                         model_path=f"./models/CVAE/{data_name}/before/",
                                          dropout_rate=0.05,
                                          output_activation='relu')
 
@@ -100,16 +100,14 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                           retrain=False,
                           verbose=2)
 
-            network.beta = 1000
-            network.eta = 0.1
-
             new_network = surgeon.operate(network,
                                           new_conditions=target_conditions,
                                           init='Xavier',
                                           freeze=freeze,
-                                          freeze_expression_input=freeze_expression)
+                                          freeze_expression_input=freeze_expression,
+                                          new_training_kwargs={"beta": 10000, "eta": 0.1})
 
-            new_network.model_path = f"./models/CVAE/{data_name}/after-{z_dim}-{subsample_frac}-{freeze_level}/"
+            new_network.model_path = f"./models/CVAE/{data_name}/after-{subsample_frac}-{freeze_level}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.80)
 
             new_network.train(train_adata,
@@ -118,11 +116,12 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                               cell_type_key=cell_type_key,
                               le=new_network.condition_encoder,
                               n_epochs=10000,
-                              batch_size=512,
+                              batch_size=1024,
                               n_epochs_warmup=0,
                               early_stop_limit=50,
                               lr_reducer=40,
-                              n_per_epoch=0,
+                              n_per_epoch=-1,
+                              score_filename=os.path.join(path_to_save, f"scores_scNet_freeze_level={freeze_level}_normalized_{i}.log"),
                               save=True,
                               retrain=True,
                               verbose=2)
@@ -132,44 +131,44 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
 
             latent_adata = new_network.to_mmd_layer(adata_out_of_sample_subsampled, encoder_labels, encoder_labels)
 
-            asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-            ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
-            nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
-            knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
-            knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
-            knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
-            knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
-            knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
-            ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=15)
-            ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=25)
-            ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=50)
-            ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=100)
-            ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=200)
-            ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=300)
+            # asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
+            # ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
+            # nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
+            # knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
+            # knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
+            # knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
+            # knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
+            # knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
+            # knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
+            # ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=15)
+            # ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=25)
+            # ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=50)
+            # ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=100)
+            # ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=200)
+            # ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=300)
 
-            scores.append(
-                [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-                 ebm_50, ebm_100, ebm_200, ebm_300])
-            print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-                 ebm_50, ebm_100, ebm_200, ebm_300])
+            # scores.append(
+            #     [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+            #      ebm_50, ebm_100, ebm_200, ebm_300])
+            # print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+            #      ebm_50, ebm_100, ebm_200, ebm_300])
 
             K.clear_session()
 
-        scores = np.array(scores)
+        # scores = np.array(scores)
 
-        filename = "scores_scNet"
-        filename += f"_freeze_level={freeze_level}"
-        filename += "_count" if loss_fn == 'nb' else "_normalized"
-        filename += f"_{i}_mmd.log"
+        # filename = "scores_scNet"
+        # filename += f"_freeze_level={freeze_level}"
+        # filename += "_count" if loss_fn == 'nb' else "_normalized"
+        # filename += f"_{i}_mmd.log"
 
-        np.savetxt(os.path.join(path_to_save, filename), X=scores, delimiter=",")
+        # np.savetxt(os.path.join(path_to_save, filename), X=scores, delimiter=",")
 
 
 if __name__ == '__main__':
@@ -188,4 +187,8 @@ if __name__ == '__main__':
     loss_fn = 'nb' if args['count'] > 0 else 'mse'
     data_dict = DATASETS[data_name]
 
-    train_and_evaluate(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)
+    if freeze_level < 0:
+        for i in range(3):
+            train_and_evaluate(data_dict=data_dict, freeze_level=i, loss_fn=loss_fn)
+    else:
+        train_and_evaluate(data_dict=data_dict, freeze_level=freeze_level, loss_fn=loss_fn)

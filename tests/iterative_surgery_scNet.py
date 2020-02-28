@@ -48,7 +48,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
 
     batch_key = 'study'
 
-    batch_colors = palettes.zeileis_26[:n_batches]
+    batch_colors = palettes.vega_10[n_batches:2 * n_batches] 
     cell_type_colors = palettes.godsnot_64[:n_cell_types]
 
     sc.pp.neighbors(adata)

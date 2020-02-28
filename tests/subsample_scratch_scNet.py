@@ -12,8 +12,8 @@ DATASETS = {
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
     "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type",
              "target": ["inDrops", "Drop-seq"]},
-    "mouse_brain": {"name": "mouse_brain_subset", "batch_key": "study", "cell_type_key": "cell_type",
-                    "target": ["Rosenberg", "Zeisel"]},
+    "mouse_brain": {"name": "mouse_brain", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Tabula_muris", "Zeisel"]},
 }
 
 
@@ -29,7 +29,7 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
     os.makedirs(path_to_save, exist_ok=True)
 
     if loss_fn == "mse":
-        clip_value = 1e6
+        clip_value = 1000.0
     else:
         clip_value = 3.0
 
@@ -53,24 +53,25 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             z_dim = 10
-            architecture = [128]
+            architecture = [128, 64, 32]
 
             network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
                                          z_dimension=z_dim,
                                          architecture=architecture,
-                                         use_batchnorm=True,
+                                         use_batchnorm=False,
                                          n_conditions=n_conditions,
                                          lr=0.001,
-                                         alpha=0.00001,
-                                         scale_factor=1.0,
+                                         alpha=0.00005,
+                                         beta=1000.0,
+                                         eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/subsample/{data_name}/{loss_fn}/{i}-{subsample_frac}-{architecture}-{z_dim}/",
-                                         dropout_rate=0.2,
+                                         model_path=f"./models/CVAE/subsample/{data_name}/scratch/",
+                                         dropout_rate=0.05,
                                          output_activation='relu')
 
             conditions = final_adata.obs[condition_key].unique().tolist()
-            condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
+            condition_encoder = surgeon.utils.create_dictionary(conditions, [])
 
             network.train(train_adata,
                           valid_adata,
@@ -78,45 +79,45 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                           cell_type_key=cell_type_key,
                           le=condition_encoder,
                           n_epochs=10000,
-                          batch_size=128,
-                          early_stop_limit=100,
-                          lr_reducer=80,
-                          n_per_epoch=0,
+                          batch_size=1024,
+                          early_stop_limit=50,
+                          lr_reducer=40,
+                          n_per_epoch=-1,
                           save=True,
                           retrain=False,
                           verbose=2)
 
-            encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
-                                                            condition_key=condition_key)
-            latent_adata = network.to_latent(final_adata, encoder_labels)
+            # encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
+            #                                                 condition_key=condition_key)
+            # latent_adata = network.to_latent(final_adata, encoder_labels)
 
-            asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-            ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
-            nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
-            knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
-            knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
-            knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
-            knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
-            knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
-            ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=15)
-            ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=25)
-            ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=50)
-            ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=100)
-            ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=200)
-            ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=300)
+            # asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
+            # ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
+            # nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
+            # knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
+            # knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
+            # knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
+            # knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
+            # knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
+            # knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
+            # ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=15)
+            # ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=25)
+            # ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                               n_neighbors=50)
+            # ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=100)
+            # ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=200)
+            # ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+            #                                                n_neighbors=300)
 
-            scores.append(
-                [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-                 ebm_50, ebm_100, ebm_200, ebm_300])
-            print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-                   ebm_50, ebm_100, ebm_200, ebm_300])
+            # scores.append(
+            #     [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+            #      ebm_50, ebm_100, ebm_200, ebm_300])
+            # print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+            #        ebm_50, ebm_100, ebm_200, ebm_300])
 
         scores = np.array(scores)
 
@@ -132,12 +133,11 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='data name')
-    arguments_group.add_argument('-l', '--loss', type=int, default=0, required=False,
+    arguments_group.add_argument('-c', '--loss', type=int, default=0, required=False,
                                  help='if 1 will use nb else will use mse')
     args = vars(parser.parse_args())
 
     data_name = args['data']
     loss_fn = "nb" if args['loss'] > 0 else "mse"
     data_dict = DATASETS[data_name]
-
     train_and_evaluate(data_dict=data_dict, loss_fn=loss_fn)

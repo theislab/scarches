@@ -13,6 +13,8 @@ DATASETS = {
                  "target": ["Pancreas SS2", "Pancreas CelSeq2"]},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"]},
     "pbmc": {"name": "pbmc_subset", "batch_key": "study", "cell_type_key": "cell_type", "target": ["inDrops", "Drop-seq"]},
+    "mouse_brain": {"name": "mouse_brain", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Tabula_muris", "Zeisel"]},
 }
 
 
@@ -32,15 +34,15 @@ def train_and_evaluate(data_dict):
     adata_out_of_sample.X = adata_out_of_sample.raw.X
 
     use_batches = True
-    n_epochs = 300
+    n_epochs = 1000
     lr = 1e-3
     early_stopping_kwargs = {
         "early_stopping_metric": "elbo",
         "save_best_state_metric": "elbo",
-        "patience": 100,
+        "patience": 50,
         "threshold": 0,
         "reduce_lr_on_plateau": True,
-        "lr_patience": 80,
+        "lr_patience": 40,
         "lr_factor": 0.1,
     }
 

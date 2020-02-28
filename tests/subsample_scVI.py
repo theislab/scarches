@@ -21,6 +21,8 @@ DATASETS = {
              "HV": False},
     "toy": {"name": "toy", "batch_key": "batch", "cell_type_key": "celltype", "target": ["Batch8", "Batch9"],
             "HV": False},
+    "mouse_brain": {"name": "mouse_brain", "batch_key": "study", "cell_type_key": "cell_type",
+                    "target": ["Tabula_muris", "Zeisel"], "HV": False},
 }
 
 parser = argparse.ArgumentParser(description='scNet')
