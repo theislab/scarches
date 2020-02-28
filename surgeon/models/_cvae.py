@@ -268,6 +268,7 @@ class CVAE:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
+        
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
                                'SliceLayer': LAYERS['SliceLayer'],
@@ -281,15 +282,23 @@ class CVAE:
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
             mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
+            kl_loss = LOSSES['kl'](self.mu, self.log_var)
+            recon_loss = LOSSES['nb_wo_kl']
+            
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
             mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
+            kl_loss = LOSSES['kl'](self.mu, self.log_var)
+            recon_loss = LOSSES['zinb_wo_kl']
+
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
             mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
+            kl_loss = LOSSES['kl'](self.mu, self.log_var)
+            recon_loss = LOSSES['recon']
 
-        return loss, mmd_loss
+        return loss, mmd_loss, kl_loss, recon_loss
 
     def compile_models(self):
         """
@@ -303,12 +312,12 @@ class CVAE:
                 Nothing will be returned.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
-        loss, mmd_loss = self._calculate_loss()
+        loss, mmd_loss, kl_loss, recon_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=[loss, mmd_loss],
-                                metrics={self.cvae_model.outputs[0].name: loss,
-                                         self.cvae_model.outputs[1].name: mmd_loss}
+                                metrics={'reconstruction': [recon_loss, kl_loss],
+                                         'mmd': [mmd_loss]}
                                 )
 
     def get_summary_of_networks(self):
