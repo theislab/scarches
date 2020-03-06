@@ -16,7 +16,7 @@ from surgeon.models._activations import ACTIVATIONS
 from surgeon.models._callbacks import ScoreCallback
 from surgeon.models._layers import LAYERS
 from surgeon.models._losses import LOSSES
-from surgeon.models._utils import sample_z, print_message
+from surgeon.models._utils import sample_z, print_message, print_progress
 from surgeon.utils import label_encoder, remove_sparsity
 
 log = logging.getLogger(__file__)
@@ -67,6 +67,7 @@ class CVAE:
         self.architecture = kwargs.get("architecture", [128])
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
         self.n_mmd_conditions = kwargs.get("n_mmd_conditions", n_conditions)
+        self.mmd_computation_method = kwargs.get("mmd_computation_method", "general")
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.size_factor = Input(shape=(1,), name='size_factor')
@@ -88,6 +89,7 @@ class CVAE:
             "architecture": self.architecture,
             "use_batchnorm": self.use_batchnorm,
             "freeze_expression_input": self.freeze_expression_input,
+            "mmd_computation_method": self.mmd_computation_method,
         }
 
         self.training_kwargs = {
@@ -314,10 +316,15 @@ class CVAE:
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
         loss, mmd_loss, kl_loss, recon_loss = self._calculate_loss()
 
+        # self.cvae_model.compile(optimizer=optimizer,
+        #                         loss=[loss, mmd_loss],
+        #                         metrics={'reconstruction': [recon_loss, kl_loss],
+        #                                  'mmd': [mmd_loss]}
+        #                         )
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=[loss, mmd_loss],
-                                metrics={'reconstruction': [recon_loss, kl_loss],
-                                         'mmd': [mmd_loss]}
+                                metrics={self.cvae_model.outputs[0].name: loss,
+                                         self.cvae_model.outputs[0].name: mmd_loss}
                                 )
 
     def get_summary_of_networks(self):
@@ -514,7 +521,7 @@ class CVAE:
 
         if verbose > 2:
             callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs, verbose)))
             fit_verbose = 0
         else:
             fit_verbose = verbose
