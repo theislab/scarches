@@ -60,6 +60,18 @@ class scVI_Trainer(UnsupervisedTrainer):
         
         self.file_name = None
         self.ks = [15, 25, 50, 100, 200, 300]
+
+        self.n_iter_kl_warmup = None
+        self.n_samples = 1.0
+        normalize_loss = None
+        self.normalize_loss = (
+            not (
+                hasattr(self.model, "reconstruction_loss")
+                and self.model.reconstruction_loss == "autozinb"
+            )
+            if normalize_loss is None
+            else normalize_loss
+        )
         
                
     def on_epoch_end(self):
