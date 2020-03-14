@@ -362,10 +362,7 @@ class CVAE:
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
-        if self.loss_fn == 'nb':
-            encoder_inputs = [adata.X, encoder_labels, adata.obs['size_factors'].values]
-        else:
-            encoder_inputs = [adata.X, encoder_labels]
+        encoder_inputs = [adata.X, encoder_labels]
 
         latent = self.encoder_model.predict(encoder_inputs)[2]
         latent = np.nan_to_num(latent, nan=0.0, posinf=0.0, neginf=0.0)
