@@ -61,7 +61,6 @@ class CVAE:
         self.scale_factor = kwargs.get("scale_factor", 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
         self.epsilon = kwargs.get('epsilon', 0.01)
-        self.lambda_l2 = kwargs.get('lambda_l2', 1e-6)
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.architecture = kwargs.get("architecture", [128])
@@ -104,7 +103,6 @@ class CVAE:
         }
 
         self.init_w = keras.initializers.glorot_normal()
-        self.regularizer = keras.regularizers.l2(self.lambda_l2)
         self._create_networks()
         self.compile_models()
 
@@ -134,10 +132,9 @@ class CVAE:
                                          use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
                     [self.x, self.encoder_labels])
             else:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False,
-                          kernel_regularizer=self.regularizer)(h)
+                h = Dense(n_neuron, kernel_initializer=self.init_w, use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1, trainable=False)(h)
+                h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
@@ -149,12 +146,10 @@ class CVAE:
 
     def _output_decoder(self, h):
         if self.loss_fn == 'nb':
-            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           kernel_regularizer=self.regularizer, use_bias=True)(h)
+            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w, use_bias=True)(h)
             h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
-            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           kernel_regularizer=self.regularizer, use_bias=True)(h)
+            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w, use_bias=True)(h)
             h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             h_mean = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
@@ -170,11 +165,11 @@ class CVAE:
             h_pi = Dense(self.x_dim, activation=ACTIVATIONS['sigmoid'], kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
             h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           kernel_regularizer=self.regularizer, use_bias=True)(h)
+                           use_bias=True)(h)
             h_mean = ACTIVATIONS['mean_activation'](h_mean)
 
             h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           kernel_regularizer=self.regularizer, use_bias=True)(h)
+                           use_bias=True)(h)
             h_disp = ACTIVATIONS['disp_activation'](h_disp)
 
             mean_output = LAYERS['ColWiseMultLayer']()([h_mean, self.size_factor])
@@ -192,7 +187,7 @@ class CVAE:
                                           output=h_pi)
 
         else:
-            h = Dense(self.x_dim, activation=None, kernel_regularizer=self.regularizer,
+            h = Dense(self.x_dim, activation=None, 
                       kernel_initializer=self.init_w,
                       use_bias=True)(h)
             h = ACTIVATIONS[self.output_activation](h)
@@ -219,10 +214,10 @@ class CVAE:
                                          use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
                     [self.z, self.decoder_labels])
             else:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer,
+                h = Dense(n_neuron, kernel_initializer=self.init_w, 
                           use_bias=False)(h)
             if self.use_batchnorm:
-                h = BatchNormalization(axis=1, trainable=False)(h)
+                h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             if idx == 0:
                 h_mmd = h
@@ -337,8 +332,11 @@ class CVAE:
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
-
-        mmd = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[1]
+        if self.loss_fn == 'nb':
+            cvae_inputs = [adata.X, encoder_labels, decoder_labels, adata.obs['size_factors'].values]
+        else:
+            cvae_inputs = [adata.X, encoder_labels, decoder_labels]
+        mmd = self.cvae_model.predict(cvae_inputs)[1]
         mmd = np.nan_to_num(mmd, nan=0.0, posinf=0.0, neginf=0.0)
 
         adata_mmd = anndata.AnnData(X=mmd)
@@ -364,7 +362,12 @@ class CVAE:
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
-        latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
+        if self.loss_fn == 'nb':
+            encoder_inputs = [adata.X, encoder_labels, adata.obs['size_factors'].values]
+        else:
+            encoder_inputs = [adata.X, encoder_labels]
+
+        latent = self.encoder_model.predict(encoder_inputs)[2]
         latent = np.nan_to_num(latent, nan=0.0, posinf=0.0, neginf=0.0)
 
         adata_latent = anndata.AnnData(X=latent)
