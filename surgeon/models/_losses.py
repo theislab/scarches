@@ -125,11 +125,11 @@ class ZINB(NB):
 
 
 def nb_kl_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
-    kl = pure_kl_loss(mu, log_var, alpha=alpha)
+    kl = pure_kl_loss(mu, log_var)
 
     def nb(y_true, y_pred):
         nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
-        return eta * nb_obj.loss(y_true, y_pred, mean=True) + kl(y_true, y_pred)
+        return eta * nb_obj.loss(y_true, y_pred, mean=True) + alpha * kl(y_true, y_pred)
 
     return nb
 
@@ -142,11 +142,11 @@ def nb_loss(disp, scale_factor=1.0, eta=1.0):
 
 
 def zinb_kl_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
-    kl = pure_kl_loss(mu, log_var, alpha=alpha)
+    kl = pure_kl_loss(mu, log_var)
 
     def zinb(y_true, y_pred):
         zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
-        return eta * zinb_obj.loss(y_true, y_pred) + kl(y_true, y_pred)
+        return eta * zinb_obj.loss(y_true, y_pred) + alpha * kl(y_true, y_pred)
 
     return zinb
 
