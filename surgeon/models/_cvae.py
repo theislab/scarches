@@ -106,7 +106,7 @@ class CVAE:
         self._create_networks()
         self.compile_models()
 
-        print_summary = kwargs.get("print_summary", True)
+        print_summary = kwargs.get("print_summary", False)
         if print_summary:
             self.encoder_model.summary()
             self.decoder_model.summary()
@@ -521,7 +521,7 @@ class CVAE:
 
         if verbose > 2:
             callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs, verbose)))
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
             fit_verbose = 0
         else:
             fit_verbose = verbose
