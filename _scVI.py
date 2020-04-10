@@ -43,21 +43,22 @@ class ADataset(GeneExpressionDataset):
         )
         self.filter_cells_by_count()
 
+
 class scVI_Trainer(UnsupervisedTrainer):
     def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, n_epochs_kl_warmup=400, **kwargs):
         super(UnsupervisedTrainer, self).__init__(model, gene_dataset, **kwargs)
         self.n_epochs_kl_warmup = n_epochs_kl_warmup
         self.train_set, self.test_set, self.validation_set = self.train_test_validation(
-                model, gene_dataset, train_size, test_size
-            )
+            model, gene_dataset, train_size, test_size
+        )
         self.train_set.to_monitor = ["elbo"]
         self.test_set.to_monitor = ["elbo"]
         self.validation_set.to_monitor = ["elbo"]
-        
+
         self.start_time = 0
         self.elapsed_time = 0
         self.writing_time = 0
-        
+
         self.file_name = None
         self.ks = [15, 25, 50, 100, 200, 300]
 
@@ -66,27 +67,27 @@ class scVI_Trainer(UnsupervisedTrainer):
         normalize_loss = None
         self.normalize_loss = (
             not (
-                hasattr(self.model, "reconstruction_loss")
-                and self.model.reconstruction_loss == "autozinb"
+                    hasattr(self.model, "reconstruction_loss")
+                    and self.model.reconstruction_loss == "autozinb"
             )
             if normalize_loss is None
             else normalize_loss
         )
-        
-               
+
     def on_epoch_end(self):
         epoch = self.epoch
-        if self.file_name is not None and self.frequency and (epoch == 0 or epoch == self.n_epochs - 1 or (epoch % self.frequency == 0)):
+        if self.file_name is not None and self.frequency and (
+                epoch == 0 or epoch == self.n_epochs - 1 or (epoch % self.frequency == 0)):
             begin = time.time()
 
             p = self.create_posterior(self.model, self.gene_dataset, indices=np.arange(len(self.gene_dataset)))
             clus = clustering_scores(p)
             if clus is not None:
-                asw_score, nmi_score , ari_score  = clus
-                
+                asw_score, nmi_score, ari_score = clus
+
                 latent, batch_ind, labels = p.get_latent()
                 ebm_scores, knn_scores = [], []
-                
+
                 for k in self.ks:
                     ebm_score = entropy_batch_mixing(latent, batch_ind, n_neighbors=k)
                     ebm_scores.append(ebm_score)
@@ -96,25 +97,27 @@ class scVI_Trainer(UnsupervisedTrainer):
 
                 end = time.time()
                 self.scores_time += end - begin
-                self.elapsed_time = (time.time() - self.start_time) - (self.compute_metrics_time + self.scores_time + self.writing_time)
+                self.elapsed_time = (time.time() - self.start_time) - (
+                            self.compute_metrics_time + self.scores_time + self.writing_time)
 
                 begin = time.time()
-                
-                row = [epoch, self.elapsed_time, asw_score, nmi_score , ari_score] + ebm_scores + knn_scores
+
+                row = [epoch, self.elapsed_time, asw_score, nmi_score, ari_score] + ebm_scores + knn_scores
                 with open(self.file_name, 'a') as csvFile:
                     writer = csv.writer(csvFile)
                     writer.writerow(row)
                 csvFile.close()
-                
+
                 end = time.time()
                 self.writing_time += (end - begin)
-                
+
         return super().on_epoch_end()
-    
-    def train(self,file_name, n_epochs=20, lr=1e-3, eps=0.01, params=None):
+
+    def train(self, file_name, n_epochs=20, lr=1e-3, eps=0.01, params=None):
         self.file_name = file_name
         if self.file_name is not None:
-            row = ["Epoch", "Elapsed Time", "ASW", "NMI" , "ARI"] + [f"EBM_{k}" for k in self.ks] + [f'KNN_{k}' for k in self.ks]
+            row = ["Epoch", "Elapsed Time", "ASW", "NMI", "ARI"] + [f"EBM_{k}" for k in self.ks] + [f'KNN_{k}' for k in
+                                                                                                    self.ks]
             with open(self.file_name, 'w+') as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerow(row)
@@ -122,10 +125,10 @@ class scVI_Trainer(UnsupervisedTrainer):
         self.scores_time = 0
         self.start_time = time.time()
         super().train(n_epochs, lr, eps, params)
-        
+
+
 @torch.no_grad()
 def entropy_batch_mixing(latent, labels, n_neighbors=50, n_pools=50, n_samples_per_pool=100):
-    
     def entropy_from_indices(indices):
         return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)))
 
@@ -142,9 +145,10 @@ def entropy_batch_mixing(latent, labels, n_neighbors=50, n_pools=50, n_samples_p
         score = np.mean([
             np.mean(entropies[np.random.choice(len(entropies), size=n_samples_per_pool)])
             for _ in range(n_pools)
-        ])    
-    
+        ])
+
     return score
+
 
 @torch.no_grad()
 def knn_purity(latent, labels, n_neighbors=30):
@@ -179,5 +183,5 @@ def clustering_scores(pos, prediction_algorithm="knn"):
         asw_score = silhouette_score(latent, batch_ind)
         nmi_score = NMI(labels, labels_pred)
         ari_score = ARI(labels, labels_pred)
-        
+
         return asw_score, nmi_score, ari_score
