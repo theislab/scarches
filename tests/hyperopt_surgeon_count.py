@@ -12,8 +12,8 @@ from hyperopt import Trials, STATUS_OK, tpe
 from scipy import sparse
 from sklearn.metrics import silhouette_score
 
-import surgeon
-from surgeon.utils import normalize, train_test_split
+import scnet
+from scnet.utils import normalize, train_test_split
 
 
 def data():
@@ -66,17 +66,17 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     batch_size_choices = {{choice([32, 64, 128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
-    network = surgeon.archs.CVAE(x_dimension=net_train_adata_in_sample.shape[1],
-                                 z_dimension=z_dim_choices,
-                                 n_conditions=n_conditions,
-                                 lr=0.001,
-                                 alpha=alpha_choices,
-                                 scale_factor=scale_factor_choices,
-                                 clip_value=clip_value_choices,
-                                 loss_fn='nb',
-                                 model_path=f"./models/CVAE/hyperopt/{data_name}/",
-                                 dropout_rate=dropout_rate_choices,
-                                 )
+    network = scnet.archs.CVAE(x_dimension=net_train_adata_in_sample.shape[1],
+                               z_dimension=z_dim_choices,
+                               n_conditions=n_conditions,
+                               lr=0.001,
+                               alpha=alpha_choices,
+                               scale_factor=scale_factor_choices,
+                               clip_value=clip_value_choices,
+                               loss_fn='nb',
+                               model_path=f"./models/CVAE/hyperopt/{data_name}/",
+                               dropout_rate=dropout_rate_choices,
+                               )
 
     network.train(net_train_adata_in_sample,
                   net_valid_adata_in_sample,
@@ -89,10 +89,10 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
                   save=False,
                   verbose=2)
 
-    new_network = surgeon.operate(network,
-                                  new_conditions=target_conditions[0],
-                                  init='Xavier',
-                                  freeze=True)
+    new_network = scnet.operate(network,
+                                new_conditions=target_conditions[0],
+                                init='Xavier',
+                                freeze=True)
 
     new_network.train(net_train_adata_out_of_sample,
                       net_valid_adata_out_of_sample,
@@ -107,8 +107,8 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
     adata = net_train_adata_in_sample.concatenate(net_valid_adata_in_sample, net_train_adata_out_of_sample, net_valid_adata_out_of_sample)
     if sparse.issparse(adata.X):
         adata.X = adata.X.A
-    encoder_labels, _ = surgeon.utils.label_encoder(adata, label_encoder=new_network.condition_encoder,
-                                                    condition_key=condition_key)
+    encoder_labels, _ = scnet.utils.label_encoder(adata, label_encoder=new_network.condition_encoder,
+                                                  condition_key=condition_key)
 
     latent_adata = new_network.to_latent(adata, encoder_labels)
 
@@ -123,7 +123,7 @@ def create_model(net_train_adata_in_sample, net_valid_adata_in_sample,
         nb_conditions = len(cell_type_adata.obs[condition_key].unique().tolist())
         if nb_conditions > 1:
             X_pca = cell_type_adata.obsm["X_pca"]
-            conditions_encoded, _ = surgeon.utils.label_encoder(cell_type_adata, new_network.condition_encoder, condition_key)
+            conditions_encoded, _ = scnet.utils.label_encoder(cell_type_adata, new_network.condition_encoder, condition_key)
             asw_score_cell_type = silhouette_score(X_pca, conditions_encoded)
             asw_score += asw_score_cell_type
             print(f"ASW for {cell_type} is {asw_score_cell_type:.6f}")

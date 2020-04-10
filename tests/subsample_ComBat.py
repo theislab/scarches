@@ -14,7 +14,7 @@ from sklearn.metrics import silhouette_score
 import os
 import argparse
 from sklearn.preprocessing import LabelEncoder
-from surgeon.utils import remove_sparsity
+from scnet.utils import remove_sparsity
 import numpy as np
 import csv
 

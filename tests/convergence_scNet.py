@@ -3,7 +3,7 @@ import os
 
 import scanpy as sc
 
-import surgeon
+import scnet
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
@@ -35,26 +35,26 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
     else:
         clip_value = 1000.0
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
-    network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=10,
-                                 architecture=[128, 64, 32],
-                                 n_conditions=n_conditions,
-                                 use_batchnorm=False,
-                                 lr=0.001,
-                                 alpha=0.0005,
-                                 beta=1000.0,
-                                 eta=1.0,
-                                 clip_value=clip_value,
-                                 loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/{data_name}/before/",
-                                 dropout_rate=0.05,
-                                 output_activation='relu')
+    network = scnet.archs.CVAE(x_dimension=train_adata.shape[1],
+                               z_dimension=10,
+                               architecture=[128, 64, 32],
+                               n_conditions=n_conditions,
+                               use_batchnorm=False,
+                               lr=0.001,
+                               alpha=0.0005,
+                               beta=1000.0,
+                               eta=1.0,
+                               clip_value=clip_value,
+                               loss_fn=loss_fn,
+                               model_path=f"./models/CVAE/{data_name}/before/",
+                               dropout_rate=0.05,
+                               output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
-    condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
+    condition_encoder = scnet.utils.create_dictionary(conditions, target_conditions)
 
     network.train(train_adata,
                   valid_adata,
@@ -70,8 +70,8 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                   retrain=False,
                   verbose=2)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
-                                                    condition_key=batch_key)
+    encoder_labels, _ = scnet.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
+                                                  condition_key=batch_key)
 
     if freeze_level == 0:
         freeze = False
@@ -84,18 +84,18 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
         freeze_expression_input = True
 
 
-    new_network = surgeon.operate(network,
-                                  new_conditions=target_conditions,
-                                  init='Xavier',
-                                  freeze=freeze,
-                                  freeze_expression_input=freeze_expression_input,
-                                  remove_dropout=False,
-                                  new_training_kwargs={"eta": 0.1, "beta": 1000},
-                                  )
+    new_network = scnet.operate(network,
+                                new_conditions=target_conditions,
+                                init='Xavier',
+                                freeze=freeze,
+                                freeze_expression_input=freeze_expression_input,
+                                remove_dropout=False,
+                                new_training_kwargs={"eta": 0.1, "beta": 1000},
+                                )
 
     new_network.model_path = f"./models/CVAE/{data_name}/Convergence/after-{freeze_level}/"
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.85)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_out_of_sample, 0.85)
 
     filename = path_to_save + f"scores_scNet_freeze_level={freeze_level}"
     filename += "_count.log" if loss_fn == 'nb' else "_normalized.log"

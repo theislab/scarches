@@ -1,6 +1,6 @@
 import os
 import argparse
-import surgeon
+import scnet
 import scanpy as sc
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
@@ -42,7 +42,7 @@ def train_scNet(data_dict, freeze_level, loss_fn):
                save="_original_celltype.pdf")
 
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     if freeze_level == 0:
@@ -59,24 +59,24 @@ def train_scNet(data_dict, freeze_level, loss_fn):
 
     architecture = [128]
     z_dim = 10
-    network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=z_dim,
-                                 architecture=architecture,
-                                 n_conditions=n_conditions,
-                                 lr=0.001,
-                                 alpha=0.001,
-                                 beta=1.0,
-                                 use_batchnorm=True,
-                                 eta=1.0,
-                                 scale_factor=1.0,
-                                 clip_value=clip_value,
-                                 loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/classification/MMD/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
-                                 dropout_rate=0.1,
-                                 output_activation='relu')
+    network = scnet.archs.CVAE(x_dimension=train_adata.shape[1],
+                               z_dimension=z_dim,
+                               architecture=architecture,
+                               n_conditions=n_conditions,
+                               lr=0.001,
+                               alpha=0.001,
+                               beta=1.0,
+                               use_batchnorm=True,
+                               eta=1.0,
+                               scale_factor=1.0,
+                               clip_value=clip_value,
+                               loss_fn=loss_fn,
+                               model_path=f"./models/CVAE/classification/MMD/before-{data_name}-{loss_fn}-{architecture}-{z_dim}/",
+                               dropout_rate=0.1,
+                               output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
-    condition_encoder = surgeon.utils.create_dictionary(conditions, [])
+    condition_encoder = scnet.utils.create_dictionary(conditions, [])
 
     network.train(train_adata,
                   valid_adata,
@@ -92,8 +92,8 @@ def train_scNet(data_dict, freeze_level, loss_fn):
                   retrain=False,
                   verbose=2)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
-                                                    condition_key=batch_key)
+    encoder_labels, _ = scnet.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
+                                                  condition_key=batch_key)
 
     latent_adata = network.to_latent(adata_for_training, encoder_labels)
 
@@ -104,15 +104,15 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="", palette=sc.pl.palettes.godsnot_64,
                save="_latent_training_celltype.pdf")
 
-    new_network = surgeon.operate(network, 
-                                  target_conditions, 
-                                  freeze=freeze, 
-                                  freeze_expression_input=freeze_expression_input,
-                                  remove_dropout=True,
-                                  )
+    new_network = scnet.operate(network,
+                                target_conditions,
+                                freeze=freeze,
+                                freeze_expression_input=freeze_expression_input,
+                                remove_dropout=True,
+                                )
 
     new_network.model_path = f"./models/CVAE/classification/MMD/after-{data_name}-{loss_fn}-{architecture}-{z_dim}-{freeze}/"
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_out_of_sample, 0.80)
 
     new_network.train(train_adata,
                       valid_adata,
@@ -129,7 +129,7 @@ def train_scNet(data_dict, freeze_level, loss_fn):
                       retrain=True,
                       verbose=2)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(
+    encoder_labels, _ = scnet.utils.label_encoder(
         adata, label_encoder=network.condition_encoder, condition_key=batch_key)
 
     latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
@@ -141,16 +141,16 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="", palette=sc.pl.palettes.godsnot_64,
                save="_latent_beforeTF_celltype.pdf")
 
-    classifier_network = surgeon.archs.NNClassifier(x_dimension=adata.shape[1],
-                                                    z_dimension=network.z_dim,
-                                                    cvae_network=new_network,
-                                                    n_labels=len(adata.obs[cell_type_key].unique().tolist()),
-                                                    use_batchnorm=True,
-                                                    model_path=f"./models/classification/MMD/classifier-{data_name}-{architecture}-{z_dim}/",
-                                                    dropout_rate=0.1,
-                                                    )
+    classifier_network = scnet.archs.NNClassifier(x_dimension=adata.shape[1],
+                                                  z_dimension=network.z_dim,
+                                                  cvae_network=new_network,
+                                                  n_labels=len(adata.obs[cell_type_key].unique().tolist()),
+                                                  use_batchnorm=True,
+                                                  model_path=f"./models/classification/MMD/classifier-{data_name}-{architecture}-{z_dim}/",
+                                                  dropout_rate=0.1,
+                                                  )
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_out_of_sample, 0.80)
     classifier_network.train(train_adata,
                              valid_adata,
                              cell_type_key,
@@ -164,16 +164,16 @@ def train_scNet(data_dict, freeze_level, loss_fn):
     predictions = classifier_network.predict(adata_out_of_sample)
     adata_out_of_sample.obs['predicted_TF'] = predictions
 
-    classifier_network = surgeon.archs.NNClassifier(x_dimension=adata.shape[1],
-                                                    z_dimension=new_network.z_dim,
-                                                    cvae_network=None,
-                                                    n_labels=len(adata.obs[cell_type_key].unique().tolist()),
-                                                    use_batchnorm=True,
-                                                    model_path=f"./models/classification/after-{data_name}-{architecture}-{z_dim}/",
-                                                    dropout_rate=0.1,
-                                                    )
+    classifier_network = scnet.archs.NNClassifier(x_dimension=adata.shape[1],
+                                                  z_dimension=new_network.z_dim,
+                                                  cvae_network=None,
+                                                  n_labels=len(adata.obs[cell_type_key].unique().tolist()),
+                                                  use_batchnorm=True,
+                                                  model_path=f"./models/classification/after-{data_name}-{architecture}-{z_dim}/",
+                                                  dropout_rate=0.1,
+                                                  )
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_out_of_sample, 0.80)
     classifier_network.train(train_adata,
                              valid_adata,
                              cell_type_key,

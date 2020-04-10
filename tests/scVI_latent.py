@@ -10,7 +10,7 @@ import pandas as pd
 import torch
 import os
 import argparse
-from surgeon.utils import remove_sparsity
+from scnet.utils import remove_sparsity
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type", "target": ["Pancreas Celseq", "Pancreas CelSeq2"], "HV": True},

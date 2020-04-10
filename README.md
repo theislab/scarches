@@ -8,15 +8,15 @@ In order to use your model
 1. Train your model with your own dataset 
 3. Use the following script to add model to kipoi
 ```python
-import surgeon
+import scnet
 data_path = "./data/data.h5ad"
-adata = surgeon.dl.read_h5ad(data_path)
+adata = scnet.dl.read_h5ad(data_path)
 condition_key = "condition"
-train_adata, valid_adata = surgeon.utils.train_test_split(adata, 0.80)
+train_adata, valid_adata = scnet.utils.train_test_split(adata, 0.80)
 conditions = adata.obs[condition_key].unique().tolist()
 n_conditions = len(conditions)
-condition_encoder = surgeon.tl.create_dictionary(conditions, [])
-network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1], 
+condition_encoder = scnet.tl.create_dictionary(conditions, [])
+network = scnet.archs.CVAE(x_dimension=train_adata.shape[1], 
                              z_dimension=10,
                              n_conditions=n_conditions,
                              lr=0.001,
@@ -41,9 +41,9 @@ network.train(train_adata,
               save=True,
 )
 ACCESS_TOKEN = "csN42Z7FXyNPwi8xOV9LDXtKI2cezQVjv6hoRrri5X6edFGhVrJEPiZQwBZG"
-surgeon.kp.create_kipoi_model(
+scnet.kp.create_kipoi_model(
     model=network,
-    model_name="surgeon",
+    model_name=scnet,
     data_path=data_path,
     access_token=ACCESS_TOKEN,
 )

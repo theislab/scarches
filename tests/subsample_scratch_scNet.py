@@ -4,7 +4,7 @@ import os
 import numpy as np
 import scanpy as sc
 
-import surgeon
+import scnet
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
@@ -49,29 +49,29 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                     sc.AnnData(condition_adata_subsampled.raw.X))
             final_adata.raw = raw_out_of_sample
 
-            train_adata, valid_adata = surgeon.utils.train_test_split(final_adata, 0.80)
+            train_adata, valid_adata = scnet.utils.train_test_split(final_adata, 0.80)
             n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
             z_dim = 10
             architecture = [128, 64, 32]
 
-            network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                         z_dimension=z_dim,
-                                         architecture=architecture,
-                                         use_batchnorm=False,
-                                         n_conditions=n_conditions,
-                                         lr=0.001,
-                                         alpha=0.00005,
-                                         beta=1000.0,
-                                         eta=1.0,
-                                         clip_value=clip_value,
-                                         loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/subsample/{data_name}/scratch/",
-                                         dropout_rate=0.05,
-                                         output_activation='relu')
+            network = scnet.archs.CVAE(x_dimension=train_adata.shape[1],
+                                       z_dimension=z_dim,
+                                       architecture=architecture,
+                                       use_batchnorm=False,
+                                       n_conditions=n_conditions,
+                                       lr=0.001,
+                                       alpha=0.00005,
+                                       beta=1000.0,
+                                       eta=1.0,
+                                       clip_value=clip_value,
+                                       loss_fn=loss_fn,
+                                       model_path=f"./models/CVAE/subsample/{data_name}/scratch/",
+                                       dropout_rate=0.05,
+                                       output_activation='relu')
 
             conditions = final_adata.obs[condition_key].unique().tolist()
-            condition_encoder = surgeon.utils.create_dictionary(conditions, [])
+            condition_encoder = scnet.utils.create_dictionary(conditions, [])
 
             network.train(train_adata,
                           valid_adata,
@@ -87,38 +87,38 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                           retrain=False,
                           verbose=5)
 
-            encoder_labels, _ = surgeon.utils.label_encoder(
+            encoder_labels, _ = scnet.utils.label_encoder(
                 final_adata, label_encoder=network.condition_encoder, condition_key=condition_key)
 
             latent_adata = network.to_mmd_layer(final_adata, encoder_labels, encoder_labels)
 
             latent_adata.write_h5ad(os.path.join(path_to_save, f'trVAE/{subsample_frac}/results_adata_{i}.h5ad'))
 
-            encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
-                                                            condition_key=condition_key)
+            encoder_labels, _ = scnet.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
+                                                          condition_key=condition_key)
             latent_adata = network.to_latent(final_adata, encoder_labels)
 
-            asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-            ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
-            nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
-            knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
-            knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
-            knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
-            knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
-            knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
-            ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=15)
-            ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=25)
-            ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                          n_neighbors=50)
-            ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=100)
-            ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=200)
-            ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-                                                           n_neighbors=300)
+            asw = scnet.metrics.asw(latent_adata, label_key=condition_key)
+            ari = scnet.metrics.ari(latent_adata, label_key=cell_type_key)
+            nmi = scnet.metrics.nmi(latent_adata, label_key=cell_type_key)
+            knn_15 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
+            knn_25 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
+            knn_50 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
+            knn_100 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
+            knn_200 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
+            knn_300 = scnet.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
+            ebm_15 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                        n_neighbors=15)
+            ebm_25 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                        n_neighbors=25)
+            ebm_50 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                        n_neighbors=50)
+            ebm_100 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                         n_neighbors=100)
+            ebm_200 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                         n_neighbors=200)
+            ebm_300 = scnet.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                         n_neighbors=300)
 
             scores.append(
                 [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,

@@ -4,7 +4,7 @@ import os
 import scanpy as sc
 from scanpy.plotting import palettes
 
-import surgeon
+import scnet
 
 DATASETS = {
     "pancreas": {"name": "pancreas", "batch_key": "study", "cell_type_key": "cell_type",
@@ -44,7 +44,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     adata_for_training = adata_for_training[adata_for_training.obs[cell_type_key] != target_cell_type]
 
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
     batch_colors = palettes.zeileis_28[:n_batches]
@@ -52,23 +52,23 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     architecture = [128, 64, 32]
     z_dim = 10
-    network = surgeon.archs.CVAE(x_dimension=train_adata.shape[1],
-                                 z_dimension=z_dim,
-                                 architecture=architecture,
-                                 n_conditions=n_conditions,
-                                 lr=0.001,
-                                 alpha=0.001,
-                                 beta=100.0,
-                                 use_batchnorm=False,
-                                 eta=1.0,
-                                 clip_value=clip_value,
-                                 loss_fn=loss_fn,
-                                 model_path=f"./models/CVAE/outofsample/{data_name}/before-{architecture}-{z_dim}/",
-                                 dropout_rate=0.0,
-                                 output_activation='relu')
+    network = scnet.archs.CVAE(x_dimension=train_adata.shape[1],
+                               z_dimension=z_dim,
+                               architecture=architecture,
+                               n_conditions=n_conditions,
+                               lr=0.001,
+                               alpha=0.001,
+                               beta=100.0,
+                               use_batchnorm=False,
+                               eta=1.0,
+                               clip_value=clip_value,
+                               loss_fn=loss_fn,
+                               model_path=f"./models/CVAE/outofsample/{data_name}/before-{architecture}-{z_dim}/",
+                               dropout_rate=0.0,
+                               output_activation='relu')
 
     conditions = adata_for_training.obs[batch_key].unique().tolist()
-    condition_encoder = surgeon.utils.create_dictionary(conditions, [])
+    condition_encoder = scnet.utils.create_dictionary(conditions, [])
 
     network.train(train_adata,
                   valid_adata,
@@ -84,8 +84,8 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                   retrain=False,
                   verbose=2)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
-                                                    condition_key=batch_key)
+    encoder_labels, _ = scnet.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
+                                                  condition_key=batch_key)
 
     latent_adata = network.to_mmd_layer(adata_for_training, encoder_labels, encoder_labels)
 
@@ -108,15 +108,15 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     else:
         raise Exception("Invalid freeze_level value")
 
-    new_network = surgeon.operate(network,
-                                  new_conditions=target_conditions,
-                                  init='Xavier',
-                                  freeze=freeze,
-                                  freeze_expression_input=freeze_expression_input,
-                                  remove_dropout=True)
+    new_network = scnet.operate(network,
+                                new_conditions=target_conditions,
+                                init='Xavier',
+                                freeze=freeze,
+                                freeze_expression_input=freeze_expression_input,
+                                remove_dropout=True)
 
     new_network.model_path = f"./models/CVAE/outofsample/MMD/after-{data_name}-{loss_fn}-{architecture}-{z_dim}/"
-    train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample, 0.80)
+    train_adata, valid_adata = scnet.utils.train_test_split(adata_out_of_sample, 0.80)
 
     new_network.train(train_adata,
                       valid_adata,
@@ -133,8 +133,8 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                       retrain=False,
                       verbose=2)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
-                                                    condition_key=batch_key)
+    encoder_labels, _ = scnet.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
+                                                  condition_key=batch_key)
 
     latent_adata = new_network.to_mmd_layer(adata_out_of_sample, encoder_labels, encoder_labels)
 
@@ -148,8 +148,8 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     plot_adata = adata_for_training.concatenate(adata_out_of_sample)
 
-    encoder_labels, _ = surgeon.utils.label_encoder(plot_adata, label_encoder=new_network.condition_encoder,
-                                                    condition_key=batch_key)
+    encoder_labels, _ = scnet.utils.label_encoder(plot_adata, label_encoder=new_network.condition_encoder,
+                                                  condition_key=batch_key)
 
     latent_adata = new_network.to_mmd_layer(plot_adata, encoder_labels, encoder_labels)
 
