@@ -13,7 +13,6 @@ from keras.utils import to_categorical
 from surgeon.models._losses import LOSSES
 from surgeon.models._utils import sample_z
 from surgeon.utils import label_encoder, remove_sparsity
-
 log = logging.getLogger(__file__)
 
 
@@ -196,8 +195,6 @@ class NNClassifier:
         probs = self.classifier_model.predict(adata.X)
         predictions = self.label_encoder.inverse_transform(np.argmax(probs, axis=1))
 
-        predictions = self.label_encoder.inverse_transform(predictions)
-
         return predictions
 
     def restore_model(self):
@@ -211,17 +208,19 @@ class NNClassifier:
             ```python
             ```
         """
-        self.classifier_model = load_model(os.path.join(self.model_path, 'classifier.h5'), compile=False)
+        if os.path.exists(os.path.join(self.model_path, 'classifier.h5')):
+            raise Exception("No model found!")
+        self.classifier_model = self.classifier_model.load_weights(os.path.join(self.model_path, 'classifier.h5'))
         self.compile_models()
 
     def save_model(self):
         os.makedirs(self.model_path, exist_ok=True)
-        self.classifier_model.save(os.path.join(self.model_path, "classifier.h5"), overwrite=True)
+        self.classifier_model.save_weights(os.path.join(self.model_path, "classifier.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_path}. Training finished")
 
     def train(self, train_adata, valid_adata, cell_type_key,
               n_epochs=25, batch_size=32, early_stop_limit=20,
-              lr_reducer=10, save=True, verbose=2):
+              lr_reducer=10, save=True, retrain=False, verbose=2):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -265,6 +264,10 @@ class NNClassifier:
 
         x_valid = valid_adata.X
         y_valid = valid_classes_onehot
+        
+        if not retrain and os.path.exists(os.path.join(self.model_path, "classifier.h5")):
+            self.restore_model()
+            return
 
         callbacks = [
             History(),

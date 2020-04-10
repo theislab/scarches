@@ -110,44 +110,44 @@ def create_dictionary(conditions, target_conditions):
 
 def hvg_batch(adata, batch_key=None, target_genes=2000, flavor='cell_ranger', n_bins=20, adataOut=False):
     """
-    Method to select HVGs based on mean dispersions of genes that are highly
+
+    Method to select HVGs based on mean dispersions of genes that are highly 
     variable genes in all batches. Using a the top target_genes per batch by
-    average normalize dispersion. If target genes still hasn't been reached,
-    then HVGs in all but one batches are used to fill up. This is continued
+    average normalize dispersion. If target genes still hasn't been reached, 
+    then HVGs in all but one batches are used to fill up. This is continued 
     until HVGs in a single batch are considered.
     """
-
+    
     adata_hvg = adata if adataOut else adata.copy()
 
     n_batches = len(adata_hvg.obs[batch_key].cat.categories)
 
     # Calculate double target genes per dataset
     sc.pp.highly_variable_genes(adata_hvg,
-                                flavor=flavor,
+                                flavor=flavor, 
                                 n_top_genes=target_genes,
-                                n_bins=n_bins,
-                                batch_key=batch_key,
-                                )
+                                n_bins=n_bins, 
+                                batch_key=batch_key)
 
     nbatch1_dispersions = adata_hvg.var['dispersions_norm'][adata_hvg.var.highly_variable_nbatches >
-                                                            len(adata_hvg.obs[batch_key].cat.categories) - 1]
-
+                                                           len(adata_hvg.obs[batch_key].cat.categories)-1]
+    
     nbatch1_dispersions.sort_values(ascending=False, inplace=True)
 
     if len(nbatch1_dispersions) > target_genes:
         hvg = nbatch1_dispersions.index[:target_genes]
-
+    
     else:
         enough = False
         print(f'Using {len(nbatch1_dispersions)} HVGs from full intersect set')
         hvg = nbatch1_dispersions.index[:]
         not_n_batches = 1
-
+        
         while not enough:
             target_genes_diff = target_genes - len(hvg)
 
             tmp_dispersions = adata_hvg.var['dispersions_norm'][adata_hvg.var.highly_variable_nbatches ==
-                                                                (n_batches - not_n_batches)]
+                                                                (n_batches-not_n_batches)]
 
             if len(tmp_dispersions) < target_genes_diff:
                 print(f'Using {len(tmp_dispersions)} HVGs from n_batch-{not_n_batches} set')
@@ -158,7 +158,7 @@ def hvg_batch(adata, batch_key=None, target_genes=2000, flavor='cell_ranger', n_
                 print(f'Using {target_genes_diff} HVGs from n_batch-{not_n_batches} set')
                 tmp_dispersions.sort_values(ascending=False, inplace=True)
                 hvg = hvg.append(tmp_dispersions.index[:target_genes_diff])
-                enough = True
+                enough=True
 
     print(f'Using {len(hvg)} HVGs')
 
@@ -166,7 +166,7 @@ def hvg_batch(adata, batch_key=None, target_genes=2000, flavor='cell_ranger', n_
         del adata_hvg
         return hvg.tolist()
     else:
-        return adata_hvg[:, hvg].copy()
+        return adata_hvg[:,hvg].copy()
 
 def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=0.5, 
                  pred_unknown=True, return_uncertainty=True):
@@ -174,6 +174,9 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
     k_neighbors_transformer = KNeighborsTransformer(n_neighbors=n_neighbors, mode='distance', 
                                                     algorithm='brute', metric='euclidean', 
                                                     n_jobs=-1)
+    train_adata = remove_sparsity(train_adata)
+    valid_adata = remove_sparsity(valid_adata)
+    
     k_neighbors_transformer.fit(train_adata.X)
 
     y_train_labels = train_adata.obs[label_key].values

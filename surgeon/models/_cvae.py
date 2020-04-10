@@ -534,7 +534,7 @@ class CVAE:
             batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
             celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
-            callbacks.append(ScoreCallback(score_filename, adata.X, batch_labels, celltype_labels, self.cvae_model,
+            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
                                            n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
                                            n_celltype_labels=len(np.unique(celltype_labels))))
 
