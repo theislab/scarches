@@ -86,3 +86,12 @@ for i in range(5):
 
         os.makedirs("./models/scVI/subsample/", exist_ok=True)
         torch.save(model.model.state_dict(), f"./models/scVI/subsample/{data_name}-{subsample_frac}-{i}.pt")
+
+        posterior = model.create_posterior(model.model, scvi_dataset, indices=np.arange(len(scvi_dataset)))
+        latent, batch_indices, labels = posterior.sequential().get_latent()
+
+        latent_adata = sc.AnnData(latent)
+        latent_adata.obs[cell_type_key] = final_adata.obs[cell_type_key].values
+        latent_adata.obs[batch_key] = final_adata.obs[batch_key].values
+        
+        latent_adata.write_h5ad(f"./results/subsample/{data_name}/scVI/{subsample_frac}/results_adata_{i}.h5ad")

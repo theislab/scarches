@@ -25,7 +25,7 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
-    path_to_save = f"./results/subsample/{data_name}/{loss_fn}/"
+    path_to_save = f"./results/subsample/{data_name}/"
     os.makedirs(path_to_save, exist_ok=True)
 
     if loss_fn == "mse":
@@ -85,39 +85,46 @@ def train_and_evaluate(data_dict, loss_fn="mse"):
                           n_per_epoch=-1,
                           save=True,
                           retrain=False,
-                          verbose=2)
+                          verbose=5)
 
-            # encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
-            #                                                 condition_key=condition_key)
-            # latent_adata = network.to_latent(final_adata, encoder_labels)
+            encoder_labels, _ = surgeon.utils.label_encoder(
+                final_adata, label_encoder=network.condition_encoder, condition_key=condition_key)
 
-            # asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
-            # ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
-            # nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
-            # knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
-            # knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
-            # knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
-            # knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
-            # knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
-            # knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
-            # ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                               n_neighbors=15)
-            # ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                               n_neighbors=25)
-            # ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                               n_neighbors=50)
-            # ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                                n_neighbors=100)
-            # ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                                n_neighbors=200)
-            # ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
-            #                                                n_neighbors=300)
+            latent_adata = network.to_mmd_layer(final_adata, encoder_labels, encoder_labels)
 
-            # scores.append(
-            #     [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-            #      ebm_50, ebm_100, ebm_200, ebm_300])
-            # print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
-            #        ebm_50, ebm_100, ebm_200, ebm_300])
+            latent_adata.write_h5ad(os.path.join(path_to_save, f'trVAE/{subsample_frac}/results_adata_{i}.h5ad'))
+
+            encoder_labels, _ = surgeon.utils.label_encoder(final_adata, label_encoder=network.condition_encoder,
+                                                            condition_key=condition_key)
+            latent_adata = network.to_latent(final_adata, encoder_labels)
+
+            asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
+            ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)
+            nmi = surgeon.metrics.nmi(latent_adata, label_key=cell_type_key)
+            knn_15 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=15)
+            knn_25 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=25)
+            knn_50 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=50)
+            knn_100 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=100)
+            knn_200 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=200)
+            knn_300 = surgeon.metrics.knn_purity(latent_adata, label_key=cell_type_key, n_neighbors=300)
+            ebm_15 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=15)
+            ebm_25 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=25)
+            ebm_50 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                          n_neighbors=50)
+            ebm_100 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=100)
+            ebm_200 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=200)
+            ebm_300 = surgeon.metrics.entropy_batch_mixing(latent_adata, label_key=condition_key, n_pools=1,
+                                                           n_neighbors=300)
+
+            scores.append(
+                [subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+                 ebm_50, ebm_100, ebm_200, ebm_300])
+            print([subsample_frac, asw, ari, nmi, knn_15, knn_25, knn_50, knn_100, knn_200, knn_300, ebm_15, ebm_25,
+                   ebm_50, ebm_100, ebm_200, ebm_300])
 
         scores = np.array(scores)
 

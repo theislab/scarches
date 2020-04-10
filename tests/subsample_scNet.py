@@ -78,14 +78,13 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                          eta=1.0,
                                          clip_value=clip_value,
                                          loss_fn=loss_fn,
-                                         model_path=f"./models/CVAE/{data_name}/before/",
-                                         dropout_rate=0.05,
+                                         model_path=f"./models/CVAE/subsample/{data_name}/before/",
+                                         dropout_rate=0.2,
                                          output_activation='relu')
 
             conditions = adata_for_training.obs[condition_key].unique().tolist()
             condition_encoder = surgeon.utils.create_dictionary(conditions, target_conditions)
 
-            # network.restore_model()
             network.train(train_adata,
                           valid_adata,
                           condition_key=condition_key,
@@ -105,9 +104,10 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                                           init='Xavier',
                                           freeze=freeze,
                                           freeze_expression_input=freeze_expression,
-                                          new_training_kwargs={"beta": 10000, "eta": 0.1})
+                                          new_training_kwargs={"beta": 1000, "eta": 1}
+                                          )
 
-            new_network.model_path = f"./models/CVAE/{data_name}/after-{subsample_frac}-{freeze_level}/"
+            new_network.model_path = f"./models/CVAE/subsample/{data_name}/after-{subsample_frac}-{freeze_level}/"
             train_adata, valid_adata = surgeon.utils.train_test_split(adata_out_of_sample_subsampled, 0.80)
 
             new_network.train(train_adata,
@@ -116,7 +116,7 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                               cell_type_key=cell_type_key,
                               le=new_network.condition_encoder,
                               n_epochs=10000,
-                              batch_size=1024,
+                              batch_size=256,
                               n_epochs_warmup=0,
                               early_stop_limit=50,
                               lr_reducer=40,
@@ -127,9 +127,11 @@ def train_and_evaluate(data_dict, freeze_level=0, loss_fn='nb'):
                               verbose=2)
 
             encoder_labels, _ = surgeon.utils.label_encoder(
-                adata_out_of_sample_subsampled, label_encoder=network.condition_encoder, condition_key=condition_key)
+                adata_out_of_sample_subsampled, label_encoder=new_network.condition_encoder, condition_key=condition_key)
 
             latent_adata = new_network.to_mmd_layer(adata_out_of_sample_subsampled, encoder_labels, encoder_labels)
+
+            latent_adata.write_h5ad(os.path.join(path_to_save, f'scNet_freeze_level={freeze_level}/{subsample_frac}/results_adata_{i}.h5ad'))
 
             # asw = surgeon.metrics.asw(latent_adata, label_key=condition_key)
             # ari = surgeon.metrics.ari(latent_adata, label_key=cell_type_key)

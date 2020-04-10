@@ -47,8 +47,8 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     train_adata, valid_adata = surgeon.utils.train_test_split(adata_for_training, 0.80)
     n_conditions = len(train_adata.obs[batch_key].unique().tolist())
 
-    batch_colors = palettes.zeileis_26[:n_batches]
-    cell_type_colors = palettes.godsnot_64[:n_cell_types]
+    batch_colors = palettes.zeileis_28[:n_batches]
+    cell_type_colors = palettes.godsnot_102[:n_cell_types]
 
     architecture = [128, 64, 32]
     z_dim = 10
@@ -87,13 +87,13 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     encoder_labels, _ = surgeon.utils.label_encoder(adata_for_training, label_encoder=network.condition_encoder,
                                                     condition_key=batch_key)
 
-    latent_adata = network.to_latent(adata_for_training, encoder_labels)
+    latent_adata = network.to_mmd_layer(adata_for_training, encoder_labels, encoder_labels)
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
-    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False, title="", palette=,
+    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False, title="", palette=batch_colors,
                save="_latent_first_condition.pdf")
-    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="", palette=,
+    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False, title="", palette=cell_type_colors,
                save="_latent_first_celltype.pdf")
 
     if freeze_level == 0:
@@ -126,8 +126,8 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
                       n_epochs=10000,
                       batch_size=512,
                       n_epochs_warmup=0,
-                      early_stop_limit=100,
-                      lr_reducer=80,
+                      early_stop_limit=50,
+                      lr_reducer=40,
                       n_per_epoch=0,
                       save=True,
                       retrain=False,
@@ -136,7 +136,7 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
     encoder_labels, _ = surgeon.utils.label_encoder(adata_out_of_sample, label_encoder=new_network.condition_encoder,
                                                     condition_key=batch_key)
 
-    latent_adata = new_network.to_latent(adata_out_of_sample, encoder_labels)
+    latent_adata = new_network.to_mmd_layer(adata_out_of_sample, encoder_labels, encoder_labels)
 
     sc.pp.neighbors(latent_adata)
     sc.tl.umap(latent_adata)
@@ -145,6 +145,21 @@ def train(data_dict, freeze_level=0, loss_fn='nb'):
 
     sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False,
                save="_latent_out_of_sample_celltype.pdf")
+
+    plot_adata = adata_for_training.concatenate(adata_out_of_sample)
+
+    encoder_labels, _ = surgeon.utils.label_encoder(plot_adata, label_encoder=new_network.condition_encoder,
+                                                    condition_key=batch_key)
+
+    latent_adata = new_network.to_mmd_layer(plot_adata, encoder_labels, encoder_labels)
+
+    sc.pp.neighbors(latent_adata)
+    sc.tl.umap(latent_adata)
+    sc.pl.umap(latent_adata, color=[batch_key], wspace=0.7, frameon=False,
+               save="_latent_all_condition.pdf")
+
+    sc.pl.umap(latent_adata, color=[cell_type_key], wspace=0.7, frameon=False,
+               save="_latent_all_celltype.pdf")
 
 
 if __name__ == '__main__':
