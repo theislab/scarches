@@ -2,6 +2,11 @@
 
 Transfer learning using architecture surgery for scRNA-seq
 
+<img align="center" src="./sketch.png?raw=true">
+
+## Introduction
+A Tensorflow (Keras) implementation of scNet. 
+
 ## Installation
 
 ### Installation with pip
