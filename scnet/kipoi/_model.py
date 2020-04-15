@@ -3,13 +3,13 @@ from collections import OrderedDict
 
 import yaml
 
-from scnet.models import CVAE
+from scnet.models import scNet
 
 
-def create_network_yaml(network: CVAE,
+def create_network_yaml(network: scNet,
                         model_url: str = None,
                         model_md5: str = None,
-                        path_to_save: str = None,):
+                        path_to_save: str = None, ):
     data = OrderedDict(
         defined_as='kipoi.model.KerasModel',
         args=OrderedDict(

@@ -17,7 +17,7 @@ from . import data_loader as dl
 list_str = TypeVar('list_str', str, list)
 
 
-def operate(network: archs.CVAE,
+def operate(network: archs.scNet,
             new_conditions: list_str,
             init: str = 'Xavier',
             freeze: bool = True,
@@ -26,7 +26,7 @@ def operate(network: archs.CVAE,
             print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
-            ) -> archs.CVAE:
+            ) -> archs.scNet:
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
@@ -50,8 +50,8 @@ def operate(network: archs.CVAE,
         network_kwargs[key] = new_network_kwargs[key]
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = archs.CVAE(**network_kwargs, **training_kwargs,
-                             print_summary=False)
+    new_network = archs.scNet(**network_kwargs, **training_kwargs,
+                              print_summary=False)
 
     # Get Previous Model's weights
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias

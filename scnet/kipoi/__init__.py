@@ -5,11 +5,11 @@ from shutil import copyfile
 from scnet.kipoi._data import create_dataloader_yaml
 from scnet.kipoi._model import create_network_yaml
 from scnet.kipoi._upload import upload_file_to_zenodo
-from scnet.models import CVAE
+from scnet.models import scNet
 
 
 def create_kipoi_model(model_name: str,
-                       model: CVAE,
+                       model: scNet,
                        upload=False,
                        **kwargs):
     path_to_save = f"~/.kipoi/models/{model_name}/"

@@ -22,7 +22,7 @@ from scnet.utils import label_encoder, remove_sparsity
 log = logging.getLogger(__file__)
 
 
-class CVAE:
+class scNet:
     """
         C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.

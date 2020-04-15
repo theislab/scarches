@@ -2,10 +2,10 @@ import os
 
 import yaml
 from collections import OrderedDict
-from scnet.models import CVAE
+from scnet.models import scNet
 
 
-def create_dataloader_yaml(network: CVAE,
+def create_dataloader_yaml(network: scNet,
                            data_url: str = None,
                            data_md5: str = None,
                            path_to_save: str = "./dataloader.yaml"):
