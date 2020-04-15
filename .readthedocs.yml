@@ -1,0 +1,14 @@
+# .readthedocs.yml
+
+build:
+  image: latest
+
+python:
+  version: 3.6
+  setup_py_install: True
+
+requirements_file: requirements.txt
+
+formats:
+    - epub
+    - pdf
