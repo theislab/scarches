@@ -1,7 +1,5 @@
 # scNet
 
-Transfer learning using architecture surgery for scRNA-seq
-
 <img align="center" src="./sketch.png?raw=true">
 
 ## Introduction
