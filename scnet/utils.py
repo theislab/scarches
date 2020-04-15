@@ -222,3 +222,18 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
         return pred_labels, uncertainties
     else:
         return pred_labels
+
+def subsample(adata, study_key, fraction=0.1, specific_cell_types=None, cell_type_key=None):
+    studies = adata.obs[study_key].unique().tolist()
+    if specific_cell_types and cell_type_key:
+        subsampled_adata = adata[adata.obs[cell_type_key].isin(specific_cell_types)]
+        other_adata = adata[~adata.obs[cell_type_key].isin(specific_cell_types)]
+    else:
+        subsampled_adata = None
+    for study in studies:
+        study_adata = other_adata[other_adata.obs[study_key] == study]
+        n_samples = study_adata.shape[0]
+        subsample_idx = np.random.choice(n_samples, int(fraction * n_samples), replace=False)
+        study_adata_subsampled = study_adata[subsample_idx, :]
+        subsampled_adata = study_adata_subsampled if subsampled_adata is None else subsampled_adata.concatenate(study_adata_subsampled)
+    return subsampled_adata

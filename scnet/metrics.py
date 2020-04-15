@@ -13,13 +13,8 @@ def __entropy_from_indices(indices):
 
 
 def entropy_batch_mixing(adata, label_key='batch',
-                         n_neighbors=50, n_pools=50, n_samples_per_pool=100, subsample_frac=1.0):
+                         n_neighbors=50, n_pools=50, n_samples_per_pool=100):
     adata = remove_sparsity(adata)
-
-    n_samples = adata.shape[0]
-    keep_idx = np.random.choice(np.arange(n_samples), size=min(n_samples, int(subsample_frac * n_samples)),
-                                replace=False)
-    adata = adata[keep_idx, :]
 
     neighbors = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
     indices = neighbors.kneighbors(adata.X, return_distance=False)[:, 1:]

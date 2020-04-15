@@ -293,7 +293,7 @@ class CVAE:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
             mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
             kl_loss = LOSSES['kl'](self.mu, self.log_var)
-            recon_loss = LOSSES['recon']
+            recon_loss = LOSSES[f'{self.loss_fn}_recon']
 
         return loss, mmd_loss, kl_loss, recon_loss
 

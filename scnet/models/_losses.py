@@ -1,13 +1,22 @@
 import tensorflow as tf
 from keras import backend as K
+from keras import losses
 
 from ._utils import compute_mmd, _nelem, _nan2zero, _nan2inf, _reduce_mean
 
 
-def kl_recon(mu, log_var, alpha=0.1, eta=1.0):
+def kl_recon_mse(mu, log_var, alpha=0.1, eta=1.0):
     def kl_recon_loss(y_true, y_pred):
         kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
-        recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+        recon_loss = 0.5 * losses.mean_squared_error(y_true, y_pred)
+        return eta * recon_loss + alpha * kl_loss
+
+    return kl_recon_loss
+
+def kl_recon_sse(mu, log_var, alpha=0.1, eta=1.0):
+    def kl_recon_loss(y_true, y_pred):
+        kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
+        recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=-1)
         return eta * recon_loss + alpha * kl_loss
 
     return kl_recon_loss
@@ -20,7 +29,10 @@ def pure_kl_loss(mu, log_var):
     return kl_loss
 
 def sse_loss(y_true, y_pred):
-    return K.sum(K.square((y_true - y_pred)), axis=1)
+    return K.sum(K.square((y_true - y_pred)), axis=-1)
+
+def mse_loss(y_true, y_pred):
+    return losses.mean_squared_error(y_true, y_pred)
 
 def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_method="general"):
     def mmd_loss(real_labels, y_pred):
@@ -159,15 +171,15 @@ def zinb_loss(pi, disp, ridge=0.1, eta=1.0):
 
 
 LOSSES = {
-    "mse": kl_recon,
+    "mse": kl_recon_mse,
+    "sse": kl_recon_sse,
     "mmd": mmd,
     "nb": nb_kl_loss,
     "zinb": zinb_kl_loss,
     "cce": 'categorical_crossentropy',
     "kl": pure_kl_loss,
-    "recon": sse_loss,
+    "sse_recon": sse_loss,
+    "mse_recon": mse_loss,
     "nb_wo_kl": nb_loss,
     "zinb_wo_kl": zinb_loss,
-
-    
 }

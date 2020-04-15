@@ -23,7 +23,7 @@ def operate(network: archs.CVAE,
             freeze: bool = True,
             freeze_expression_input: bool = False,
             remove_dropout: bool = True,
-            print_summary: bool = True,
+            print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
             ) -> archs.CVAE:
