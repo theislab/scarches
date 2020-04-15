@@ -1,2 +1,1 @@
-from ._cvae import scNet
-from ._scvi import scVI
+from ._scnet import scNet
