@@ -26,4 +26,3 @@ __pycache__/
 *.zip
 #testing modules
 .pytest_cache/
-*.txt
