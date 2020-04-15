@@ -17,13 +17,15 @@ pip install scnet
 or install the development version via pip:
 
 ```shell script
-pip install git+https://github.com/theislab/scnet.git
+pip3 install -r requirements.txt 
+pip3 install git+https://github.com/theislab/scnet.git
 ```
 
 or: 
 ```shell script
 git clone https://github.com/theislab/scnet
 cd scnet
+pip3 install -r requirements.txt 
 python3 setup.py install
 ```
 
