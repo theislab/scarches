@@ -188,7 +188,7 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
     stds = (2. / stds) ** 2
     stds = stds.reshape(-1, 1)
 
-    top_k_distances_tilda = np.true_divide(-np.exp(top_k_distances), stds)
+    top_k_distances_tilda = np.exp(-np.true_divide(top_k_distances, stds))
 
     weights = top_k_distances_tilda / np.sum(top_k_distances_tilda, axis=1, keepdims=True)
 
