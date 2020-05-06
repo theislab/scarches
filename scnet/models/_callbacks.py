@@ -119,7 +119,7 @@ class ScoreCallback(Callback):
                 asw, asw_time = self.asw(latent_X)
                 ari, ari_time = self.ari(latent_X)
                 nmi, nmi_time = self.nmi(latent_X)
-                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15, n_pools=1)
+                ebm, ebm_time = self.entropy_of_batch_mixing(latent_X, n_neighbors=15)
                 knn, knn_time = self.knn_purity(latent_X, n_neighbors=15)
                 self.scores.append([asw, ari, nmi, ebm, knn])
                 print(
