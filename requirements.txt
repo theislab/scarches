@@ -1,3 +1,4 @@
+requests
 numpy==1.16.3
 scanpy==1.4.5.post2
 scikit-learn==0.22.1
