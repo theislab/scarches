@@ -7,7 +7,7 @@ import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model, load_model
+from keras.models import Model, model_from_json
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
@@ -17,31 +17,45 @@ from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import sample_z, print_message, print_progress
-from scnet.utils import label_encoder, remove_sparsity
+from scnet.utils import label_encoder, remove_sparsity, create_dictionary
 
 log = logging.getLogger(__file__)
 
 
 class scNet:
     """
-        C-VAE vector Network class. This class contains the implementation of Conditional
-        Variational Auto-encoder network.
+        scNet class. This class contains the implementation of scNet network.
+
         # Parameters
-            kwargs:
-                key: `dropout_rate`: float
-                        dropout rate
-                key: `learning_rate`: float
-                    learning rate of optimization algorithm
-                key: `model_path`: basestring
-                    path to save the model after training
-                key: `alpha`: float
-                    alpha coefficient for loss.
-                key: `beta`: float
-                    beta coefficient for loss.
             x_dimension: integer
                 number of gene expression space dimensions.
+            n_conditions: integer
+                number of conditions used for one-hot encoding.
             z_dimension: integer
                 number of latent space dimensions.
+            kwargs:
+                key: `learning_rate`: float
+                    scNet's optimizer's step size (learning rate).
+                key: `alpha`: float
+                    KL divergence coefficient in the loss function.
+                key: `beta`: float
+                    MMD loss coefficient in the loss function.
+                key: `eta`: float
+                    Reconstruction coefficient in the loss function.
+                key: `dropout_rate`: float
+                    dropout rate for Dropout layers in scNet's architecture.
+                key: `model_path`: str
+                    path to save model config and its weights.
+                key: `clip_value`: float
+                    Optimizer's clip value used for clipping the computed gradients.
+                key: `output_activation`: str
+                    Output activation of scNet which Depends on the range of data.
+                key: `use_batchnorm`: bool
+                    Whether use batch normalization in scNet or not.
+                key: `architecture`: list
+                    Architecture of scNet. Must be a list of integers.
+                key: `gene_names`: list
+                    names of genes fed as scNet's input. Must be a list of strings.
     """
 
     def __init__(self, x_dimension, n_conditions, z_dimension=100, **kwargs):
@@ -64,6 +78,8 @@ class scNet:
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
         self.architecture = kwargs.get("architecture", [128])
+        self.gene_names = kwargs.get("gene_names", None)
+
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
         self.n_mmd_conditions = kwargs.get("n_mmd_conditions", n_conditions)
         self.mmd_computation_method = kwargs.get("mmd_computation_method", "general")
@@ -103,8 +119,12 @@ class scNet:
         }
 
         self.init_w = keras.initializers.glorot_normal()
-        self._create_networks()
-        self.compile_models()
+
+        if kwargs.get("construct_model", True):
+            self.construct_network()
+
+        if kwargs.get("compile_model", True):
+            self.compile_models()
 
         print_summary = kwargs.get("print_summary", False)
         if print_summary:
@@ -114,9 +134,9 @@ class scNet:
 
     def _encoder(self, name="encoder"):
         """
-            Constructs the encoder sub-network of C-VAE. This function implements the
-            encoder part of Variational Auto-encoder. It will transform primary
-            data in the `n_vars` dimension-space to the `z_dimension` latent space.
+            Constructs the encoder sub-network of scNet. This function implements the
+            encoder part of scNet. It will transform primary
+            data in the `x_dimension` dimension-space to the `z_dimension` latent space.
             # Parameters
                 No parameters are needed.
             # Returns
@@ -124,6 +144,8 @@ class scNet:
                     A dense layer consists f means of gaussian distributions of latent space dimensions.
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
+                model: keras.models.Model
+                    The encoder model which is an instantiation of Keras Model.
         """
 
         for idx, n_neuron in enumerate(self.architecture):
@@ -187,7 +209,7 @@ class scNet:
                                           output=h_pi)
 
         else:
-            h = Dense(self.x_dim, activation=None, 
+            h = Dense(self.x_dim, activation=None,
                       kernel_initializer=self.init_w,
                       use_bias=True)(h)
             h = ACTIVATIONS[self.output_activation](h)
@@ -198,14 +220,16 @@ class scNet:
 
     def _decoder(self, name="decoder"):
         """
-            Constructs the decoder sub-network of C-VAE. This function implements the
-            decoder part of Variational Auto-encoder. It will transform constructed
-            latent space to the previous space of data with n_dimensions = n_vars.
+            Constructs the decoder sub-network of scNet. This function implements the
+            decoder part of scNet. It will transform constructed
+            latent space to the previous space of data with n_dimensions = x_dimension.
             # Parameters
                 No parameters are needed.
             # Returns
-                h: Tensor
-                    A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
+                model: keras.models.Model
+                    The decoder model which is an instantiation of Keras Model.
+                mmd_model: keras.models.Model
+                    The MMD decoder model which maps latent space to MMD space.
         """
 
         for idx, n_neuron in enumerate(self.architecture[::-1]):
@@ -214,7 +238,7 @@ class scNet:
                                          use_bias=False, name="first_layer", freeze=self.freeze_expression_input)(
                     [self.z, self.decoder_labels])
             else:
-                h = Dense(n_neuron, kernel_initializer=self.init_w, 
+                h = Dense(n_neuron, kernel_initializer=self.init_w,
                           use_bias=False)(h)
             if self.use_batchnorm:
                 h = BatchNormalization()(h)
@@ -228,13 +252,13 @@ class scNet:
         mmd_model = Model(inputs=model_inputs, outputs=h_mmd, name='mmd_decoder')
         return model, mmd_model
 
-    def _create_networks(self):
+    def construct_network(self):
         """
-            Constructs the whole C-VAE network. It is step-by-step constructing the C-VAE
+            Constructs the whole scNet's network. It is step-by-step constructing the scNet
             network. First, It will construct the encoder part and get mu, log_var of
             latent space. Second, It will sample from the latent space to feed the
             decoder part in next step. Finally, It will reconstruct the data by
-            constructing decoder part of C-VAE.
+            constructing decoder part of scNet.
             # Parameters
                 No parameters are needed.
             # Returns
@@ -255,7 +279,7 @@ class scNet:
             inputs = [self.x, self.encoder_labels, self.decoder_labels]
             encoder_outputs = self.encoder_model(inputs[:2])[2]
             decoder_inputs = [encoder_outputs, self.decoder_labels]
-        
+
         decoder_outputs = self.decoder_model(decoder_inputs)
         decoder_mmd_outputs = self.decoder_mmd_model(decoder_inputs)
 
@@ -265,7 +289,7 @@ class scNet:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
-        
+
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
                                'disp_activation': ACTIVATIONS['disp_activation'],
                                'SliceLayer': LAYERS['SliceLayer'],
@@ -273,15 +297,24 @@ class scNet:
                                'FirstLayer': LAYERS['FirstLayer']}
 
         get_custom_objects().update(self.custom_objects)
+        print("scNet's network has been successfully constructed!")
 
     def _calculate_loss(self):
+        """
+            Defines the loss function of scNet's network after constructing the whole
+            network.
+            # Parameters
+                No parameters are needed.
+            # Returns
+                all scNet loss functions in order to be (linearly) combined later with the coefficients.
+        """
         if self.loss_fn == 'nb':
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
             mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
             kl_loss = LOSSES['kl'](self.mu, self.log_var)
             recon_loss = LOSSES['nb_wo_kl']
-            
+
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
@@ -299,10 +332,8 @@ class scNet:
 
     def compile_models(self):
         """
-            Defines the loss function of C-VAE network after constructing the whole
-            network. This will define the KL Divergence and Reconstruction loss for
-            C-VAE and also defines the Optimization algorithm for network. The C-VAE Loss
-            will be weighted sum of reconstruction loss and KL Divergence loss.
+            Compiles scNet network with the defined loss functions and
+            Adam optimizer with its pre-defined hyper-parameters.
             # Parameters
                 No parameters are needed.
             # Returns
@@ -311,23 +342,43 @@ class scNet:
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
         loss, mmd_loss, kl_loss, recon_loss = self._calculate_loss()
 
-        # self.cvae_model.compile(optimizer=optimizer,
-        #                         loss=[loss, mmd_loss],
-        #                         metrics={'reconstruction': [recon_loss, kl_loss],
-        #                                  'mmd': [mmd_loss]}
-        #                         )
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=[loss, mmd_loss],
                                 metrics={self.cvae_model.outputs[0].name: loss,
-                                         self.cvae_model.outputs[0].name: mmd_loss}
+                                         self.cvae_model.outputs[1].name: mmd_loss}
                                 )
 
+        print("scNet's network has been successfully compiled!")
+
     def get_summary_of_networks(self):
+        """
+            Prints summary of scNet sub-networks.
+            # Parameters
+                No parameters are needed.
+            # Returns
+                Nothing will be returned.
+        """
         self.encoder_model.summary()
         self.decoder_model.summary()
         self.cvae_model.summary()
 
     def to_mmd_layer(self, adata, encoder_labels, decoder_labels):
+        """
+            Map `adata` in to the MMD space. This function will feed data
+            in `mmd_model` of scNet and compute the MMD space coordinates
+            for each sample in data.
+            # Parameters
+                adata: `~anndata.AnnData`
+                    Annotated data matrix to be mapped to MMD latent space.
+                    Please note that `adata.X` has to be in shape [n_obs, x_dimension]
+                encoder_labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as scNet's encoder condition array.
+                decoder_labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as scNet's decoder condition array.
+            # Returns
+                adata_mmd: `~anndata.AnnData`
+                    returns Annotated data containing MMD latent space encoding of 'adata'
+        """
         adata = remove_sparsity(adata)
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
@@ -346,17 +397,18 @@ class scNet:
 
     def to_latent(self, adata, encoder_labels):
         """
-            Map `data` in to the latent space. This function will feed data
-            in encoder part of C-VAE and compute the latent space coordinates
+            Map `adata` in to the latent space. This function will feed data
+            in encoder part of scNet and compute the latent space coordinates
             for each sample in data.
             # Parameters
-                data: `~anndata.AnnData`
-                    Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
+                adata: `~anndata.AnnData`
+                    Annotated data matrix to be mapped to latent space.
+                    Please note that `adata.X` has to be in shape [n_obs, x_dimension]
                 labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
+                    `numpy nd-array` of labels to be fed as scNet's condition array.
             # Returns
-                latent: numpy nd-array
-                    returns array containing latent space encoding of 'data'
+                adata_latent: `~anndata.AnnData`
+                    returns Annotated data containing latent space encoding of 'adata'
         """
         adata = remove_sparsity(adata)
 
@@ -374,25 +426,17 @@ class scNet:
 
     def predict(self, adata, encoder_labels, decoder_labels):
         """
-            Predicts the cell type provided by the user in stimulated condition.
+            Feeds `adata` to scNet and produces the reconstructed data.
             # Parameters
                 data: `~anndata.AnnData`
                     Annotated data matrix whether in primary space.
-                labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
+                encoder_labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as scNet's encoder condition array.
+                decoder_labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as scNet's decoder condition array.
             # Returns
-                stim_pred: numpy nd-array
-                    `numpy nd-array` of predicted cells in primary space.
-            # Example
-            ```python
-            import scanpy as sc
-            import scgen
-            train_data = sc.read("train_kang.h5ad")
-            validation_data = sc.read("./data/validation.h5ad")
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.train(n_epochs=20)
-            prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
-            ```
+                adata_pred: `~anndata.AnnData`
+                    Annotated data of predicted cells in primary space.
         """
         adata = remove_sparsity(adata)
 
@@ -407,74 +451,209 @@ class scNet:
 
         return adata_pred
 
-    def restore_model(self):
+    def restore_model_weights(self, compile=True):
         """
-            restores model weights from `model_to_use`.
+            restores model weights from `model_path`.
             # Parameters
                 No parameters are needed.
             # Returns
-                Nothing will be returned.
-            # Example
-            ```python
-            import scanpy as sc
-            import scgen
-            train_data = sc.read("./data/train_kang.h5ad")
-            validation_data = sc.read("./data/valiation.h5ad")
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.restore_model()
-            ```
+                `True` if the model has been successfully restored.
+                `False' if `model_path` is invalid or the model weights couldn't be found in the specified `model_path`.
         """
-        # self.cvae_model = load_model(os.path.join(self.model_path, 'cvae.h5'), compile=False,
-                                    #  custom_objects=self.custom_objects)
-        self.cvae_model.load_weights(os.path.join(self.model_path, 'cvae.h5'))
-        self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
-        self.encoder_model = self.cvae_model.get_layer("encoder")
+        if os.path.exists(os.path.join(self.model_path, "cvae.h5")):
+            self.cvae_model.load_weights(os.path.join(self.model_path, 'cvae.h5'))
 
-        self.decoder_model = self.cvae_model.get_layer("decoder")
+            self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
+            self.encoder_model = self.cvae_model.get_layer("encoder")
+            self.decoder_model = self.cvae_model.get_layer("decoder")
 
-        self.compile_models()
-        print("Model has been successfully restored!")
+            if compile:
+                self.compile_models()
+            print("scNet's weights has been successfully restored!")
+            return True
 
-    def save_model(self):
-        os.makedirs(self.model_path, exist_ok=True)
-        self.cvae_model.save_weights(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
-        log.info(f"Model saved in file: {self.model_path}. Training finished")
+    def restore_model_config(self, compile=True):
+        if os.path.exists(os.path.join(self.model_path, "cvae.json")):
+            json_file = open(os.path.join(self.model_path, "cvae.json"), 'rb')
+            loaded_model_json = json_file.read()
+            self.cvae_model = model_from_json(loaded_model_json)
+            self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
+            self.encoder_model = self.cvae_model.get_layer("encoder")
+            self.decoder_model = self.cvae_model.get_layer("decoder")
 
-    def train(self, train_adata, valid_adata, condition_key, cell_type_key='cell_type', le=None,
+            if compile:
+                self.compile_models()
+
+            print("scNet's network's config has been successfully restored!")
+            return True
+        else:
+            return False
+
+    def restore_scNet_config(self, compile_and_consturct=True):
+        import json
+        if os.path.exists(os.path.join(self.model_path, "scNet.json")):
+            with open(os.path.join(self.model_path, "scNet.json"), 'rb') as f:
+                scNet_config = json.load(f)
+
+            # Update network_kwargs and training_kwargs dictionaries
+            for key, value in scNet_config.items():
+                if key in self.network_kwargs.keys():
+                    self.network_kwargs[key] = value
+                elif key in self.training_kwargs.keys():
+                    self.training_kwargs[key] = value
+
+            # Update class attributes
+            for key, value in scNet_config.items():
+                setattr(self, key, value)
+
+            if compile_and_consturct:
+                self.construct_network()
+                self.compile_models()
+
+            print("scNet's config has been successfully restored!")
+            return True
+        else:
+            return False
+
+    def save(self, make_dir=True):
+        """
+            Saves all model weights, configs, and hyperparameters in the `model_path`.
+            # Parameters
+                make_dir: bool
+                    Whether makes `model_path` directory if it does not exists.
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        if make_dir:
+            os.makedirs(self.model_path, exist_ok=True)
+
+        if os.path.exists(self.model_path):
+            self.save_model_weights()
+            self.save_model_config()
+            self.save_scNet_config(make_dir)
+            print(f"scNet has been successfully saved in {self.model_path}.")
+            return True
+        else:
+            return False
+
+    def save_model_weights(self, make_dir=True):
+        """
+            Saves model weights in the `model_path`.
+            # Parameters
+                make_dir: bool
+                    Whether makes `model_path` directory if it does not exists.
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        if make_dir:
+            os.makedirs(self.model_path, exist_ok=True)
+
+        if os.path.exists(self.model_path):
+            self.cvae_model.save_weights(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
+            return True
+        else:
+            return False
+
+    def save_model_config(self, make_dir=True):
+        """
+            Saves model's config in the `model_path`.
+            # Parameters
+                make_dir: bool
+                    Whether makes `model_path` directory if it does not exists.
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        if make_dir:
+            os.makedirs(self.model_path, exist_ok=True)
+
+        if os.path.exists(self.model_path):
+            model_json = self.cvae_model.to_json()
+            with open(os.path.join(self.model_path, "cvae.json"), 'w') as file:
+                file.write(model_json)
+            return True
+        else:
+            return False
+
+    def save_scNet_config(self, make_dir=True):
+        """
+            Saves scNet's config in the `model_path`.
+            # Parameters
+                make_dir: bool
+                    Whether makes `model_path` directory if it does not exists.
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        import json
+
+        if make_dir:
+            os.makedirs(self.model_path, exist_ok=True)
+
+        if os.path.exists(self.model_path):
+            config = self.network_kwargs
+            config.update(self.training_kwargs)
+            with open(os.path.join(self.model_path, "scNet.json"), 'w') as f:
+                json.dump(config, f)
+
+            return True
+        else:
+            return False
+
+    def set_condition_encoder(self, condition_encoder=None, conditions=None):
+        """
+            Sets condition encoder of scNet
+            # Parameters
+                condition_encoder: dict
+                    dictionary with conditions as key and integers as value
+                conditions: list
+                    list of unique conditions exist in annotated data for training
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        if condition_encoder:
+            self.condition_encoder = condition_encoder
+        elif not condition_encoder and conditions:
+            self.condition_encoder = create_dictionary(conditions, [])
+        else:
+            raise Exception("Either condition_encoder or conditions have to be passed.")
+
+    def train(self, train_adata, valid_adata,
+              condition_key, cell_type_key='cell_type', le=None,
               n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, n_epochs_warmup=0,
               score_filename="./scores.log", lr_reducer=10, save=True, verbose=2, retrain=True):
         """
-            Trains the network `n_epochs` times with given `train_data`
-            and validates the model using validation_data if it was given
-            in the constructor function. This function is using `early stopping`
-            technique to prevent overfitting.
+            Trains scNet with `n_epochs` times given `train_adata`
+            and validates the model using `valid_adata`
+            This function is using `early stopping` and `learning rate reduce on plateau`
+            techniques to prevent over-fitting.
             # Parameters
+                train_adata: `~anndata.AnnData`
+                    Annotated dataset for training scNet.
+                valid_adata: `~anndata.AnnData`
+                    Annotated dataset for validating scNet.
+                condition_key: str
+                    column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
                 n_epochs: int
-                    number of epochs to iterate and optimize network weights
+                    number of epochs.
+                batch_size: int
+                    number of samples in the mini-batches used to optimize scNet.
                 early_stop_limit: int
-                    number of consecutive epochs in which network loss is not going lower.
-                    After this limit, the network will stop training.
-                threshold: float
-                    Threshold for difference between consecutive validation loss values
-                    if the difference is upper than this `threshold`, this epoch will not
-                    considered as an epoch in early stopping.
-                full_training: bool
-                    if `True`: Network will be trained with all batches of data in each epoch.
-                    if `False`: Network will be trained with a random batch of data in each epoch.
-                initial_run: bool
-                    if `True`: The network will initiate training and log some useful initial messages.
-                    if `False`: Network will resume the training using `restore_model` function in order
-                        to restore last model which has been trained with some training dataset.
+                    patience of EarlyStopping
+                lr_reducer: int
+                    patience of LearningRateReduceOnPlateau.
+                save: bool
+                    Whether to save scNet after the training or not.
+                verbose: int
+                    Verbose level
+                retrain: bool
+                    if `True` scNet will be trained regardless of existance of pre-trained scNet in `model_path`.
+                    if `False` scNet will not be trained if pre-trained scNet exists in `model_path`.
             # Returns
                 Nothing will be returned
-            # Example
-            ```python
-            import scanpy as sc
-            import scgen
-            train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.train(n_epochs=20)
-            ```
         """
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
@@ -494,7 +673,7 @@ class scNet:
             self.condition_encoder = new_le
 
         if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
-            self.restore_model()
+            self.restore_model_weights()
             return
 
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
@@ -531,7 +710,6 @@ class scNet:
 
             train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
             valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
-            batch_labels = np.concatenate([train_conditions_encoded, valid_conditions_encoded], axis=0)
             celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
             callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
@@ -553,4 +731,4 @@ class scNet:
                             callbacks=callbacks,
                             )
         if save:
-            self.save_model()
+            self.save(make_dir=True)
