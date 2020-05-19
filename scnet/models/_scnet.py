@@ -628,25 +628,24 @@ class scNet:
         else:
             return False
 
-
-def set_condition_encoder(self, condition_encoder=None, conditions=None):
-    """
-        Sets condition encoder of scNet
-        # Parameters
-            condition_encoder: dict
-                dictionary with conditions as key and integers as value
-            conditions: list
-                list of unique conditions exist in annotated data for training
-        # Returns
-            `True` if the model has been successfully saved.
-            `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
-    """
-    if condition_encoder:
-        self.condition_encoder = condition_encoder
-    elif not condition_encoder and conditions:
-        self.condition_encoder = create_dictionary(conditions, [])
-    else:
-        raise Exception("Either condition_encoder or conditions have to be passed.")
+    def set_condition_encoder(self, condition_encoder=None, conditions=None):
+        """
+            Sets condition encoder of scNet
+            # Parameters
+                condition_encoder: dict
+                    dictionary with conditions as key and integers as value
+                conditions: list
+                    list of unique conditions exist in annotated data for training
+            # Returns
+                `True` if the model has been successfully saved.
+                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+        """
+        if condition_encoder:
+            self.condition_encoder = condition_encoder
+        elif not condition_encoder and conditions:
+            self.condition_encoder = create_dictionary(conditions, [])
+        else:
+            raise Exception("Either condition_encoder or conditions have to be passed.")
 
     def train(self, train_adata, valid_adata,
               condition_key, cell_type_key='cell_type',
