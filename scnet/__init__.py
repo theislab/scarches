@@ -6,7 +6,6 @@ warnings.filterwarnings('ignore')
 from scnet.zenodo.file import download_file
 from scnet.zenodo.zip import unzip_model_directory
 
-
 import numpy as np
 from typing import TypeVar, Optional, Union
 
@@ -171,39 +170,13 @@ def operate(network: archs.scNet,
     return new_network
 
 
-PRETRAINED_TASKS = {
-    "pancreas": {
-        "default_link": "",
-    },
-    "mouse_brain": {
-        "default_link": "",
-    },
-    "tabula_muris_senis": {
-        "default_link": "",
-    },
-    "hcl": {
-        "default_link": "",
-    },
-    "hcl_mca": {
-        "default_link": "",
-    },
-    "tabula_muris_senis_mca": {
-        "default_link": "",
-    },
-
-}
-
-
-def create_scNet_from_pre_trained_task(pre_trained_task: str = None,
-                                       new_task: str = None,
-                                       target_conditions: list = [],
+def create_scNet_from_pre_trained_task(path_or_link: str,
+                                       model_path: str,
+                                       new_task: str,
+                                       target_conditions: list,
                                        version: str = 'scNet',
-                                       use_default_params: bool = True,
-                                       downloaded_path: str = None,
-                                       model_path: str = None,
                                        **kwargs,
                                        ):
-    pre_trained_task = pre_trained_task.lower()
     version = version.lower()
 
     if version == 'scnet':
@@ -218,32 +191,26 @@ def create_scNet_from_pre_trained_task(pre_trained_task: str = None,
     else:
         raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
 
+    if not os.path.isdir(path_or_link):
+        downloaded_path = download_pretrained_scNet(path_or_link, save_path=model_path, make_dir=True)
+    else:
+        downloaded_path = path_or_link
+
     if os.path.exists(downloaded_path) and downloaded_path.endswith(".zip"):
-        if model_path:
-            base_path = os.path.join(os.path.dirname(model_path), f"scNet-{new_task}/")
-        else:
-            base_path = os.path.join(os.path.dirname(downloaded_path), f"scNet-{new_task}/")
-
-        extract_dir = os.path.join(base_path, f"before-{pre_trained_task}/")
+        extract_dir = os.path.join(model_path, f"before/")
         unzip_model_directory(downloaded_path, extract_dir=extract_dir)
-
-        model_path = extract_dir if model_path is None else model_path
     elif not os.path.isdir(downloaded_path):
         raise ValueError("`model_path` should be either path to downloaded zip file or scNet pre-trained directory")
 
-    task = PRETRAINED_TASKS.get(pre_trained_task, None)
-    if task:
-        if use_default_params:
-            kwargs.update(task.get("default_hyper_params", {}))
-        kwargs.update(task.get("network_config", {}))
-    else:
-        raise Exception("Invalid task")
+    downloaded_files = os.listdir(extract_dir)
+    for file in downloaded_files:
+        if file.startswith("scNet") and file.endswith(".json"):
+            config_filename = file
 
-    config_path = os.path.join(extract_dir, f"scNet-{pre_trained_task}.json")
+    config_path = os.path.join(extract_dir, config_filename)
     pre_trained_scNet = archs.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
 
     pre_trained_scNet.model_path = model_path
-    pre_trained_scNet.task_name = pre_trained_task
 
     pre_trained_scNet.restore_model_weights(compile=True)
 
@@ -257,22 +224,26 @@ def create_scNet_from_pre_trained_task(pre_trained_task: str = None,
                     )
 
     scNet.task_name = new_task
-    scNet.model_path = os.path.join(base_path, f"after/")
+    scNet.model_path = os.path.join(model_path, f"after/")
 
     return scNet
 
 
-def download_pretrained_scNet(task_name: str,
+PRETRAINED_TASKS = {
+    "pancreas": "",
+    "mouse_brain": "",
+    "tabula_muris_senis": "",
+    "hcl": "",
+    "hcl_mca": "",
+    "tabula_muris_senis_mca": "",
+}
+
+
+def download_pretrained_scNet(download_link: str,
                               save_path: str = './',
                               make_dir=False):
-    task_dict = PRETRAINED_TASKS.get(task_name, None)
-
-    if task_dict:
-        download_link = task_dict.get('default_link', '')
-        if download_link != '':
-            file_path, response = download_file(download_link, save_path, make_dir)
-            return file_path
-        else:
-            raise Exception("Download link does not exist for the specified task")
+    if download_link != '':
+        file_path, response = download_file(download_link, save_path, make_dir)
+        return file_path
     else:
-        raise ValueError("Invalid task")
+        raise Exception("Download link does not exist for the specified task")
