@@ -612,161 +612,165 @@ class scNet:
             os.makedirs(self.model_path, exist_ok=True)
 
         if os.path.exists(self.model_path):
-            config = self.network_kwargs
-            config.update(self.training_kwargs)
-            config.update({"x_dimension": self.x_dim,
-                           "z_dimension": self.z_dim,
-                           "n_conditions": self.n_conditions,
-                           "task_name": self.task_name,
-                           "condition_encoder": self.condition_encoder,
-                           "gene_names": self.gene_names})
+            config = {"x_dimension": self.x_dim,
+                      "z_dimension": self.z_dim,
+                      "n_conditions": self.n_conditions,
+                      "task_name": self.task_name,
+                      "condition_encoder": self.condition_encoder,
+                      "gene_names": self.gene_names}
+            all_configs = dict(list(self.network_kwargs.items()) +
+                               list(self.training_kwargs.items()) +
+                               list(config.items()))
             with open(os.path.join(self.model_path, f"scNet-{self.task_name}.json"), 'w') as f:
-                json.dump(config, f)
+                json.dump(all_configs, f)
 
             return True
+
         else:
             return False
 
-    def set_condition_encoder(self, condition_encoder=None, conditions=None):
-        """
-            Sets condition encoder of scNet
-            # Parameters
-                condition_encoder: dict
-                    dictionary with conditions as key and integers as value
-                conditions: list
-                    list of unique conditions exist in annotated data for training
-            # Returns
-                `True` if the model has been successfully saved.
-                `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
-        """
-        if condition_encoder:
-            self.condition_encoder = condition_encoder
-        elif not condition_encoder and conditions:
-            self.condition_encoder = create_dictionary(conditions, [])
+
+def set_condition_encoder(self, condition_encoder=None, conditions=None):
+    """
+        Sets condition encoder of scNet
+        # Parameters
+            condition_encoder: dict
+                dictionary with conditions as key and integers as value
+            conditions: list
+                list of unique conditions exist in annotated data for training
+        # Returns
+            `True` if the model has been successfully saved.
+            `False' if `model_path` is an invalid path and `make_dir` is set to `False`.
+    """
+    if condition_encoder:
+        self.condition_encoder = condition_encoder
+    elif not condition_encoder and conditions:
+        self.condition_encoder = create_dictionary(conditions, [])
+    else:
+        raise Exception("Either condition_encoder or conditions have to be passed.")
+
+
+def train(self, train_adata, valid_adata,
+          condition_key, cell_type_key='cell_type',
+          n_epochs=25, batch_size=32,
+          early_stop_limit=20, lr_reducer=10,
+          n_per_epoch=0, score_filename=None,
+          save=True, retrain=True, verbose=2, ):
+    """
+        Trains scNet with `n_epochs` times given `train_adata`
+        and validates the model using `valid_adata`
+        This function is using `early stopping` and `learning rate reduce on plateau`
+        techniques to prevent over-fitting.
+        # Parameters
+            train_adata: `~anndata.AnnData`
+                Annotated dataset for training scNet.
+            valid_adata: `~anndata.AnnData`
+                Annotated dataset for validating scNet.
+            condition_key: str
+                column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
+            n_epochs: int
+                number of epochs.
+            batch_size: int
+                number of samples in the mini-batches used to optimize scNet.
+            early_stop_limit: int
+                patience of EarlyStopping
+            lr_reducer: int
+                patience of LearningRateReduceOnPlateau.
+            save: bool
+                Whether to save scNet after the training or not.
+            verbose: int
+                Verbose level
+            retrain: bool
+                if `True` scNet will be trained regardless of existance of pre-trained scNet in `model_path`.
+                if `False` scNet will not be trained if pre-trained scNet exists in `model_path`.
+        # Returns
+            Nothing will be returned
+    """
+    train_adata = remove_sparsity(train_adata)
+    valid_adata = remove_sparsity(valid_adata)
+
+    if self.gene_names is None:
+        self.gene_names = train_adata.var_names.tolist()
+    else:
+        if set(self.gene_names).issubset(set(train_adata.var_names)):
+            train_adata = train_adata[:, self.gene_names]
         else:
-            raise Exception("Either condition_encoder or conditions have to be passed.")
+            raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
 
-    def train(self, train_adata, valid_adata,
-              condition_key, cell_type_key='cell_type',
-              n_epochs=25, batch_size=32,
-              early_stop_limit=20, lr_reducer=10,
-              n_per_epoch=0, score_filename=None,
-              save=True, retrain=True, verbose=2, ):
-        """
-            Trains scNet with `n_epochs` times given `train_adata`
-            and validates the model using `valid_adata`
-            This function is using `early stopping` and `learning rate reduce on plateau`
-            techniques to prevent over-fitting.
-            # Parameters
-                train_adata: `~anndata.AnnData`
-                    Annotated dataset for training scNet.
-                valid_adata: `~anndata.AnnData`
-                    Annotated dataset for validating scNet.
-                condition_key: str
-                    column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
-                n_epochs: int
-                    number of epochs.
-                batch_size: int
-                    number of samples in the mini-batches used to optimize scNet.
-                early_stop_limit: int
-                    patience of EarlyStopping
-                lr_reducer: int
-                    patience of LearningRateReduceOnPlateau.
-                save: bool
-                    Whether to save scNet after the training or not.
-                verbose: int
-                    Verbose level
-                retrain: bool
-                    if `True` scNet will be trained regardless of existance of pre-trained scNet in `model_path`.
-                    if `False` scNet will not be trained if pre-trained scNet exists in `model_path`.
-            # Returns
-                Nothing will be returned
-        """
-        train_adata = remove_sparsity(train_adata)
-        valid_adata = remove_sparsity(valid_adata)
-
-        if self.gene_names is None:
-            self.gene_names = train_adata.var_names.tolist()
+        if set(self.gene_names).issubset(set(valid_adata.var_names)):
+            valid_adata = valid_adata[:, self.gene_names]
         else:
-            if set(self.gene_names).issubset(set(train_adata.var_names)):
-                train_adata = train_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+            raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
 
-            if set(self.gene_names).issubset(set(valid_adata.var_names)):
-                valid_adata = valid_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
+    if self.loss_fn in ['nb', 'zinb']:
+        if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
+            train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
+        if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
+            valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
-        if self.loss_fn in ['nb', 'zinb']:
-            if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
-                train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
-            if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
-                valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
+    train_conditions_encoded, _ = label_encoder(train_adata, le=self.condition_encoder,
+                                                condition_key=condition_key)
 
-        train_conditions_encoded, _ = label_encoder(train_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+    valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
+                                                condition_key=condition_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+    if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
+        self.restore_model_weights()
+        return
 
-        if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
-            self.restore_model_weights()
-            return
+    train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+    valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+    if self.loss_fn in ['nb', 'zinb']:
+        x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
+                   train_adata.obs['size_factors'].values]
+        y_train = [train_adata.raw.X, train_conditions_encoded]
 
-        if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
-                       train_adata.obs['size_factors'].values]
-            y_train = [train_adata.raw.X, train_conditions_encoded]
+        x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
+                   valid_adata.obs['size_factors'].values]
+        y_valid = [valid_adata.raw.X, valid_conditions_encoded]
+    else:
+        x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
+        y_train = [train_adata.X, train_conditions_encoded]
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
-                       valid_adata.obs['size_factors'].values]
-            y_valid = [valid_adata.raw.X, valid_conditions_encoded]
-        else:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-            y_train = [train_adata.X, train_conditions_encoded]
+        x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
+        y_valid = [valid_adata.X, valid_conditions_encoded]
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = [valid_adata.X, valid_conditions_encoded]
+    callbacks = [
+        History(),
+    ]
 
-        callbacks = [
-            History(),
-        ]
+    if verbose > 2:
+        callbacks.append(
+            LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
+        fit_verbose = 0
+    else:
+        fit_verbose = verbose
 
-        if verbose > 2:
-            callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
-            fit_verbose = 0
-        else:
-            fit_verbose = verbose
+    if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
+        adata = train_adata.concatenate(valid_adata)
 
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
+        train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+        valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
+        celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+        callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
+                                       n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
+                                       n_celltype_labels=len(np.unique(celltype_labels))))
 
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
+    if early_stop_limit > 0:
+        callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
 
-        if early_stop_limit > 0:
-            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
+    if lr_reducer > 0:
+        callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        if lr_reducer > 0:
-            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-
-        self.cvae_model.fit(x=x_train,
-                            y=y_train,
-                            validation_data=(x_valid, y_valid),
-                            epochs=n_epochs,
-                            batch_size=batch_size,
-                            verbose=fit_verbose,
-                            callbacks=callbacks,
-                            )
-        if save:
-            self.save(make_dir=True)
+    self.cvae_model.fit(x=x_train,
+                        y=y_train,
+                        validation_data=(x_valid, y_valid),
+                        epochs=n_epochs,
+                        batch_size=batch_size,
+                        verbose=fit_verbose,
+                        callbacks=callbacks,
+                        )
+    if save:
+        self.save(make_dir=True)
