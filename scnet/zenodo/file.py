@@ -39,5 +39,6 @@ def upload_file(file_path: str,
     if r.status_code != 201:
         raise Exception(r_dict['message'])
 
-    download_link = r_dict['links']['download']
+    filename = r_dict['filename']
+    download_link = f"https://zenodo.org/record/{deposition_id}/files/{filename}?download=1"
     return download_link
