@@ -171,6 +171,7 @@ def operate(network: archs.scNet,
 
 
 def create_scNet_from_pre_trained_task(path_or_link: str,
+                                       filename: str,
                                        model_path: str,
                                        new_task: str,
                                        target_conditions: list,
@@ -192,7 +193,8 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
         raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
 
     if not os.path.isdir(path_or_link):
-        downloaded_path = download_pretrained_scNet(path_or_link, save_path=model_path, make_dir=True)
+        downloaded_path = os.path.join(model_path, filename)
+        downloaded_path = download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
     else:
         downloaded_path = path_or_link
 
