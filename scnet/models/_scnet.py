@@ -93,7 +93,7 @@ class scNet:
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        self.condition_encoder = None
+        self.condition_encoder = kwargs.get("condition_encoder", None)
         self.aux_models = {}
 
         self.network_kwargs = {
