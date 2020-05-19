@@ -1,9 +1,13 @@
+import os
 import warnings
+
+from scnet.zenodo.file import download_file
+from scnet.zenodo.zip import unzip_model_directory
 
 warnings.filterwarnings('ignore')
 
 import numpy as np
-from typing import TypeVar
+from typing import TypeVar, Optional, Union
 
 from keras import backend as K
 
@@ -164,3 +168,110 @@ def operate(network: archs.scNet,
         new_network.condition_encoder[new_condition] = network.n_conditions + idx
 
     return new_network
+
+
+PRETRAINED_TASKS = {
+    "pancreas": {
+        "default_link": "",
+    },
+    "mouse_brain": {
+        "default_link": "",
+    },
+    "tabula_muris_senis": {
+        "default_link": "",
+    },
+    "hcl": {
+        "default_link": "",
+    },
+    "hcl_mca": {
+        "default_link": "",
+    },
+    "tabula_muris_senis_mca": {
+        "default_link": "",
+    },
+
+}
+
+
+def create_scNet_from_pre_trained_task(pre_trained_task: str = None,
+                                       new_task: str = None,
+                                       target_conditions: list = [],
+                                       version: str = 'scNet',
+                                       use_default_params: bool = True,
+                                       downloaded_path: str = None,
+                                       model_path: str = None,
+                                       **kwargs,
+                                       ):
+    pre_trained_task = pre_trained_task.lower()
+    version = version.lower()
+
+    if version == 'scnet':
+        freeze_input_expression = True
+        freeze = True
+    elif version == 'scnet v1':
+        freeze_input_expression = False
+        freeze = True
+    elif version == 'scnet v2':
+        freeze_input_expression = False
+        freeze = False
+    else:
+        raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
+
+    if os.path.exists(downloaded_path) and downloaded_path.endswith(".zip"):
+        if model_path:
+            base_path = os.path.join(os.path.dirname(model_path), f"scNet-{new_task}/")
+        else:
+            base_path = os.path.join(os.path.dirname(downloaded_path), f"scNet-{new_task}/")
+
+        extract_dir = os.path.join(base_path, f"before-{pre_trained_task}/")
+        unzip_model_directory(downloaded_path, extract_dir=extract_dir)
+
+        model_path = extract_dir if model_path is None else model_path
+    elif not os.path.isdir(downloaded_path):
+        raise ValueError("`model_path` should be either path to downloaded zip file or scNet pre-trained directory")
+
+    task = PRETRAINED_TASKS.get(pre_trained_task, None)
+    if task:
+        if use_default_params:
+            kwargs.update(task.get("default_hyper_params", {}))
+        kwargs.update(task.get("network_config", {}))
+    else:
+        raise Exception("Invalid task")
+
+    config_path = os.path.join(extract_dir, f"scNet-{pre_trained_task}.json")
+    pre_trained_scNet = archs.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
+
+    pre_trained_scNet.model_path = model_path
+    pre_trained_scNet.task_name = pre_trained_task
+
+    pre_trained_scNet.restore_model_weights(compile=True)
+
+    scNet = operate(pre_trained_scNet,
+                    new_conditions=target_conditions,
+                    init='Xavier',
+                    freeze=freeze,
+                    freeze_expression_input=freeze_input_expression,
+                    remove_dropout=False,
+                    print_summary=False,
+                    )
+
+    scNet.task_name = new_task
+    scNet.model_path = os.path.join(base_path, f"after/")
+
+    return scNet
+
+
+def download_pretrained_scNet(task_name: str,
+                              save_path: str = './',
+                              make_dir=False):
+    task_dict = PRETRAINED_TASKS.get(task_name, None)
+
+    if task_dict:
+        download_link = task_dict.get('default_link', '')
+        if download_link != '':
+            file_path, response = download_file(download_link, save_path, make_dir)
+            return file_path
+        else:
+            raise Exception("Download link does not exist for the specified task")
+    else:
+        raise ValueError("Invalid task")
