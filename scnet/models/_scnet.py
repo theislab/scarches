@@ -108,6 +108,8 @@ class scNet:
             "use_batchnorm": self.use_batchnorm,
             "freeze_expression_input": self.freeze_expression_input,
             "mmd_computation_method": self.mmd_computation_method,
+            "gene_names": self.gene_names,
+            "condition_encoder": self.condition_encoder,
         }
 
         self.training_kwargs = {
@@ -616,7 +618,8 @@ class scNet:
                            "z_dimension": self.z_dim,
                            "n_conditions": self.n_conditions,
                            "task_name": self.task_name,
-                           "condition_encoder": self.condition_encoder})
+                           "condition_encoder": self.condition_encoder,
+                           "gene_names": self.gene_names})
             with open(os.path.join(self.model_path, f"scNet-{self.task_name}.json"), 'w') as f:
                 json.dump(config, f)
 
@@ -644,9 +647,11 @@ class scNet:
             raise Exception("Either condition_encoder or conditions have to be passed.")
 
     def train(self, train_adata, valid_adata,
-              condition_key, cell_type_key='cell_type', le=None,
-              n_epochs=25, batch_size=32, early_stop_limit=20, n_per_epoch=5, n_epochs_warmup=0,
-              score_filename="./scores.log", lr_reducer=10, save=True, verbose=2, retrain=True):
+              condition_key, cell_type_key='cell_type',
+              n_epochs=25, batch_size=32,
+              early_stop_limit=20, lr_reducer=10,
+              n_per_epoch=0, score_filename=None,
+              save=True, retrain=True, verbose=2, ):
         """
             Trains scNet with `n_epochs` times given `train_adata`
             and validates the model using `valid_adata`
@@ -699,13 +704,11 @@ class scNet:
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
-        train_conditions_encoded, new_le = label_encoder(train_adata, le=le,
-                                                         condition_key=condition_key)
+        train_conditions_encoded, _ = label_encoder(train_adata, le=self.condition_encoder,
+                                                    condition_key=condition_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, le=le, condition_key=condition_key)
-
-        if self.condition_encoder is None:
-            self.condition_encoder = new_le
+        valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
+                                                    condition_key=condition_key)
 
         if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
             self.restore_model_weights()
@@ -740,7 +743,7 @@ class scNet:
         else:
             fit_verbose = verbose
 
-        if n_per_epoch > 0 or n_per_epoch == -1:
+        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
             adata = train_adata.concatenate(valid_adata)
 
             train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
