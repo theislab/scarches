@@ -33,6 +33,8 @@ class scNet:
                 number of conditions used for one-hot encoding.
             z_dimension: integer
                 number of latent space dimensions.
+            task_name: str
+                name of the task
             kwargs:
                 key: `learning_rate`: float
                     scNet's optimizer's step size (learning rate).
@@ -58,26 +60,27 @@ class scNet:
                     names of genes fed as scNet's input. Must be a list of strings.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=100, **kwargs):
+    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
+        self.task_name = task_name
 
         self.n_conditions = n_conditions
 
         self.lr = kwargs.get("learning_rate", 0.001)
-        self.alpha = kwargs.get("alpha", 0.001)
-        self.beta = kwargs.get('beta', 0.0)
-        self.eta = kwargs.get("eta", 1.0)
-        self.dr_rate = kwargs.get("dropout_rate", 0.2)
+        self.alpha = kwargs.get("alpha", 0.0005)
+        self.beta = kwargs.get('beta', 20.0)
+        self.eta = kwargs.get("eta", 1000.0)
+        self.dr_rate = kwargs.get("dropout_rate", 0.05)
         self.model_path = kwargs.get("model_path", "./models/trVAE/")
         self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get("scale_factor", 1.0)
-        self.clip_value = kwargs.get('clip_value', 3.0)
+        self.clip_value = kwargs.get('clip_value', 10.0)
         self.epsilon = kwargs.get('epsilon', 0.01)
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", False)
-        self.architecture = kwargs.get("architecture", [128])
+        self.architecture = kwargs.get("architecture", [128, 32])
         self.gene_names = kwargs.get("gene_names", None)
 
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
@@ -123,7 +126,7 @@ class scNet:
         if kwargs.get("construct_model", True):
             self.construct_network()
 
-        if kwargs.get("compile_model", True):
+        if kwargs.get("construct_model", True) and kwargs.get("compile_model", True):
             self.compile_models()
 
         print_summary = kwargs.get("print_summary", False)
@@ -131,6 +134,20 @@ class scNet:
             self.encoder_model.summary()
             self.decoder_model.summary()
             self.cvae_model.summary()
+
+    @classmethod
+    def from_config(cls, config_path, new_params=None, compile=True, construct=True):
+        import json
+        with open(config_path, 'rb') as f:
+            scNet_config = json.load(f)
+
+        scNet_config['construct_model'] = construct
+        scNet_config['compile_model'] = compile
+
+        if new_params:
+            scNet_config.update(new_params)
+
+        return cls(**scNet_config)
 
     def _encoder(self, name="encoder"):
         """
@@ -460,8 +477,8 @@ class scNet:
                 `True` if the model has been successfully restored.
                 `False' if `model_path` is invalid or the model weights couldn't be found in the specified `model_path`.
         """
-        if os.path.exists(os.path.join(self.model_path, "cvae.h5")):
-            self.cvae_model.load_weights(os.path.join(self.model_path, 'cvae.h5'))
+        if os.path.exists(os.path.join(self.model_path, f"cvae-{self.task_name}.h5")):
+            self.cvae_model.load_weights(os.path.join(self.model_path, f'cvae-{self.task_name}.h5'))
 
             self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
             self.encoder_model = self.cvae_model.get_layer("encoder")
@@ -473,8 +490,8 @@ class scNet:
             return True
 
     def restore_model_config(self, compile=True):
-        if os.path.exists(os.path.join(self.model_path, "cvae.json")):
-            json_file = open(os.path.join(self.model_path, "cvae.json"), 'rb')
+        if os.path.exists(os.path.join(self.model_path, f"cvae-{self.task_name}.json")):
+            json_file = open(os.path.join(self.model_path, f"cvae-{self.task_name}.json"), 'rb')
             loaded_model_json = json_file.read()
             self.cvae_model = model_from_json(loaded_model_json)
             self.decoder_mmd_model = self.cvae_model.get_layer("mmd_decoder")
@@ -491,8 +508,8 @@ class scNet:
 
     def restore_scNet_config(self, compile_and_consturct=True):
         import json
-        if os.path.exists(os.path.join(self.model_path, "scNet.json")):
-            with open(os.path.join(self.model_path, "scNet.json"), 'rb') as f:
+        if os.path.exists(os.path.join(self.model_path, f"scNet-{self.task_name}.json")):
+            with open(os.path.join(self.model_path, f"scNet-{self.task_name}.json"), 'rb') as f:
                 scNet_config = json.load(f)
 
             # Update network_kwargs and training_kwargs dictionaries
@@ -551,7 +568,7 @@ class scNet:
             os.makedirs(self.model_path, exist_ok=True)
 
         if os.path.exists(self.model_path):
-            self.cvae_model.save_weights(os.path.join(self.model_path, "cvae.h5"), overwrite=True)
+            self.cvae_model.save_weights(os.path.join(self.model_path, f"cvae-{self.task_name}.h5"), overwrite=True)
             return True
         else:
             return False
@@ -571,7 +588,7 @@ class scNet:
 
         if os.path.exists(self.model_path):
             model_json = self.cvae_model.to_json()
-            with open(os.path.join(self.model_path, "cvae.json"), 'w') as file:
+            with open(os.path.join(self.model_path, f"cvae-{self.task_name}.json"), 'w') as file:
                 file.write(model_json)
             return True
         else:
@@ -595,7 +612,12 @@ class scNet:
         if os.path.exists(self.model_path):
             config = self.network_kwargs
             config.update(self.training_kwargs)
-            with open(os.path.join(self.model_path, "scNet.json"), 'w') as f:
+            config.update({"x_dimension": self.x_dim,
+                           "z_dimension": self.z_dim,
+                           "n_conditions": self.n_conditions,
+                           "task_name": self.task_name,
+                           "condition_encoder": self.condition_encoder})
+            with open(os.path.join(self.model_path, f"scNet-{self.task_name}.json"), 'w') as f:
                 json.dump(config, f)
 
             return True
@@ -658,16 +680,29 @@ class scNet:
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
 
+        if self.gene_names is None:
+            self.gene_names = train_adata.var_names.tolist()
+        else:
+            if set(self.gene_names).issubset(set(train_adata.var_names)):
+                train_adata = train_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+
+            if set(self.gene_names).issubset(set(valid_adata.var_names)):
+                valid_adata = valid_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
+
         if self.loss_fn in ['nb', 'zinb']:
             if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
                 train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
-        train_conditions_encoded, new_le = label_encoder(train_adata, label_encoder=le,
+        train_conditions_encoded, new_le = label_encoder(train_adata, le=le,
                                                          condition_key=condition_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=condition_key)
+        valid_conditions_encoded, _ = label_encoder(valid_adata, le=le, condition_key=condition_key)
 
         if self.condition_encoder is None:
             self.condition_encoder = new_le
@@ -708,8 +743,8 @@ class scNet:
         if n_per_epoch > 0 or n_per_epoch == -1:
             adata = train_adata.concatenate(valid_adata)
 
-            train_celltypes_encoded, _ = label_encoder(train_adata, label_encoder=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, label_encoder=None, condition_key=cell_type_key)
+            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
             celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
             callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
