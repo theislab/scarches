@@ -549,7 +549,7 @@ class scNet:
             self.save_model_weights()
             self.save_model_config()
             self.save_scNet_config(make_dir)
-            print(f"scNet has been successfully saved in {self.model_path}.")
+            print(f"\nscNet has been successfully saved in {self.model_path}.")
             return True
         else:
             return False

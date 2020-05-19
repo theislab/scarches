@@ -1,10 +1,11 @@
 import os
 import warnings
 
+warnings.filterwarnings('ignore')
+
 from scnet.zenodo.file import download_file
 from scnet.zenodo.zip import unzip_model_directory
 
-warnings.filterwarnings('ignore')
 
 import numpy as np
 from typing import TypeVar, Optional, Union

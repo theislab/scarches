@@ -1,6 +1,7 @@
 from scnet.models import scNet
-from scnet.zenodo.file import upload_file
-from scnet.zenodo.zip import zip_model_directory
+from .file import *
+from .deposition import *
+from .zip import *
 
 
 def upload_model(model: scNet,

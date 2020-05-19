@@ -4,7 +4,6 @@ from shutil import copyfile
 
 from scnet.kipoi._data import create_dataloader_yaml
 from scnet.kipoi._model import create_network_yaml
-from scnet.kipoi._upload import upload_file_to_zenodo
 from scnet.models import scNet
 
 
