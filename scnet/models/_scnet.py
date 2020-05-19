@@ -651,7 +651,7 @@ class scNet:
               n_epochs=25, batch_size=32,
               early_stop_limit=20, lr_reducer=10,
               n_per_epoch=0, score_filename=None,
-              save=True, retrain=True, verbose=2, ):
+              save=True, retrain=True, verbose=3):
         """
             Trains scNet with `n_epochs` times given `train_adata`
             and validates the model using `valid_adata`
@@ -710,7 +710,7 @@ class scNet:
         valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
                                                     condition_key=condition_key)
 
-        if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"cvae-{self.task_name}.h5")):
             self.restore_model_weights()
             return
 
