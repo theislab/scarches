@@ -4,7 +4,7 @@ import requests
 
 
 def download_file(link: str,
-                  save_path: str = './',
+                  save_path: str = None,
                   make_dir: bool = False
                   ):
     from urllib.request import urlretrieve
@@ -16,9 +16,14 @@ def download_file(link: str,
         if not os.path.isdir(save_path):
             raise ValueError("`save_path` is not a valid path. You may want to try setting `make_dir` to True.")
 
-    print(f"Downloading...", end="\t")
-    file_path, http_response = urlretrieve(link, save_path)
-    print(f"Finished! File has been successfully saved to {file_path}.")
+    if not os.path.exists(save_path):
+        print(f"Downloading...", end="\t")
+        file_path, http_response = urlretrieve(link, save_path)
+        print(f"Finished! File has been successfully saved to {file_path}.")
+    else:
+        file_path, http_response = save_path, None
+        print("File already exists!")
+
     return file_path, http_response
 
 
@@ -42,3 +47,4 @@ def upload_file(file_path: str,
     filename = r_dict['filename']
     download_link = f"https://zenodo.org/record/{deposition_id}/files/{filename}?download=1"
     return download_link
+
