@@ -33,11 +33,11 @@ class ScoreCallback(Callback):
         super(ScoreCallback, self).__init__()
         self.adata = remove_sparsity(adata)
 
-        self.batch_labels, __BuiltinMethodDescriptor__ = label_encoder(adata, label_encoder=None, condition_key=batch_key)
+        self.batch_labels, _ = label_encoder(adata, le=None, condition_key=batch_key)
         self.batch_labels = np.reshape(self.batch_labels, (-1,))
         self.batch_labels_onehot = to_categorical(self.batch_labels, num_classes=n_batch_labels)
 
-        self.celltype_labels, _ = label_encoder(adata, label_encoder=None, condition_key=cell_type_key)
+        self.celltype_labels, _ = label_encoder(adata, le=None, condition_key=cell_type_key)
         self.celltype_labels = np.reshape(self.celltype_labels, (-1,))
         self.celltype_labels_onehot = to_categorical(self.celltype_labels, num_classes=n_celltype_labels)
 
