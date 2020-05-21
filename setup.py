@@ -1,22 +1,45 @@
+from pathlib import Path
+
 from setuptools import setup, find_packages
 
-with open("README.md", "r") as fh:
-    long_description = fh.readlines()[1]
+long_description = Path('README.rst').read_text('utf-8')
 
-setup(name='scnet',
-      version='1.0',
+try:
+    from scnet import __author__, __email__
+except ImportError:  # Deps not yet installed
+    __author__ = __email__ = ''
+
+setup(name='scNet',
+      version='0.1.0',
       description='Transfer learning with Architecture Surgery on Single-cell data',
       long_description=long_description,
       long_description_content_type="text/markdown",
-      url='https://github.com/theislab/scnet',
-      author='Mohammad Lotfollahi, Mohsen Naghipourfar',
-      author_email='mohammad.lotfollahi@helmholtz-zentrum.de, naghipourfar@ce.sharif.edu',
+      url='https://github.com/theislab/scNet',
+      author=__author__,
+      author_email=__email__,
       license='MIT',
       packages=find_packages(),
       zip_safe=False,
+      install_requires=[
+          l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
+      ],
       classifiers=[
-          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.6",
+          "Programming Language :: Python :: 3.7",
+          'Environment :: Console',
+          'Framework :: Jupyter',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Science/Research',
           "License :: OSI Approved :: MIT License",
-          "Operating System :: OS Independent",
+          'Natural Language :: English',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: POSIX :: Linux',
+      ],
+      doc=[
+          'sphinx',
+          'sphinx_rtd_theme',
+          'sphinx_autodoc_typehints',
+          'typing_extensions; python_version < "3.8"',
       ],
       )
