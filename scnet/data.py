@@ -4,14 +4,52 @@ import numpy as np
 
 
 def read(filename, **kwargs):
+    """Reads the dataset. For more information about this function, read `here <scanpy.readthedocs.io>`_.
+
+        Parameters
+        ----------
+        filename: str
+            path to the dataset.
+        kwargs:
+            Other ``scanpy.read`` function arguments.
+
+        Returns
+        -------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+
+    """
     return sc.read(filename, **kwargs)
 
 
-def normalize(adata, batch_key=None, filter_min_counts=True, size_factors=True, logtrans_input=True,
-              target_sum=None, n_top_genes=2000):
-    if filter_min_counts:
-        sc.pp.filter_genes(adata, min_counts=1)
-        sc.pp.filter_cells(adata, min_counts=1)
+def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True,
+                  target_sum=None, n_top_genes=2000):
+    """Normalizes, and select highly variable genes of ``adata``.
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        batch_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame. This is
+            used for selecting highly variable genes.
+        size_factors: bool
+            whether to add size factors (or n_counts) as a column after normalization in ``adata.obs`` matrix or not.
+            if `True`, the added column name is ``size_factors``.
+        logtrans_input: bool
+            If ``True``, will apply ``scanpy.pp.log1p`` function on ``adata.X`` after normalizing per cell.
+        target_sum: float
+            If ``None``, after normalization, each observation (cell) has a total count
+            equal to the median of total counts for observations (cells)
+            before normalization.
+        n_top_genes: int
+            Number of highly variable genes to be selected after normalization.
+
+        Returns
+        -------
+        adata: :class:`~anndata.AnnData`
+            Normalized and hvg selected annotated dataset.
+
+    """
 
     adata_count = adata.copy()
 
@@ -106,15 +144,38 @@ def _hvg_batch(adata, batch_key=None, target_genes=2000, flavor='cell_ranger', n
         return adata_hvg[:, hvg].copy()
 
 
-def subsample(adata, study_key, fraction=0.1, specific_cell_types=None, cell_type_key=None):
-    studies = adata.obs[study_key].unique().tolist()
+def subsample(adata, batch_key, fraction=0.1, specific_cell_types=None, cell_type_key=None):
+    """Performs Stratified subsampling on ``adata`` while keeping all samples for cell types in ``specific_cell_types``
+        if passed.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        batch_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        fraction: float
+            Fraction of cells out of all cells in each study to be subsampled.
+        specific_cell_types: list
+            if `None` will just subsample based on ``batch_key`` in a stratified way. Otherwise, will keep all samples
+            with specific cell types in the list and do not subsample them.
+        cell_type_key: str
+            Name of the column which contains information about different cell types in ``adata.obs`` data frame.
+
+        Returns
+        -------
+        adata: :class:`~anndata.AnnData`
+            Subsampled annotated dataset.
+
+    """
+    studies = adata.obs[batch_key].unique().tolist()
     if specific_cell_types and cell_type_key:
         subsampled_adata = adata[adata.obs[cell_type_key].isin(specific_cell_types)]
         other_adata = adata[~adata.obs[cell_type_key].isin(specific_cell_types)]
     else:
         subsampled_adata = None
     for study in studies:
-        study_adata = other_adata[other_adata.obs[study_key] == study]
+        study_adata = other_adata[other_adata.obs[batch_key] == study]
         n_samples = study_adata.shape[0]
         subsample_idx = np.random.choice(n_samples, int(fraction * n_samples), replace=False)
         study_adata_subsampled = study_adata[subsample_idx, :]
