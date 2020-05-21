@@ -7,6 +7,26 @@ def create_deposition(access_token: str,
                       title: str,
                       description: str,
                       **kwargs):
+    """Creates A deposition in your Zenodo account.
+
+        Parameters
+        ----------
+        access_token: str
+            Your Zenodo Access token.
+        upload_type: str
+
+        title: str
+
+        description: str
+
+        kwargs:
+
+
+        Returns
+        -------
+        deposition_id: str
+            ID of the created deposition.
+    """
     url = "https://zenodo.org/api/deposit/depositions"
     headers = {"Content-Type": "application/json"}
 
@@ -29,6 +49,17 @@ def create_deposition(access_token: str,
 def update_deposition(deposition_id: str,
                       access_token: str,
                       metadata: dict):
+    """Updates the existing deposition with ``deposition_id`` in your Zenodo account.
+
+        Parameters
+        ----------
+        deposition_id: str
+            ID of a deposition in your Zenodo account.
+        access_token: str
+            Your Zenodo Access token.
+        metadata: dict
+
+    """
     url = f"https://zenodo.org/api/deposit/depositions/{deposition_id}?access_token={access_token}"
     headers = {"Content-Type": "application/json"}
 
@@ -42,6 +73,16 @@ def update_deposition(deposition_id: str,
 
 def delete_deposition(deposition_id: str,
                       access_token: str):
+    """Deletes the existing deposition with ``deposition_id`` in your Zenodo account.
+
+        Parameters
+        ----------
+        deposition_id: str
+            ID of a deposition in your Zenodo account.
+        access_token: str
+            Your Zenodo Access token.
+
+    """
     r = requests.delete(f'https://zenodo.org/api/deposit/depositions/{deposition_id}',
                         params={'access_token': access_token})
 
@@ -53,6 +94,20 @@ def delete_deposition(deposition_id: str,
 
 def publish_deposition(deposition_id: str,
                        access_token: str):
+    """Publishes the existing deposition with ``deposition_id`` in your Zenodo account.
+
+        Parameters
+        ----------
+        deposition_id: str
+            ID of a deposition in your Zenodo account.
+        access_token: str
+            Your Zenodo Access token.
+
+        Returns
+        -------
+        download_link: str
+            Generated direct download link for the uploaded model in the deposition. Please **Note** that the link is usable **after** your published your deposition.
+    """
     r = requests.post(f'https://zenodo.org/api/deposit/depositions/{deposition_id}/actions/publish',
                       params={'access_token': access_token})
     if r.status_code == 202:
@@ -62,6 +117,18 @@ def publish_deposition(deposition_id: str,
 
 
 def get_all_deposition_ids(access_token: str):
+    """Gets list of all of deposition IDs existed in your Zenodo account.
+
+        Parameters
+        ----------
+        access_token: str
+            Your Zenodo Access token.
+
+        Returns
+        -------
+        deposition_ids: list
+            List of deposition IDs.
+    """
     r = requests.get('https://zenodo.org/api/deposit/depositions',
                      params={'access_token': access_token})
 

@@ -7,6 +7,24 @@ def download_file(link: str,
                   save_path: str = None,
                   make_dir: bool = False
                   ):
+    """Downloads the file in the ``link`` and saves it in ``save_path``.
+
+        Parameters
+        ----------
+        link: str
+            Direct downloadable link.
+        save_path: str
+            Path with the name and extension of downloaded file.
+        make_dir: bool
+            Whether to make the ``save_path`` if it does not exist in the system.
+
+        Returns
+        -------
+        file_path: str
+            Full path with name and extension of downloaded file.
+        http_response: :class:`~http.client.HTTPMessage`
+            ``HttpMessage`` object containing status code and information about the http request.
+    """
     from urllib.request import urlretrieve
 
     if make_dir:
@@ -30,6 +48,24 @@ def download_file(link: str,
 def upload_file(file_path: str,
                 deposition_id: str,
                 access_token: str):
+    """Downloads the file in the ``link`` and saves it in ``save_path``.
+
+        Parameters
+        ----------
+        file_path: str
+            Full path with the name and extension of the file you want to upload.
+        deposition_id: str
+            ID of a deposition in your Zenodo account.
+        access_token: str
+            Your Zenodo Access token.
+
+        Returns
+        -------
+        file_path: str
+            Full path with name and extension of downloaded file.
+        http_response: :class:`~http.client.HTTPMessage`
+            ``HttpMessage`` object containing status code and information about the http request.
+    """
     file_name = file_path.split("/")[-1]
     data = {
         'filename': file_name,
