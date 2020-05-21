@@ -15,7 +15,7 @@ of scNet.
 Reproducing the results
 -----------------------
 
-In order to reproduce paper results visit `here <https://github.com/theislab/scNet>`.
+In order to reproduce paper results visit `here <https://github.com/theislab/scNet>`_.
 
 References
 ----------
