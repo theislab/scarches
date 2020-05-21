@@ -7,7 +7,7 @@ from scnet.zenodo.file import download_file
 from scnet.zenodo.zip import unzip_model_directory
 
 import numpy as np
-from typing import TypeVar, Optional, Union
+from typing import Union
 
 from keras import backend as K
 
@@ -15,14 +15,22 @@ from . import metrics
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
-from . import kipoi as kp
 from . import data_loader as dl
 
-list_str = TypeVar('list_str', str, list)
+__author__ = ', '.join([
+    'Mohsen Naghipourfar',
+    'Mohammad Lotfollahi',
+    'Matin Khajavi',
+])
+
+__email__ = ', '.join([
+    'naghipourfar@ce.sharif.edu',
+    'mohammad.lotfollahi@helmholtz-muenchen.de',
+])
 
 
 def operate(network: archs.scNet,
-            new_conditions: list_str,
+            new_conditions: Union[list, str],
             init: str = 'Xavier',
             freeze: bool = True,
             freeze_expression_input: bool = False,
