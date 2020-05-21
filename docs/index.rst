@@ -23,6 +23,13 @@ the challenge of integrating query datasets with reference atlases.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Pipeline Tutorial
+   :hidden:
+
+   pancreas
+
+.. toctree::
+   :maxdepth: 1
    :caption: Examples
    :hidden:
 
