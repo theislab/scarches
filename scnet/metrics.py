@@ -14,6 +14,27 @@ def __entropy_from_indices(indices):
 
 def entropy_batch_mixing(adata, label_key='batch',
                          n_neighbors=50, n_pools=50, n_samples_per_pool=100):
+    """Computes Entory of Batch mixing metric for ``adata`` given the batch column name.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        label_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        n_neighbors: int
+            Number of nearest neighbors.
+        n_pools: int
+            Number of EBM computation which will be averaged.
+        n_samples_per_pool: int
+            Number of samples to be used in each pool of execution.
+
+        Returns
+        -------
+        score: float
+            EBM score. A float between zero and one.
+
+    """
     adata = remove_sparsity(adata)
 
     neighbors = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
@@ -35,6 +56,20 @@ def entropy_batch_mixing(adata, label_key='batch',
 
 
 def asw(adata, label_key):
+    """Computes Average Silhouette Width (ASW) metric for ``adata`` given the batch column name.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        label_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        Returns
+        -------
+        score: float
+            ASW score. A float between -1 and 1.
+
+    """
     adata = remove_sparsity(adata)
 
     labels = adata.obs[label_key].values
@@ -45,6 +80,20 @@ def asw(adata, label_key):
 
 
 def ari(adata, label_key):
+    """Computes Adjusted Rand Index (ARI) metric for ``adata`` given the batch column name.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        label_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        Returns
+        -------
+        score: float
+            ARI score. A float between 0 and 1.
+
+    """
     adata = remove_sparsity(adata)
 
     n_labels = len(adata.obs[label_key].unique().tolist())
@@ -58,6 +107,20 @@ def ari(adata, label_key):
 
 
 def nmi(adata, label_key):
+    """Computes Normalized Mutual Information (NMI) metric for ``adata`` given the batch column name.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        label_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        Returns
+        -------
+        score: float
+            NMI score. A float between 0 and 1.
+
+    """
     adata = remove_sparsity(adata)
 
     n_labels = len(adata.obs[label_key].unique().tolist())
@@ -71,6 +134,22 @@ def nmi(adata, label_key):
 
 
 def knn_purity(adata, label_key, n_neighbors=30):
+    """Computes KNN Purity metric for ``adata`` given the batch column name.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset.
+        label_key: str
+            Name of the column which contains information about different studies in ``adata.obs`` data frame.
+        n_neighbors: int
+            Number of nearest neighbors.
+        Returns
+        -------
+        score: float
+            KNN purity score. A float between 0 and 1.
+
+    """
     adata = remove_sparsity(adata)
     labels = LabelEncoder().fit_transform(adata.obs[label_key].to_numpy())
 
