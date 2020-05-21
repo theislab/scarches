@@ -12,6 +12,20 @@ matplotlib.rc('xtick', labelsize=14)
 
 
 def sankey_diagram(data, save_path=None, show=False, **kwargs):
+    """Draws Sankey diagram for the given ``data``.
+
+        Parameters
+        ----------
+        data: :class:`~numpy.ndarray`
+            array with 2 columns. One for predictions and another for true values.
+        save_path: str
+            Path to save the drawn Sankey diagram. if ``None``, the diagram will not be saved.
+        show: bool
+            if ``True`` will show the diagram.
+        kwargs:
+            additional arguments for diagram configuration. See ``_alluvial.plot`` function.
+
+    """
     plt.close('all')
     ax = _alluvial.plot(data.tolist(),
                         color_side=kwargs.get("color_side", 1),
