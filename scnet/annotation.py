@@ -8,6 +8,37 @@ from scnet.utils import remove_sparsity
 
 def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=0.5,
                  pred_unknown=True, return_uncertainty=True):
+    """Annotates ``valid_adata`` cells with a trained weighted KNN classifier on ``train_adata``.
+
+        Parameters
+        ----------
+        train_adata: :class:`~anndata.AnnData`
+            Annotated dataset to be used to train KNN classifier with ``label_key`` as the target variable.
+        valid_adata: :class:`~anndata.AnnData`
+            Annotated dataset to be used to validate KNN classifier.
+        label_key: str
+            Name of the column to be used as target variable (e.g. cell_type) in ``train_adata`` and ``valid_adata``.
+        n_neighbors: int
+            Number of nearest neighbors in KNN classifier.
+        threshold: float
+            Threshold of uncertainty used to annotating cells as "Unknown". cells with uncertainties upper than this
+             value will be annotated as "Unknown".
+        pred_unknown: bool
+            ``True`` by default. Whether to annotate any cell as "unknown" or not. If `False`, will not use
+            ``threshold`` and annotate each cell with the label which is the most common in its
+            ``n_neighbors`` nearest cells.
+        return_uncertainty: bool
+            ``True`` by default. Whether to return the values of uncertainties or not.
+
+        Returns
+        -------
+        pred_labels: :class:`~numpy.ndarray`
+            Array of predicted labels for ``valid_adata`` cells.
+        uncertainties: :class:`~numpy.ndarray`
+            Array of uncertainty values. Please **note** that this will be returned if ``return_uncertainty`` argument
+            is set ``True``.
+
+    """
     print(f'Weighted KNN with n_neighbors = {n_neighbors} and threshold = {threshold} ... ', end='')
     k_neighbors_transformer = KNeighborsTransformer(n_neighbors=n_neighbors, mode='distance',
                                                     algorithm='brute', metric='euclidean',
