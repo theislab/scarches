@@ -145,7 +145,8 @@ def _hvg_batch(adata, batch_key=None, target_genes=2000, flavor='cell_ranger', n
 
 
 def subsample(adata, batch_key, fraction=0.1, specific_cell_types=None, cell_type_key=None):
-    """Performs Stratified subsampling on ``adata`` while keeping all samples for cell types in ``specific_cell_types``
+    """
+        Performs Stratified subsampling on ``adata`` while keeping all samples for cell types in ``specific_cell_types``
         if passed.
 
         Parameters

@@ -12,10 +12,10 @@ from typing import Union
 from keras import backend as K
 
 from . import metrics
-from . import models as archs
+from . import models
 from . import plotting as pl
-from . import utils as tl
-from . import data as dl
+from . import utils
+from . import data
 from . import annotation as ann
 
 __author__ = ', '.join([
@@ -30,7 +30,7 @@ __email__ = ', '.join([
 ])
 
 
-def operate(network: archs.scNet,
+def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVAE_ZINB],
             new_conditions: Union[list, str],
             init: str = 'Xavier',
             freeze: bool = True,
@@ -39,7 +39,7 @@ def operate(network: archs.scNet,
             print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
-            ) -> archs.scNet:
+            ) -> Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVAE_ZINB]:
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
@@ -63,8 +63,8 @@ def operate(network: archs.scNet,
         network_kwargs[key] = new_network_kwargs[key]
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = archs.scNet(**network_kwargs, **training_kwargs,
-                              print_summary=False)
+    new_network = models.scNet(**network_kwargs, **training_kwargs,
+                               print_summary=False)
 
     # Get Previous Model's weights
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
@@ -219,7 +219,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
             config_filename = file
 
     config_path = os.path.join(extract_dir, config_filename)
-    pre_trained_scNet = archs.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
+    pre_trained_scNet = models.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
 
     pre_trained_scNet.model_path = model_path
 
@@ -238,16 +238,6 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
     scNet.model_path = os.path.join(model_path, f"after/")
 
     return scNet
-
-
-PRETRAINED_TASKS = {
-    "pancreas": "",
-    "mouse_brain": "",
-    "tabula_muris_senis": "",
-    "hcl": "",
-    "hcl_mca": "",
-    "tabula_muris_senis_mca": "",
-}
 
 
 def download_pretrained_scNet(download_link: str,
