@@ -27,6 +27,7 @@ the challenge of integrating query datasets with reference atlases.
    :hidden:
 
    pancreas_from_pretrained
+   pancreas_from_scratch
 
 
 Main Principles
