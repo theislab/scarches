@@ -15,7 +15,8 @@ from . import metrics
 from . import models as archs
 from . import plotting as pl
 from . import utils as tl
-from . import data_loader as dl
+from . import data as dl
+from . import annotation as ann
 
 __author__ = ', '.join([
     'Mohsen Naghipourfar',

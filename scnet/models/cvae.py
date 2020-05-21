@@ -16,7 +16,7 @@ from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import sample_z, print_message, print_progress
-from scnet.utils import label_encoder, remove_sparsity, create_dictionary
+from scnet.utils import label_encoder, remove_sparsity, create_condition_encoder
 
 
 class CVAE(object):
@@ -646,7 +646,7 @@ class CVAE(object):
         if condition_encoder:
             self.condition_encoder = condition_encoder
         elif not condition_encoder and conditions:
-            self.condition_encoder = create_dictionary(conditions, [])
+            self.condition_encoder = create_condition_encoder(conditions, [])
         else:
             raise Exception("Either condition_encoder or conditions have to be passed.")
 
