@@ -323,8 +323,7 @@ class scNet(CVAE):
         valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
                                                     condition_key=condition_key)
 
-        if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
-            self.restore_model_weights()
+        if not retrain and self.restore_model_weights():
             return
 
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)

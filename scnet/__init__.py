@@ -31,6 +31,7 @@ __email__ = ', '.join([
 
 
 def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVAE_ZINB],
+            new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
             freeze: bool = True,
@@ -52,6 +53,8 @@ def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVA
     network_kwargs['n_mmd_conditions'] += n_new_conditions
     network_kwargs['freeze_expression_input'] = freeze_expression_input
     network_kwargs['mmd_computation_method'] = "general"
+    
+    training_kwargs['model_path'] = network.model_path.split(network.task_name)[0]
 
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
@@ -63,7 +66,7 @@ def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVA
         network_kwargs[key] = new_network_kwargs[key]
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = models.scNet(**network_kwargs, **training_kwargs,
+    new_network = models.scNet(task_name=new_task_name, **network_kwargs, **training_kwargs,
                                print_summary=False)
 
     # Get Previous Model's weights
@@ -180,7 +183,7 @@ def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVA
 
 
 def create_scNet_from_pre_trained_task(path_or_link: str,
-                                       filename: str,
+                                       prev_task_name: str,
                                        model_path: str,
                                        new_task: str,
                                        target_conditions: list,
@@ -202,13 +205,13 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
         raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
 
     if not os.path.isdir(path_or_link):
-        downloaded_path = os.path.join(model_path, filename)
+        downloaded_path = os.path.join(model_path, prev_task_name + ".zip")
         downloaded_path = download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
     else:
         downloaded_path = path_or_link
 
     if os.path.exists(downloaded_path) and downloaded_path.endswith(".zip"):
-        extract_dir = os.path.join(model_path, f"before/")
+        extract_dir = os.path.join(model_path, f"{prev_task_name}/")
         unzip_model_directory(downloaded_path, extract_dir=extract_dir)
     elif not os.path.isdir(downloaded_path):
         raise ValueError("`model_path` should be either path to downloaded zip file or scNet pre-trained directory")
@@ -220,8 +223,9 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
 
     config_path = os.path.join(extract_dir, config_filename)
     pre_trained_scNet = models.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
-
+    
     pre_trained_scNet.model_path = model_path
+    pre_trained_scNet.task_name = prev_task_name
 
     pre_trained_scNet.restore_model_weights(compile=True)
 
@@ -235,7 +239,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
                     )
 
     scNet.task_name = new_task
-    scNet.model_path = os.path.join(model_path, f"after/")
+    scNet.model_path = os.path.join(model_path)
 
     return scNet
 

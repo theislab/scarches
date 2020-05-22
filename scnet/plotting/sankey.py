@@ -2,14 +2,6 @@ import matplotlib
 from matplotlib import pyplot as plt
 from scnet.plotting import _alluvial
 
-font = {'family': 'Arial',
-        'weight': 'bold',
-        'size': 14}
-
-matplotlib.rc('font', **font)
-matplotlib.rc('ytick', labelsize=14)
-matplotlib.rc('xtick', labelsize=14)
-
 
 def sankey_diagram(data, save_path=None, show=False, **kwargs):
     """Draws Sankey diagram for the given ``data``.
@@ -26,6 +18,13 @@ def sankey_diagram(data, save_path=None, show=False, **kwargs):
             additional arguments for diagram configuration. See ``_alluvial.plot`` function.
 
     """
+    font = {'family': 'Arial',
+            'weight': 'bold',
+            'size': 14}
+
+    matplotlib.rc('font', **font)
+    matplotlib.rc('ytick', labelsize=14)
+    matplotlib.rc('xtick', labelsize=14)
     plt.close('all')
     ax = _alluvial.plot(data.tolist(),
                         color_side=kwargs.get("color_side", 1),
