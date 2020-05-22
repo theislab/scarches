@@ -1,6 +1,6 @@
 Installation
 ============
-scNet requires Python 3.6 or later. We recommend to use Miniconda_.
+scNet requires Python 3.6 or later. We recommend to use Miniconda.
 
 PyPI
 --------

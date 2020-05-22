@@ -55,14 +55,19 @@ html_theme_options = dict(navigation_depth=3, titles_only=False)
 #     'includehidden': True,
 #     'titles_only': False
 # }
-# html_context = dict(
-#     display_github=True,      # Integrate GitHub
-#     github_user='theislab',   # Username
-#     github_repo='scNet',     # Repo name
-#     github_version='master',  # Version
-#     conf_py_path='/docs/',
-# )
+html_context = dict(
+    display_github=True,
+    github_user='theislab',
+    github_repo='scNet',
+    github_version='master',
+    conf_py_path='/docs/',
+)
 html_static_path = ['_static']
+
+
+def setup(app):
+    app.add_stylesheet('custom.css')
+
 
 # -- General configuration ---------------------------------------------------
 
