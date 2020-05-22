@@ -437,8 +437,8 @@ class CVAE(object):
             ``True`` if the model has been successfully restored.
             ``False`` if ``model_path`` is invalid or the model weights couldn't be found in the specified ``model_path``.
         """
-        if os.path.exists(os.path.join(self.model_path, f"{self.model_name}-{self.task_name}.h5")):
-            self.cvae_model.load_weights(os.path.join(self.model_path, f'{self.model_name}-{self.task_name}.h5'))
+        if os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.cvae_model.load_weights(os.path.join(self.model_path, f'{self.model_name}.h5'))
 
             self.encoder_model = self.cvae_model.get_layer("encoder")
             self.decoder_model = self.cvae_model.get_layer("decoder")
@@ -463,8 +463,8 @@ class CVAE(object):
             ``True`` if the model config has been successfully restored.
             ``False`` if `model_path` is invalid or the model config couldn't be found in the specified ``model_path``.
         """
-        if os.path.exists(os.path.join(self.model_path, f"{self.model_name}-{self.task_name}.json")):
-            json_file = open(os.path.join(self.model_path, f"{self.model_name}-{self.task_name}.json"), 'rb')
+        if os.path.exists(os.path.join(self.model_path, f"{self.model_name}.json")):
+            json_file = open(os.path.join(self.model_path, f"{self.model_name}.json"), 'rb')
             loaded_model_json = json_file.read()
             self.cvae_model = model_from_json(loaded_model_json)
             self.encoder_model = self.cvae_model.get_layer("encoder")
@@ -493,8 +493,8 @@ class CVAE(object):
             ``False`` if `model_path` is invalid or the class' config couldn't be found in the specified ``model_path``.
         """
         import json
-        if os.path.exists(os.path.join(self.model_path, f"{self.class_name}-{self.task_name}.json")):
-            with open(os.path.join(self.model_path, f"{self.class_name}-{self.task_name}.json"), 'rb') as f:
+        if os.path.exists(os.path.join(self.model_path, f"{self.class_name}.json")):
+            with open(os.path.join(self.model_path, f"{self.class_name}.json"), 'rb') as f:
                 scNet_config = json.load(f)
 
             # Update network_kwargs and training_kwargs dictionaries
@@ -535,8 +535,8 @@ class CVAE(object):
             os.makedirs(self.model_path, exist_ok=True)
 
         if os.path.exists(self.model_path):
-            self.save_model_weights()
-            self.save_model_config()
+            self.save_model_weights(make_dir)
+            self.save_model_config(make_dir)
             self.save_class_config(make_dir)
             print(f"\n{self.class_name} has been successfully saved in {self.model_path}.")
             return True
@@ -561,7 +561,7 @@ class CVAE(object):
             os.makedirs(self.model_path, exist_ok=True)
 
         if os.path.exists(self.model_path):
-            self.cvae_model.save_weights(os.path.join(self.model_path, f"{self.model_name}-{self.task_name}.h5"),
+            self.cvae_model.save_weights(os.path.join(self.model_path, f"{self.model_name}.h5"),
                                          overwrite=True)
             return True
         else:
@@ -586,7 +586,7 @@ class CVAE(object):
 
         if os.path.exists(self.model_path):
             model_json = self.cvae_model.to_json()
-            with open(os.path.join(self.model_path, f"{self.model_name}-{self.task_name}.json"), 'w') as file:
+            with open(os.path.join(self.model_path, f"{self.model_name}.json"), 'w') as file:
                 file.write(model_json)
             return True
         else:
@@ -621,7 +621,7 @@ class CVAE(object):
             all_configs = dict(list(self.network_kwargs.items()) +
                                list(self.training_kwargs.items()) +
                                list(config.items()))
-            with open(os.path.join(self.model_path, f"{self.class_name}-{self.task_name}.json"), 'w') as f:
+            with open(os.path.join(self.model_path, f"{self.class_name}.json"), 'w') as f:
                 json.dump(all_configs, f)
 
             return True
