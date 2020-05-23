@@ -28,6 +28,22 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 import scnet
 
+# -- Retrieve notebooks ------------------------------------------------------
+
+from urllib.request import urlretrieve
+notebooks_url = 'https://github.com/theislab/scNet/raw/master/notebooks/'
+notebooks = [
+    'zenodo_pancreas_from_pretrained.ipynb',
+    'zenodo_pancreas_from_scratch.ipynb',
+    'pancreas_pipeline.ipynb',
+]
+
+for nb in notebooks:
+    try:
+        urlretrieve(notebooks_url + nb, nb)
+    except: pass
+
+
 # -- Project information -----------------------------------------------------
 
 project = 'scNet'
@@ -39,22 +55,6 @@ author = 'Mohsen Naghipourfar, Mohammad Lotfollahi'
 pygments_style = 'sphinx'
 todo_include_todos = True
 html_theme_options = dict(navigation_depth=3, titles_only=False)
-# html_theme_options = {
-#     'canonical_url': '',
-#     'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
-#     'logo_only': False,
-#     'display_version': True,
-#     'prev_next_buttons_location': 'bottom',
-#     'style_external_links': False,
-#     'vcs_pageview_mode': '',
-#     'style_nav_header_background': 'white',
-#     # Toc options
-#     'collapse_navigation': True,
-#     'sticky_navigation': True,
-#     'navigation_depth': 4,
-#     'includehidden': True,
-#     'titles_only': False
-# }
 html_context = dict(
     display_github=True,
     github_user='theislab',
