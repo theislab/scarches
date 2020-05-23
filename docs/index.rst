@@ -33,8 +33,9 @@ the challenge of integrating query datasets with reference atlases.
    :caption: Examples
    :hidden:
 
-   pancreas_from_pretrained
-   pancreas_from_scratch
+   pancreas_pipeline
+   zenodo_pancreas_from_pretrained
+   zenodo_pancreas_from_scratch
 
 
 Main Principles
