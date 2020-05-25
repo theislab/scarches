@@ -198,7 +198,7 @@ class scNet(CVAE):
 
         print("scNet's network has been successfully compiled!")
 
-    def to_mmd_layer(self, adata, encoder_labels, decoder_labels):
+    def to_mmd_layer(self, adata, batch_key):
         """
             Map ``adata`` in to the MMD space. This function will feed data
             in ``mmd_model`` of scNet and compute the MMD space coordinates
@@ -220,13 +220,15 @@ class scNet(CVAE):
                 returns Annotated data containing MMD latent space encoding of ``adata``
         """
         adata = remove_sparsity(adata)
+        
+        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
-        if self.loss_fn == 'nb':
-            cvae_inputs = [adata.X, encoder_labels, decoder_labels, adata.obs['size_factors'].values]
-        else:
-            cvae_inputs = [adata.X, encoder_labels, decoder_labels]
+
+        cvae_inputs = [adata.X, encoder_labels, decoder_labels]
+            
         mmd = self.cvae_model.predict(cvae_inputs)[1]
         mmd = np.nan_to_num(mmd, nan=0.0, posinf=0.0, neginf=0.0)
 
@@ -262,15 +264,12 @@ class scNet(CVAE):
             return_z = True
 
         encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         if return_z or self.beta == 0:
             return self.get_z_latent(adata, encoder_labels)
         else:
-            return self.to_mmd_layer(adata, encoder_labels, decoder_labels)
+            return self.to_mmd_layer(adata, batch_key)
 
     def predict(self, adata, encoder_labels, decoder_labels):
         """Feeds ``adata`` to scNet and produces the reconstructed data.
