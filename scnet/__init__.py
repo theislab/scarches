@@ -30,7 +30,7 @@ __email__ = ', '.join([
 ])
 
 
-def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVAE_ZINB],
+def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB],
             new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
@@ -40,7 +40,7 @@ def operate(network: Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVA
             print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
-            ) -> Union[models.scNet, models.CVAE, models.CVAE_NB, models.CVAE_ZINB]:
+            ) -> Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB]:
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 

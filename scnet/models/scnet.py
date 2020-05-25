@@ -16,7 +16,7 @@ from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import print_progress
-from scnet.utils import label_encoder, remove_sparsity
+from scnet.utils import label_encoder, remove_sparsity, train_test_split
 
 
 class scNet(CVAE):
@@ -235,6 +235,43 @@ class scNet(CVAE):
 
         return adata_mmd
 
+    def get_latent(self, adata, batch_key, return_z=False):
+        """ Transforms `adata` in latent space of scNet and returns the latent
+        coordinates in the annotated (adata) format.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset matrix in Primary space.
+        batch_key: str
+            Name of the column containing the study (batch) names for each sample.
+        return_z: bool
+            ``False`` by defaul. if ``True``, the output of bottleneck layer of network will be computed.
+
+        Returns
+        -------
+        adata_pred: `~anndata.AnnData`
+            Annotated data of transformed ``adata`` into latent space.
+        """
+        if set(self.gene_names).issubset(set(adata.var_names)):
+            adata = adata[:, self.gene_names]
+        else:
+            raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+
+        if self.beta == 0:
+            return_z = True
+
+        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        if return_z or self.beta == 0:
+            return self.get_z_latent(adata, encoder_labels)
+        else:
+            return self.to_mmd_layer(adata, encoder_labels, decoder_labels)
+
     def predict(self, adata, encoder_labels, decoder_labels):
         """Feeds ``adata`` to scNet and produces the reconstructed data.
 
@@ -265,8 +302,9 @@ class scNet(CVAE):
 
         return adata_pred
 
-    def train(self, train_adata, valid_adata,
-              condition_key, cell_type_key='cell_type',
+    def train(self, adata, condition_key,
+              cell_type_key='cell_type',
+              train_size=0.8,
               n_epochs=25, batch_size=32,
               early_stop_limit=20, lr_reducer=10,
               n_per_epoch=0, score_filename=None,
@@ -279,12 +317,12 @@ class scNet(CVAE):
 
             Parameters
             ----------
-            train_adata: :class:`~anndata.AnnData`
-                Annotated dataset for training scNet.
-            valid_adata: :class:`~anndata.AnnData`
-                Annotated dataset for validating scNet.
+            adata: :class:`~anndata.AnnData`
+                Annotated dataset used to train & evaluate scNet.
             condition_key: str
                 column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
+            train_size: float
+                fraction of samples used to train scNet.
             n_epochs: int
                 number of epochs.
             batch_size: int
@@ -301,6 +339,8 @@ class scNet(CVAE):
                 ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
 
         """
+        train_adata, valid_adata = train_test_split(adata, train_size)
+
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
 
@@ -317,11 +357,11 @@ class scNet(CVAE):
             else:
                 raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
 
-        train_conditions_encoded, _ = label_encoder(train_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+        train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+        valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
 
         if not retrain and self.restore_model_weights():
             return

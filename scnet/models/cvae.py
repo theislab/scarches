@@ -16,7 +16,7 @@ from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import sample_z, print_message, print_progress
-from scnet.utils import label_encoder, remove_sparsity, create_condition_encoder
+from scnet.utils import label_encoder, remove_sparsity, create_condition_encoder, train_test_split
 
 
 class CVAE(object):
@@ -356,7 +356,30 @@ class CVAE(object):
         """
         raise NotImplementedError("There are no MMD layer in CVAE")
 
-    def to_latent(self, adata, encoder_labels):
+    def get_latent(self, adata, batch_key):
+        """ Transforms `adata` in latent space of CVAE and returns the latent
+        coordinates in the annotated (adata) format.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated dataset matrix in Primary space.
+
+
+
+
+        """
+        if set(self.gene_names).issubset(set(adata.var_names)):
+            adata = adata[:, self.gene_names]
+        else:
+            raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+
+        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+
+        return self.get_z_latent(adata, encoder_labels)
+
+    def get_z_latent(self, adata, encoder_labels):
         """
             Map ``adata`` in to the latent space. This function will feed data
             in encoder part of scNet and compute the latent space coordinates
@@ -651,8 +674,8 @@ class CVAE(object):
         else:
             raise Exception("Either condition_encoder or conditions have to be passed.")
 
-    def train(self, train_adata, valid_adata,
-              condition_key, cell_type_key='cell_type',
+    def train(self, adata,
+              condition_key, train_size=0.8, cell_type_key='cell_type',
               n_epochs=25, batch_size=32,
               early_stop_limit=20, lr_reducer=10,
               n_per_epoch=0, score_filename=None,
@@ -665,12 +688,12 @@ class CVAE(object):
 
             Parameters
             ----------
-            train_adata: :class:`~anndata.AnnData`
-                Annotated dataset for training scNet.
-            valid_adata: :class:`~anndata.AnnData`
-                Annotated dataset for validating scNet.
+            adata: :class:`~anndata.AnnData`
+                Annotated dataset used to train & evaluate scNet.
             condition_key: str
                 column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
+            train_size: float
+                fraction of samples in `adata` used to train scNet.
             n_epochs: int
                 number of epochs.
             batch_size: int
@@ -687,6 +710,8 @@ class CVAE(object):
                 ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
 
         """
+        train_adata, valid_adata = train_test_split(adata, train_size)
+
         train_adata = remove_sparsity(train_adata)
         valid_adata = remove_sparsity(valid_adata)
 
@@ -709,11 +734,11 @@ class CVAE(object):
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
-        train_conditions_encoded, _ = label_encoder(train_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+        train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
 
-        valid_conditions_encoded, _ = label_encoder(valid_adata, le=self.condition_encoder,
-                                                    condition_key=condition_key)
+        valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
 
         if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
             self.restore_model_weights()

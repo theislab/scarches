@@ -1,12 +1,12 @@
 from typing import Union
 
-from scnet.models import scNet, CVAE_ZINB, CVAE_NB, CVAE
+from scnet.models import scNet, scNetZINB, scNetNB, CVAE
 from .file import *
 from .deposition import *
 from .zip import *
 
 
-def upload_model(model: Union[scNet, CVAE, CVAE_NB, CVAE_ZINB],
+def upload_model(model: Union[scNet, CVAE, scNetNB, scNetZINB],
                  deposition_id: str,
                  access_token: str):
     """uploads trained ``model`` to Zenodo.
