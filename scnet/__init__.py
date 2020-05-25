@@ -34,13 +34,26 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
             new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
-            freeze: bool = True,
-            freeze_expression_input: bool = False,
+            version='scNet',
             remove_dropout: bool = True,
             print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
             ) -> Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB]:
+
+    version = version.lower()
+    if version == 'scnet':
+        freeze = True
+        freeze_expression_input = True
+    elif version == 'scnet v1':
+        freeze = True
+        freeze_expression_input = False
+    elif version == 'scnet v2':
+        freeze = False
+        freeze_expression_input = False
+    else:
+        raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
+    
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
@@ -190,20 +203,6 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
                                        version: str = 'scNet',
                                        **kwargs,
                                        ):
-    version = version.lower()
-
-    if version == 'scnet':
-        freeze_input_expression = True
-        freeze = True
-    elif version == 'scnet v1':
-        freeze_input_expression = False
-        freeze = True
-    elif version == 'scnet v2':
-        freeze_input_expression = False
-        freeze = False
-    else:
-        raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
-
     if not os.path.isdir(path_or_link):
         downloaded_path = os.path.join(model_path, prev_task_name + ".zip")
         downloaded_path = download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
@@ -231,9 +230,9 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
 
     scNet = operate(pre_trained_scNet,
                     new_conditions=target_conditions,
+                    new_task_name=new_task,
                     init='Xavier',
-                    freeze=freeze,
-                    freeze_expression_input=freeze_input_expression,
+                    version=version,
                     remove_dropout=False,
                     print_summary=False,
                     )
