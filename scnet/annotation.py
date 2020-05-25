@@ -7,7 +7,7 @@ from scnet.utils import remove_sparsity
 
 
 def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=0.5,
-                 pred_unknown=True, return_uncertainty=True):
+                 pred_unknown=True):
     """Annotates ``valid_adata`` cells with a trained weighted KNN classifier on ``train_adata``.
 
         Parameters
@@ -27,25 +27,11 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
             ``True`` by default. Whether to annotate any cell as "unknown" or not. If `False`, will not use
             ``threshold`` and annotate each cell with the label which is the most common in its
             ``n_neighbors`` nearest cells.
-        return_uncertainty: bool
-            ``True`` by default. Whether to return the values of uncertainties or not.
-
-        Returns
-        -------
-        pred_labels: :class:`~numpy.ndarray`
-            Array of predicted labels for ``valid_adata`` cells.
-        uncertainties: :class:`~numpy.ndarray`
-            Array of uncertainty values. Please **note** that this will be returned if ``return_uncertainty`` argument
-            is set ``True``.
-
     """
     print(f'Weighted KNN with n_neighbors = {n_neighbors} and threshold = {threshold} ... ', end='')
     k_neighbors_transformer = KNeighborsTransformer(n_neighbors=n_neighbors, mode='distance',
                                                     algorithm='brute', metric='euclidean',
                                                     n_jobs=-1)
-    train_adata = remove_sparsity(train_adata)
-    valid_adata = remove_sparsity(valid_adata)
-
     k_neighbors_transformer.fit(train_adata.X)
 
     y_train_labels = train_adata.obs[label_key].values
@@ -64,30 +50,52 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
     uncertainties = []
     pred_labels = []
     for i in range(len(weights)):
-        labels = y_train_labels[top_k_indices[i]]
-        most_common_label, _ = Counter(y_train_labels[top_k_indices[i]]).most_common(n=1)[0]
-        most_prob = weights[i, y_train_labels[top_k_indices[i]] == most_common_label].sum()
+        unique_labels = y_train_labels[top_k_indices[i]].unique().tolist()
+        best_label, best_prob = None, 0.0
+        for candidate_label in unique_labels:
+            candidate_prob = weights[i, y_train_labels[top_k_indices[i]] == candidate_label].sum()
+            if best_prob < candidate_prob:
+                best_prob = candidate_prob
+                best_label = candidate_label
+        
         if pred_unknown:
-            if most_prob >= threshold:
-                pred_label = most_common_label
+            if best_prob >= threshold:
+                pred_label = best_label
             else:
                 pred_label = 'Unknown'
         else:
-            pred_label = most_common_label
+            pred_label = best_label
 
         if pred_label == y_valid_labels[i]:
-            uncertainties.append(1 - most_prob)
+            uncertainties.append(max(1 - best_prob, 0))
         else:
             true_prob = weights[i, y_train_labels[top_k_indices[i]] == y_valid_labels[i]].sum()
-            uncertainties.append(1 - true_prob)
+            if true_prob > 0.5:
+                pass
+            uncertainties.append(max(1 - true_prob, 0))
 
         pred_labels.append(pred_label)
 
-    pred_labels = np.array(pred_labels).reshape(-1, 1)
-    uncertainties = np.array(uncertainties).reshape(-1, 1)
-
+    pred_labels = np.array(pred_labels).reshape(-1,)
+    uncertainties = np.array(uncertainties).reshape(-1,)
+    
+    labels_eval = pred_labels == y_valid_labels
+    labels_eval = labels_eval.astype(object)
+    
+    n_correct = len(labels_eval[labels_eval == True])
+    n_incorrect = len(labels_eval[labels_eval == False]) - len(labels_eval[pred_labels == 'Unknown'])
+    n_unknown = len(labels_eval[pred_labels == 'Unknown'])
+    
+    labels_eval[labels_eval == True] = f'Correct'
+    labels_eval[labels_eval == False] = f'InCorrect'
+    labels_eval[pred_labels == 'Unknown'] = f'Unknown'
+    
+    valid_adata.obs['uncertainty'] = uncertainties
+    valid_adata.obs[f'pred_{label_key}'] = pred_labels
+    valid_adata.obs['evaluation'] = labels_eval
+    
+    
     print('finished!')
-    if return_uncertainty:
-        return pred_labels, uncertainties
-    else:
-        return pred_labels
+    print(f"Number of correctly classified samples: {n_correct}")
+    print(f"Number of misclassified samples: {n_incorrect}")
+    print(f"Number of samples classified as unknown: {n_unknown}")
