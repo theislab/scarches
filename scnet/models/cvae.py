@@ -379,7 +379,7 @@ class CVAE(object):
 
         return self.get_z_latent(adata, encoder_labels)
 
-    def __get_z_latent(self, adata, encoder_labels):
+    def get_z_latent(self, adata, encoder_labels):
         """
             Map ``adata`` in to the latent space. This function will feed data
             in encoder part of scNet and compute the latent space coordinates
