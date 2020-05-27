@@ -267,7 +267,7 @@ class scNet(CVAE):
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
         if return_z or self.beta == 0:
-            return self.get_z_latent(adata, encoder_labels)
+            return self.__get_z_latent(adata, encoder_labels)
         else:
             return self.to_mmd_layer(adata, batch_key)
 
