@@ -332,7 +332,7 @@ class CVAE(object):
 
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=loss,
-                                metrics=[loss, recon_loss, kl_loss],
+                                metrics=[recon_loss, kl_loss],
                                 )
 
         print(f"{self.class_name}'s network has been successfully compiled!")
