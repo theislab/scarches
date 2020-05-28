@@ -283,7 +283,7 @@ class CVAE(object):
 
         decoder_outputs = self.decoder_model(decoder_inputs)
 
-        reconstruction_output = Lambda(lambda x: x, name="reconstruction")(decoder_outputs)
+        reconstruction_output = Lambda(lambda x: x, name=self.loss_fn)(decoder_outputs)
 
         self.cvae_model = Model(inputs=inputs,
                                 outputs=reconstruction_output,
