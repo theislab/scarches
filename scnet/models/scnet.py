@@ -66,10 +66,10 @@ class scNet(CVAE):
             kwargs.pop('mmd_computation_method')
 
             if loss_fn == 'nb':
-                from scnet.models.scnetnb import scNetNB
+                from .scnetnb import scNetNB
                 return scNetNB(*args, **kwargs)
             elif loss_fn == 'zinb':
-                from scnet.models.scnetzinb import scNetZINB
+                from .scnetzinb import scNetZINB
                 return scNetZINB(*args, **kwargs)
         else:
             return super(scNet, cls).__new__(cls)
