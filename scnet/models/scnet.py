@@ -61,10 +61,6 @@ class scNet(CVAE):
     def __new__(cls, *args, **kwargs):
         loss_fn = kwargs.get("loss_fn", "mse")
         if loss_fn in ['nb', 'zinb']:
-            kwargs.pop('beta')
-            kwargs.pop('n_mmd_conditions')
-            kwargs.pop('mmd_computation_method')
-
             if loss_fn == 'nb':
                 from .scnetnb import scNetNB
                 return scNetNB(*args, **kwargs)
