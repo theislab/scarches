@@ -307,13 +307,13 @@ class CVAE(object):
             loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha,
                                         self.eta)
             kl_loss = LOSSES['kl'](self.mu, self.log_var)
-            recon_loss = LOSSES['nb_wo_kl']
+            recon_loss = LOSSES['nb_wo_kl'](self.disp_output, self.scale_factor, self.eta)
 
         elif self.loss_fn == 'zinb':
             loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha,
                                         self.eta)
             kl_loss = LOSSES['kl'](self.mu, self.log_var)
-            recon_loss = LOSSES['zinb_wo_kl']
+            recon_loss = LOSSES['zinb_wo_kl'](self.pi_output, self.disp_output, self.ridge, self.eta)
 
         else:
             loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)

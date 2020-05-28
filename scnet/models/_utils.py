@@ -110,7 +110,7 @@ def print_message(epoch, logs, n_epochs=10000, duration=50):
 
 def print_progress(epoch, logs, n_epochs=10000):
     message = ''
-    for key in logs.keys():
+    for key in sorted(list(logs.keys())):
         message += f' - {key}: {logs[key]:.4f}'
     #     message = f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
 
