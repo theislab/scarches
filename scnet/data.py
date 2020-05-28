@@ -22,7 +22,7 @@ def read(filename, **kwargs):
     return sc.read(filename, **kwargs)
 
 
-def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True,
+def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True, scale=True,
                   target_sum=None, n_top_genes=2000):
     """Normalizes, and select highly variable genes of ``adata``.
         Parameters
@@ -69,6 +69,9 @@ def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True,
             genes = adata.var['highly_variable']
         adata = adata[:, genes]
         adata_count = adata_count[:, genes]
+
+    if scale:
+        sc.pp.scale(adata)
 
     if sparse.issparse(adata_count.X):
         adata_count.X = adata_count.X.A
