@@ -10,7 +10,7 @@ from keras.models import Model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
 
-from scnet.models import CVAE
+from scnet.models import CVAE, scNetNB, scNetZINB
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
@@ -58,13 +58,27 @@ class scNet(CVAE):
                 names of genes fed as scNet's input. Must be a list of strings.
     """
 
+    def __new__(cls, *args, **kwargs):
+        loss_fn = kwargs.get("loss_fn", "mse")
+        if loss_fn in ['nb', 'zinb']:
+            kwargs.pop('beta')
+            kwargs.pop('n_mmd_conditions')
+            kwargs.pop('mmd_computation_method')
+
+            if loss_fn == 'nb':
+                return scNetNB(*args, **kwargs)
+            elif loss_fn == 'zinb':
+                return scNetZINB(*args, **kwargs)
+        else:
+            return super(scNet, cls).__new__(cls)
+
     def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
         self.beta = kwargs.pop('beta', 20.0)
         self.n_mmd_conditions = kwargs.pop("n_mmd_conditions", n_conditions)
         self.mmd_computation_method = kwargs.pop("mmd_computation_method", "general")
 
         if kwargs.get("loss_fn", "mse") in ['nb', 'zinb']:
-            kwargs['loss_nb'] = 'mse'
+            kwargs['loss_fn'] = 'mse'
 
         kwargs.update({"model_name": "cvae", "class_name": "scNet"})
 
@@ -220,7 +234,7 @@ class scNet(CVAE):
                 returns Annotated data containing MMD latent space encoding of ``adata``
         """
         adata = remove_sparsity(adata)
-        
+
         encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
         decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
 
@@ -228,7 +242,7 @@ class scNet(CVAE):
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         cvae_inputs = [adata.X, encoder_labels, decoder_labels]
-            
+
         mmd = self.cvae_model.predict(cvae_inputs)[1]
         mmd = np.nan_to_num(mmd, nan=0.0, posinf=0.0, neginf=0.0)
 
