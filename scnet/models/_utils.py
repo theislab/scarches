@@ -109,10 +109,18 @@ def print_message(epoch, logs, n_epochs=10000, duration=50):
 
 
 def print_progress(epoch, logs, n_epochs=10000):
-    message = ''
-    for key in sorted(list(logs.keys())):
+    message = f' - loss: {logs["loss"]:.4f}'
+    train_keys = [key for key in sorted(list(logs.keys())) if (not key.startswith('val_') and key != 'loss')]
+    
+    for key in train_keys:
         message += f' - {key}: {logs[key]:.4f}'
-    #     message = f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
+    
+
+    message += f' - val_loss: {logs["val_loss"]:.4f}'
+    valid_keys = [key for key in sorted(list(logs.keys())) if (key.startswith('val_') and key != 'val_loss')]
+    
+    for key in valid_keys:
+        message += f' - {key}: {logs[key]:.4f}'
 
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
 

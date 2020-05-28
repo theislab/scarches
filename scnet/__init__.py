@@ -63,9 +63,11 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
     training_kwargs = network.training_kwargs
 
     network_kwargs['n_conditions'] += n_new_conditions
-    network_kwargs['n_mmd_conditions'] += n_new_conditions
+    if isinstance(network, models.scNet):
+        network_kwargs['n_mmd_conditions'] += n_new_conditions
+        network_kwargs['mmd_computation_method'] = "general"
+    
     network_kwargs['freeze_expression_input'] = freeze_expression_input
-    network_kwargs['mmd_computation_method'] = "general"
     
     training_kwargs['model_path'] = network.model_path.split(network.task_name)[0]
 
@@ -79,8 +81,8 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
         network_kwargs[key] = new_network_kwargs[key]
 
     # Instantiate new model with old parameters except `n_conditions`
-    new_network = models.scNet(task_name=new_task_name, **network_kwargs, **training_kwargs,
-                               print_summary=False)
+    new_network = type(network)(task_name=new_task_name, **network_kwargs, **training_kwargs,
+                                print_summary=False)
 
     # Get Previous Model's weights
     used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
