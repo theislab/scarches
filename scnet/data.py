@@ -175,6 +175,7 @@ def subsample(adata, batch_key, fraction=0.1, specific_cell_types=None, cell_typ
         other_adata = adata[~adata.obs[cell_type_key].isin(specific_cell_types)]
     else:
         subsampled_adata = None
+        other_adata = adata
     for study in studies:
         study_adata = other_adata[other_adata.obs[batch_key] == study]
         n_samples = study_adata.shape[0]
