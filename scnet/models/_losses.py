@@ -13,6 +13,7 @@ def kl_recon_mse(mu, log_var, alpha=0.1, eta=1.0):
 
     return kl_recon_loss
 
+
 def kl_recon_sse(mu, log_var, alpha=0.1, eta=1.0):
     def kl_recon_loss(y_true, y_pred):
         kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
@@ -26,13 +27,19 @@ def pure_kl_loss(mu, log_var):
     def kl_loss(y_true, y_pred):
         kl_div = K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
         return kl_div
+
+    kl_loss.__name__ = "kl"
+
     return kl_loss
+
 
 def sse_loss(y_true, y_pred):
     return K.sum(K.square((y_true - y_pred)), axis=-1)
 
+
 def mse_loss(y_true, y_pred):
     return losses.mean_squared_error(y_true, y_pred)
+
 
 def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_method="general"):
     def mmd_loss(real_labels, y_pred):
@@ -52,7 +59,6 @@ def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_method=
             if n_conditions == 1:
                 loss = _nan2zero(tf.zeros(shape=(1,)))
             return beta * loss
-            
 
     return mmd_loss
 
@@ -145,13 +151,16 @@ def nb_kl_loss(disp, mu, log_var, scale_factor=1.0, alpha=0.1, eta=1.0):
         nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
         return eta * nb_obj.loss(y_true, y_pred, mean=True) + alpha * kl(y_true, y_pred)
 
+    nb.__name__ = 'nb_kl'
     return nb
+
 
 def nb_loss(disp, scale_factor=1.0, eta=1.0):
     def nb(y_true, y_pred):
         nb_obj = NB(theta=disp, masking=False, scale_factor=scale_factor)
         return eta * nb_obj.loss(y_true, y_pred, mean=True)
 
+    nb.__name__ = 'nb'
     return nb
 
 
@@ -162,13 +171,16 @@ def zinb_kl_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1, eta=1.0):
         zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
         return eta * zinb_obj.loss(y_true, y_pred) + alpha * kl(y_true, y_pred)
 
+    zinb.__name__ = 'zinb_kl'
     return zinb
+
 
 def zinb_loss(pi, disp, ridge=0.1, eta=1.0):
     def zinb(y_true, y_pred):
         zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
         return eta * zinb_obj.loss(y_true, y_pred)
 
+    zinb.__name__ = 'zinb'
     return zinb
 
 

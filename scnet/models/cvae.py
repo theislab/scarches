@@ -66,7 +66,7 @@ class CVAE(object):
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.0005)
-        self.eta = kwargs.get("eta", 1000.0)
+        self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.05)
         self.model_path = os.path.join(kwargs.get("model_path", "./models/trVAE/"), self.task_name)
         self.loss_fn = kwargs.get("loss_fn", 'mse')
@@ -332,7 +332,7 @@ class CVAE(object):
 
         self.cvae_model.compile(optimizer=optimizer,
                                 loss=loss,
-                                metrics={self.cvae_model.outputs[0].name: loss},
+                                metrics=[loss, recon_loss, kl_loss],
                                 )
 
         print(f"{self.class_name}'s network has been successfully compiled!")

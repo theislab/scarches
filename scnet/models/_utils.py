@@ -4,7 +4,6 @@ from keras import backend as K
 import sys
 
 
-
 def compute_kernel(x, y, kernel='rbf', **kwargs):
     """
         Computes RBF kernel between x and y.
@@ -103,20 +102,22 @@ def _reduce_mean(x):
 def print_message(epoch, logs, n_epochs=10000, duration=50):
     if epoch % duration == 0:
         print(f"Epoch {epoch + 1}/{n_epochs}:")
-        print(f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f}"
-              f" - val_loss: {logs['val_loss']:.4f}"
-              f" - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
+        print(
+            f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f}"
+            f" - val_loss: {logs['val_loss']:.4f}"
+            f" - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
 
 
 def print_progress(epoch, logs, n_epochs=10000):
     message = ''
     for key in logs.keys():
         message += f' - {key}: {logs[key]:.4f}'
-#     message = f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
+    #     message = f" - loss: {logs['loss']:.4f} - reconstruction_loss: {logs['reconstruction_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_reconstruction_loss: {logs['val_reconstruction_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
 
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
 
-def _print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+
+def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filled_len = int(length * iteration // total)
     bar = fill * filled_len + '-' * (length - filled_len)
