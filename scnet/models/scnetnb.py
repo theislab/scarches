@@ -41,7 +41,7 @@ class scNetNB(CVAE):
 
     def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
         kwargs.update({'loss_nb': 'nb', 'beta': 0,
-                       "model_name": "cvae_nb", "class_name": "CVAE_NB"})
+                       "model_name": "cvae_nb", "class_name": "scNetNB"})
         super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
 
 
