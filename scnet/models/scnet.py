@@ -10,7 +10,7 @@ from keras.models import Model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
 
-from scnet.models import CVAE, scNetNB, scNetZINB
+from scnet.models import CVAE
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
@@ -66,8 +66,10 @@ class scNet(CVAE):
             kwargs.pop('mmd_computation_method')
 
             if loss_fn == 'nb':
+                from scnet.models.scnetnb import scNetNB
                 return scNetNB(*args, **kwargs)
             elif loss_fn == 'zinb':
+                from scnet.models.scnetzinb import scNetZINB
                 return scNetZINB(*args, **kwargs)
         else:
             return super(scNet, cls).__new__(cls)
