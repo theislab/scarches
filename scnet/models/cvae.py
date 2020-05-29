@@ -736,7 +736,7 @@ class CVAE(object):
         valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
 
-        if not retrain and os.path.exists(os.path.join(self.model_path, "cvae.h5")):
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
             return
 
