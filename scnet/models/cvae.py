@@ -745,11 +745,11 @@ class CVAE(object):
 
         if self.loss_fn in ['nb', 'zinb']:
             x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
-                       train_adata.obs['size_factors'].values]
+                       train_adata.obs[self.size_factor_key].values]
             y_train = train_adata.raw.X
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
-                       valid_adata.obs['size_factors'].values]
+                       valid_adata.obs[self.size_factor_key].values]
             y_valid = valid_adata.raw.X
         else:
             x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
