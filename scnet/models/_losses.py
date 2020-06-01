@@ -62,6 +62,7 @@ def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_method=
 
     return mmd_loss
 
+# NB loss and ZINB are taken from https://github.com/theislab/dca, thanks to @@gokceneraslan
 
 class NB(object):
     def __init__(self, theta=None, masking=False, scope='nbinom_loss/',
