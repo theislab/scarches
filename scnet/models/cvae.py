@@ -100,6 +100,7 @@ class CVAE(object):
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
+            "size_factor_key": self.size_factor_key,
             "architecture": self.architecture,
             "use_batchnorm": self.use_batchnorm,
             "freeze_expression_input": self.freeze_expression_input,
