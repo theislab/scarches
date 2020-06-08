@@ -62,6 +62,7 @@ def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_method=
 
     return mmd_loss
 
+
 # NB loss and ZINB are taken from https://github.com/theislab/dca, thanks to @gokceneraslan
 
 class NB(object):
@@ -185,16 +186,31 @@ def zinb_loss(pi, disp, ridge=0.1, eta=1.0):
     return zinb
 
 
+def cce_loss(gamma):
+    def cce(y_true, y_pred):
+        return gamma * K.categorical_crossentropy(y_true, y_pred)
+
+    cce.__name__ = "cce"
+    return cce
+
+
+def accuracy(y_true, y_pred):
+    y_true = K.argmax(y_true, axis=1)
+    y_pred = K.argmax(y_pred, axis=1)
+    return K.mean(K.equal(y_true, y_pred))
+
+
 LOSSES = {
     "mse": kl_recon_mse,
     "sse": kl_recon_sse,
     "mmd": mmd,
     "nb": nb_kl_loss,
     "zinb": zinb_kl_loss,
-    "cce": 'categorical_crossentropy',
+    "cce": cce_loss,
     "kl": pure_kl_loss,
     "sse_recon": sse_loss,
     "mse_recon": mse_loss,
     "nb_wo_kl": nb_loss,
     "zinb_wo_kl": zinb_loss,
+    "acc": accuracy
 }

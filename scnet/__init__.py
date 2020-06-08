@@ -30,7 +30,7 @@ __email__ = ', '.join([
 ])
 
 
-def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB],
+def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB, models.scANet],
             new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
@@ -63,13 +63,15 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
     training_kwargs = network.training_kwargs
 
     network_kwargs['n_conditions'] += n_new_conditions
-    if isinstance(network, models.scNet):
+
+    if network_kwargs.get("n_mmd_conditions", None):
         network_kwargs['n_mmd_conditions'] += n_new_conditions
         network_kwargs['mmd_computation_method'] = "general"
-    
+
     network_kwargs['freeze_expression_input'] = freeze_expression_input
     
     training_kwargs['model_path'] = network.model_path.split(network.task_name)[0]
+    training_kwargs['gamma'] = 0.0
 
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
@@ -182,6 +184,10 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
         for decoder_layer in new_network.decoder_model.layers:
             if decoder_layer.name != 'first_layer':
                 decoder_layer.trainable = False
+
+        if isinstance(new_network, models.scANet):
+            for layer in new_network.classifier_model.layers:
+                layer.trainable = False
 
         new_network.compile_models()
 
