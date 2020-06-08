@@ -9,6 +9,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
+from sklearn.metrics import classification_report, confusion_matrix
 
 from scnet.models import CVAE
 from scnet.models._activations import ACTIVATIONS
@@ -325,9 +326,46 @@ class scANet(CVAE):
 
         cvae_inputs = [adata.X, encoder_labels, decoder_labels]
 
-        labels = self.cvae_model.predict(cvae_inputs)[2].argmax(axis=1)
+        encoded_labels = self.cvae_model.predict(cvae_inputs)[2].argmax(axis=1)
 
-        adata.obs[f'pred_{cell_type_key}'] = labels
+        self._reverse_cell_type_encoder()
+        labels = []
+        for encoded_label in encoded_labels:
+            labels.append(self.inv_cell_type_encoder[encoded_label])
+
+        adata.obs[f'pred_{cell_type_key}'] = np.array(labels)
+
+    def _reverse_cell_type_encoder(self):
+        assert self.cell_type_encoder is not None
+        if hasattr(self, "inv_cell_type_encoder"):
+            if self.cell_type_encoder and self.inv_cell_type_encoder is None:
+                self.inv_cell_type_encoder = {k: v for v, k in self.cell_type_encoder.items()}
+
+    def evaluate(self, adata, batch_key):
+        adata = remove_sparsity(adata)
+
+        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
+
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        cvae_inputs = [adata.X, encoder_labels, decoder_labels]
+
+        encoded_labels = self.cvae_model.predict(cvae_inputs)[2].argmax(axis=1)
+
+        self._reverse_cell_type_encoder()
+        labels = []
+        for encoded_label in encoded_labels:
+            labels.append(self.inv_cell_type_encoder[encoded_label])
+
+        labels = np.array(labels)
+        true_labels = adata.obs[batch_key].values
+        accuracy = np.mean(labels == true_labels)
+
+        print(classification_report(true_labels, labels))
+
+        return accuracy, confusion_matrix(true_labels, labels)
 
     def train(self, adata, condition_key, cell_type_key,
               train_size=0.8,
