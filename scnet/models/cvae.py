@@ -68,7 +68,7 @@ class CVAE(object):
         self.alpha = kwargs.get("alpha", 0.0005)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.05)
-        self.model_path = os.path.join(kwargs.get("model_path", "./models/trVAE/"), self.task_name)
+        self.model_path = os.path.join(kwargs.get("model_path", "./models/CVAE/"), self.task_name)
         self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get("scale_factor", 1.0)
