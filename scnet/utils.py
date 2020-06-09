@@ -24,7 +24,8 @@ def label_encoder(adata, le=None, condition_key='condition'):
     labels = np.zeros(adata.shape[0])
     unique_labels = sorted(adata.obs[condition_key].unique().tolist())
     if isinstance(le, dict):
-        assert set(unique_labels).issubset(set(le.keys()))
+        if not set(unique_labels).issubset(set(le.keys())):
+            print("WARNING: unique_labels is not subset of the given encoder")
     else:
         le = dict()
         for idx, label in enumerate(unique_labels):

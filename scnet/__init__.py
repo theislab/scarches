@@ -40,7 +40,6 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
             ) -> Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB]:
-
     version = version.lower()
     if version == 'scnet':
         freeze = True
@@ -53,11 +52,12 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
         freeze_expression_input = False
     else:
         raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
-    
+
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
     n_new_conditions = len(new_conditions)
+    network.update_kwargs()
 
     network_kwargs = network.network_kwargs
     training_kwargs = network.training_kwargs
@@ -69,7 +69,7 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
         network_kwargs['mmd_computation_method'] = "general"
 
     network_kwargs['freeze_expression_input'] = freeze_expression_input
-    
+
     training_kwargs['model_path'] = network.model_path.split(network.task_name)[0]
     training_kwargs['gamma'] = 0.0
 
@@ -230,7 +230,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
 
     config_path = os.path.join(extract_dir, config_filename)
     pre_trained_scNet = models.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
-    
+
     pre_trained_scNet.model_path = model_path
     pre_trained_scNet.task_name = prev_task_name
 
