@@ -13,6 +13,7 @@ from keras.utils.generic_utils import get_custom_objects
 from scnet.models import CVAE
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
+from scnet.models._data_generator import UnsupervisedDataGenerator
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import print_progress
@@ -82,6 +83,17 @@ class scNet(CVAE):
 
         super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
 
+        self.network_kwargs.update({
+            "n_mmd_conditions": self.n_mmd_conditions,
+            "mmd_computation_method": self.mmd_computation_method,
+        })
+
+        self.training_kwargs.update({
+            "beta": self.beta,
+        })
+
+    def update_kwargs(self):
+        super().update_kwargs()
         self.network_kwargs.update({
             "n_mmd_conditions": self.n_mmd_conditions,
             "mmd_computation_method": self.mmd_computation_method,
@@ -352,9 +364,6 @@ class scNet(CVAE):
         """
         train_adata, valid_adata = train_test_split(adata, train_size)
 
-        train_adata = remove_sparsity(train_adata)
-        valid_adata = remove_sparsity(valid_adata)
-
         if self.gene_names is None:
             self.gene_names = train_adata.var_names.tolist()
         else:
@@ -377,15 +386,15 @@ class scNet(CVAE):
         if not retrain and self.restore_model_weights():
             return
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+        train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
+                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    n_conditions=len(self.condition_encoder),
+                                                    batch_size=batch_size)
 
-        x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-        y_train = [train_adata.X, train_conditions_encoded]
-
-        x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-        y_valid = [valid_adata.X, valid_conditions_encoded]
-
+        valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
+                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    n_conditions=len(self.condition_encoder),
+                                                    batch_size=batch_size)
         callbacks = [
             History(),
         ]
@@ -414,13 +423,13 @@ class scNet(CVAE):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit(x=x_train,
-                            y=y_train,
-                            validation_data=(x_valid, y_valid),
-                            epochs=n_epochs,
-                            batch_size=batch_size,
-                            verbose=fit_verbose,
-                            callbacks=callbacks,
-                            )
+        self.cvae_model.fit_generator(generator=train_generator,
+                                      validation_data=valid_generator,
+                                      epochs=n_epochs,
+                                      verbose=fit_verbose,
+                                      use_multiprocessing=True,
+                                      callbacks=callbacks,
+                                      workers=8)
         if save:
+            self.update_kwargs()
             self.save(make_dir=True)

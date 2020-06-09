@@ -14,6 +14,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from scnet.models import CVAE
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
+from scnet.models._data_generator import SupervisedDataGenerator
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import print_progress
@@ -76,6 +77,8 @@ class scANet(CVAE):
 
         super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
 
+    def update_kwargs(self):
+        super().update_kwargs()
         self.network_kwargs.update({
             "n_classes": self.n_classes,
             "n_mmd_conditions": self.n_mmd_conditions,
@@ -405,9 +408,6 @@ class scANet(CVAE):
         """
         train_adata, valid_adata = train_test_split(adata, train_size)
 
-        train_adata = remove_sparsity(train_adata)
-        valid_adata = remove_sparsity(valid_adata)
-
         if self.gene_names is None:
             self.gene_names = train_adata.var_names.tolist()
         else:
@@ -427,27 +427,29 @@ class scANet(CVAE):
         valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
 
-        train_cell_types_encoded, self.cell_type_encoder = label_encoder(train_adata, le=self.cell_type_encoder,
-                                                                         condition_key=cell_type_key)
+        train_cell_types_encoded, encoder = label_encoder(train_adata, le=self.cell_type_encoder,
+                                                          condition_key=cell_type_key)
 
-        valid_cell_types_encoded, self.cell_type_encoder = label_encoder(valid_adata, le=self.cell_type_encoder,
-                                                                         condition_key=cell_type_key)
+        if self.cell_type_encoder is None:
+            self.cell_type_encoder = encoder
+
+        valid_cell_types_encoded, _ = label_encoder(valid_adata, le=self.cell_type_encoder,
+                                                    condition_key=cell_type_key)
 
         if not retrain and self.restore_model_weights():
             return
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+        train_generator = SupervisedDataGenerator(train_adata, train_conditions_encoded, train_cell_types_encoded,
+                                                  use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                  n_conditions=self.n_conditions,
+                                                  n_cell_types=self.n_classes,
+                                                  batch_size=batch_size)
 
-        train_cell_types_onehot = to_categorical(train_cell_types_encoded, num_classes=self.n_classes)
-        valid_cell_types_onehot = to_categorical(valid_cell_types_encoded, num_classes=self.n_classes)
-
-        x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-        y_train = [train_adata.X, train_conditions_encoded, train_cell_types_onehot]
-
-        x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-        y_valid = [valid_adata.X, valid_conditions_encoded, valid_cell_types_onehot]
-
+        valid_generator = SupervisedDataGenerator(valid_adata, valid_conditions_encoded, valid_cell_types_encoded,
+                                                  use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                  n_conditions=self.n_conditions,
+                                                  n_cell_types=self.n_classes,
+                                                  batch_size=batch_size)
         callbacks = [
             History(),
         ]
@@ -462,9 +464,7 @@ class scANet(CVAE):
         if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
             adata = train_adata.concatenate(valid_adata)
 
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+            celltype_labels = np.concatenate([train_cell_types_encoded, valid_cell_types_encoded], axis=0)
 
             callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
                                            n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
@@ -476,13 +476,13 @@ class scANet(CVAE):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit(x=x_train,
-                            y=y_train,
-                            validation_data=(x_valid, y_valid),
-                            epochs=n_epochs,
-                            batch_size=batch_size,
-                            verbose=fit_verbose,
-                            callbacks=callbacks,
-                            )
+        self.cvae_model.fit_generator(generator=train_generator,
+                                      validation_data=valid_generator,
+                                      epochs=n_epochs,
+                                      verbose=fit_verbose,
+                                      use_multiprocessing=True,
+                                      callbacks=callbacks,
+                                      workers=8)
         if save:
+            self.update_kwargs()
             self.save(make_dir=True)

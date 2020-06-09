@@ -132,6 +132,33 @@ class CVAE(object):
             self.decoder_model.summary()
             self.cvae_model.summary()
 
+    def update_kwargs(self):
+        self.network_kwargs = {
+            "x_dimension": self.x_dim,
+            "z_dimension": self.z_dim,
+            "n_conditions": self.n_conditions,
+            "dropout_rate": self.dr_rate,
+            "loss_fn": self.loss_fn,
+            "output_activation": self.output_activation,
+            "size_factor_key": self.size_factor_key,
+            "architecture": self.architecture,
+            "use_batchnorm": self.use_batchnorm,
+            "freeze_expression_input": self.freeze_expression_input,
+            "gene_names": self.gene_names,
+            "condition_encoder": self.condition_encoder,
+        }
+
+        self.training_kwargs = {
+            "learning_rate": self.lr,
+            "alpha": self.alpha,
+            "eta": self.eta,
+            "ridge": self.ridge,
+            "scale_factor": self.scale_factor,
+            "clip_value": self.clip_value,
+            "model_path": self.model_path,
+        }
+
+
     @classmethod
     def from_config(cls, config_path, new_params=None, compile=True, construct=True):
         """create CVAE object from exsiting CVAE's config file.
