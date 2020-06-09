@@ -386,13 +386,18 @@ class scNet(CVAE):
         if not retrain and self.restore_model_weights():
             return
 
+        if self.loss_fn in ['zinb', 'nb']:
+            size_factor_key = self.size_factor_key
+        else:
+            size_factor_key = None
+
         train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
-                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    size_factor_key=size_factor_key,
                                                     n_conditions=len(self.condition_encoder),
                                                     batch_size=batch_size)
 
         valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
-                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    size_factor_key=size_factor_key,
                                                     n_conditions=len(self.condition_encoder),
                                                     batch_size=batch_size)
         callbacks = [

@@ -10,14 +10,14 @@ def desparse(data):
 
 
 class UnsupervisedDataGenerator(keras.utils.Sequence):
-    def __init__(self, adata, encoded_conditions, use_raw=False, n_conditions=1,
+    def __init__(self, adata, encoded_conditions, n_conditions=1, size_factor_key=None,
                  batch_size=32,
                  shuffle=True):
         self.adata = adata
         self.encoded_conditions = encoded_conditions
         self.batch_size = batch_size
         self.n_conditions = n_conditions
-        self.use_raw = use_raw
+        self.size_factor_key = size_factor_key
         self.shuffle = shuffle
         self.on_epoch_end()
 
@@ -33,14 +33,14 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
         encoded_condition = self.encoded_conditions[indexes]
         one_hot_condition = keras.utils.to_categorical(encoded_condition, num_classes=self.n_conditions)
 
-        if self.use_raw:
+        if self.size_factor_key:
+            X = [expression, one_hot_condition, one_hot_condition, self.adata.obs[self.size_factor_key].values[indexes]]
             target_expression = desparse(self.adata.raw.X[indexes])
         else:
+            X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
 
-        X = [expression, one_hot_condition, one_hot_condition]
         y = [target_expression, encoded_condition]
-
         return X, y
 
     def on_epoch_end(self):
@@ -51,7 +51,7 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
 
 class SupervisedDataGenerator(keras.utils.Sequence):
     def __init__(self, adata, encoded_conditions, encoded_labels,
-                 use_raw=False, n_conditions=1, n_cell_types=1,
+                 size_factor_key=None, n_conditions=1, n_cell_types=1,
                  batch_size=32,
                  shuffle=True):
         self.adata = adata
@@ -60,7 +60,7 @@ class SupervisedDataGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.n_conditions = n_conditions
         self.n_cell_types = n_cell_types
-        self.use_raw = use_raw
+        self.size_factor_key = size_factor_key
         self.shuffle = shuffle
         self.on_epoch_end()
 
@@ -78,12 +78,13 @@ class SupervisedDataGenerator(keras.utils.Sequence):
         one_hot_condition = keras.utils.to_categorical(encoded_condition, num_classes=self.n_conditions)
         one_hot_cell_type = keras.utils.to_categorical(encoded_cell_type, num_classes=self.n_cell_types)
 
-        if self.use_raw:
+        if self.size_factor_key:
+            X = [expression, one_hot_condition, one_hot_condition, self.adata.obs[self.size_factor_key].values[indexes]]
             target_expression = desparse(self.adata.raw.X[indexes])
         else:
+            X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
 
-        X = [expression, one_hot_condition, one_hot_condition]
         y = [target_expression, encoded_condition, one_hot_cell_type]
 
         return X, y
