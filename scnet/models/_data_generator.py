@@ -11,7 +11,7 @@ def desparse(data):
 
 class UnsupervisedDataGenerator(keras.utils.Sequence):
     def __init__(self, adata, encoded_conditions, n_conditions=1, size_factor_key=None,
-                 batch_size=32,
+                 batch_size=32, use_mmd=True,
                  shuffle=True):
         self.adata = adata
         self.encoded_conditions = encoded_conditions
@@ -19,6 +19,7 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
         self.n_conditions = n_conditions
         self.size_factor_key = size_factor_key
         self.shuffle = shuffle
+        self.use_mmd = use_mmd
         self.on_epoch_end()
 
     def __len__(self):
@@ -40,7 +41,11 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
             X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
 
-        y = [target_expression, encoded_condition]
+        if self.use_mmd:
+            y = [target_expression, encoded_condition]
+        else:
+            y = [target_expression]
+
         return X, y
 
     def on_epoch_end(self):
@@ -50,7 +55,7 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
 
 
 class SupervisedDataGenerator(keras.utils.Sequence):
-    def __init__(self, adata, encoded_conditions, encoded_labels,
+    def __init__(self, adata, encoded_conditions, encoded_labels, use_mmd=False,
                  size_factor_key=None, n_conditions=1, n_cell_types=1,
                  batch_size=32,
                  shuffle=True):
@@ -61,6 +66,7 @@ class SupervisedDataGenerator(keras.utils.Sequence):
         self.n_conditions = n_conditions
         self.n_cell_types = n_cell_types
         self.size_factor_key = size_factor_key
+        self.use_mmd = use_mmd
         self.shuffle = shuffle
         self.on_epoch_end()
 
@@ -85,7 +91,10 @@ class SupervisedDataGenerator(keras.utils.Sequence):
             X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
 
-        y = [target_expression, encoded_condition, one_hot_cell_type]
+        if self.use_mmd:
+            y = [target_expression, encoded_condition, one_hot_cell_type]
+        else:
+            y = [target_expression, one_hot_cell_type]
 
         return X, y
 

@@ -394,11 +394,13 @@ class scNet(CVAE):
         train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
                                                     size_factor_key=size_factor_key,
                                                     n_conditions=len(self.condition_encoder),
+                                                    use_mmd=True,
                                                     batch_size=batch_size)
 
         valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
                                                     size_factor_key=size_factor_key,
                                                     n_conditions=len(self.condition_encoder),
+                                                    use_mmd=True,
                                                     batch_size=batch_size)
         callbacks = [
             History(),

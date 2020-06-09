@@ -448,12 +448,14 @@ class scANet(CVAE):
                                                   size_factor_key=size_factor_key,
                                                   n_conditions=self.n_conditions,
                                                   n_cell_types=self.n_classes,
+                                                  use_mmd=True,
                                                   batch_size=batch_size)
 
         valid_generator = SupervisedDataGenerator(valid_adata, valid_conditions_encoded, valid_cell_types_encoded,
                                                   size_factor_key=size_factor_key,
                                                   n_conditions=self.n_conditions,
                                                   n_cell_types=self.n_classes,
+                                                  use_mmd=True,
                                                   batch_size=batch_size)
         callbacks = [
             History(),
