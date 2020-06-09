@@ -1,5 +1,6 @@
 import keras
 import numpy as np
+from scipy import sparse
 from scipy.sparse import issparse
 
 
@@ -7,30 +8,35 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
     def __init__(self, adata, encoded_conditions, n_conditions=1, size_factor_key=None,
                  batch_size=32, use_mmd=True,
                  shuffle=True):
-        self.adata = adata
         self.encoded_conditions = encoded_conditions
         self.batch_size = batch_size
         self.n_conditions = n_conditions
         self.size_factor_key = size_factor_key
         self.shuffle = shuffle
         self.use_mmd = use_mmd
+
+        self.expr = adata.X.A if sparse.issparse(adata.X) else adata.X
+        if self.size_factor_key:
+            self.raw_expr = adata.raw.X.A if sparse.issparse(adata.raw.X) else adata.raw.X
+            self.size_factors = adata.obs[self.size_factor_key].values
+
         self.on_epoch_end()
 
     def __len__(self):
-        return len(self.adata)
+        return len(self.expr)
 
     def __getitem__(self, index):
         start = index
         end = index + self.batch_size
         indexes = self.indexes[start:end]
 
-        expression = self.adata.X[indexes]
+        expression = self.expr[indexes]
         encoded_condition = self.encoded_conditions[indexes]
         one_hot_condition = keras.utils.to_categorical(encoded_condition, num_classes=self.n_conditions)
 
         if self.size_factor_key:
-            X = [expression, one_hot_condition, one_hot_condition, self.adata.obs[self.size_factor_key].values[indexes]]
-            target_expression = self.adata.raw.X[indexes]
+            X = [expression, one_hot_condition, one_hot_condition, self.size_factors[indexes]]
+            target_expression = self.raw_expr[indexes]
         else:
             X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
@@ -43,7 +49,7 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
         return X, y
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.adata))
+        self.indexes = np.arange(len(self.expr))
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 

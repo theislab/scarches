@@ -751,13 +751,9 @@ class CVAE(object):
             else:
                 raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
 
-        train_expr = train_adata.X.toarray() if sparse.issparse(train_adata.X) else train_adata.X
-        valid_expr = valid_adata.X.toarray() if sparse.issparse(valid_adata.X) else valid_adata.X
-
         if self.loss_fn in ['nb', 'zinb']:
             train_raw_expr = train_adata.raw.X.A if sparse.issparse(train_adata.raw.X) else train_adata.raw.X
             valid_raw_expr = valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X
-
 
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
@@ -769,27 +765,22 @@ class CVAE(object):
             self.restore_model_weights()
             return
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-
-        if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_expr, train_conditions_onehot,
-                       train_adata.obs[self.size_factor_key].values]
-            y_train = [train_raw_expr]
-
-            x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot,
-                       valid_adata.obs[self.size_factor_key].values]
-            y_valid = [valid_raw_expr]
+        if self.loss_fn in ['zinb', 'nb']:
+            size_factor_key = self.size_factor_key
         else:
-            x_train = [train_expr, train_conditions_onehot]
-            y_train = None
+            size_factor_key = None
 
-            x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = [valid_expr]
+        train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
+                                                    size_factor_key=size_factor_key,
+                                                    n_conditions=len(self.condition_encoder),
+                                                    use_mmd=False,
+                                                    batch_size=batch_size)
 
-        train_generator = unsupervised_data_generator(x_train, y_train, batch_size,
-                                                      size_factor=self.loss_fn in ['nb', 'zinb'],
-                                                      use_mmd=False)
+        valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
+                                                    size_factor_key=size_factor_key,
+                                                    n_conditions=len(self.condition_encoder),
+                                                    use_mmd=False,
+                                                    batch_size=batch_size)
 
         callbacks = [
             History(),
@@ -820,15 +811,13 @@ class CVAE(object):
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
         self.cvae_model.fit_generator(generator=train_generator,
-                                      validation_data=(x_valid, y_valid),
-                                      steps_per_epoch=train_adata.shape[0] // batch_size,
+                                      validation_data=valid_generator,
                                       epochs=n_epochs,
                                       verbose=fit_verbose,
-                                      # use_multiprocessing=True,
+                                      use_multiprocessing=True,
                                       callbacks=callbacks,
-                                      # workers=self.n_threads
+                                      workers=self.n_threads
                                       )
-
         if save:
             self.update_kwargs()
             self.save(make_dir=True)
