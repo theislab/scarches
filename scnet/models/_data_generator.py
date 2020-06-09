@@ -108,7 +108,7 @@ def unsupervised_data_generator(x, y, batch_size=128, size_factor=False, use_mmd
     else:
         expression, one_hot_condition = x
 
-    n_samples = len(expression)
+    n_samples = expression.shape[0]
     batch_expression_source, batch_expression_target = [], []
     batch_encoded_condition, batch_one_hot_condition = [], []
     batch_size_factors = []
