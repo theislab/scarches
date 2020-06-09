@@ -736,7 +736,6 @@ class CVAE(object):
                 ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
 
         """
-        adata = remove_sparsity(adata)
         train_adata, valid_adata = train_test_split(adata, train_size)
 
         if self.gene_names is None:
@@ -752,11 +751,13 @@ class CVAE(object):
             else:
                 raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
 
+        train_expr = train_adata.X.toarray() if sparse.issparse(train_adata.X) else train_adata.X
+        valid_expr = train_adata.X.toarray() if sparse.issparse(valid_adata.X) else valid_adata.X
+
         if self.loss_fn in ['nb', 'zinb']:
-            if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
-                train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
-            if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
-                valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
+            train_raw_expr = train_adata.raw.X.A if sparse.issparse(train_adata.raw.X) else train_adata.raw.X
+            valid_raw_expr = valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X
+
 
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
@@ -772,19 +773,19 @@ class CVAE(object):
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
         if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_adata.X, train_conditions_onehot,
+            x_train = [train_expr, train_conditions_onehot,
                        train_adata.obs[self.size_factor_key].values]
-            y_train = [train_adata.raw.X]
+            y_train = [train_raw_expr]
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
+            x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot,
                        valid_adata.obs[self.size_factor_key].values]
-            y_valid = [valid_adata.raw.X]
+            y_valid = [valid_raw_expr]
         else:
-            x_train = [train_adata.X, train_conditions_onehot]
+            x_train = [train_expr, train_conditions_onehot]
             y_train = None
 
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = [valid_adata.X]
+            x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+            y_valid = [valid_expr]
 
         train_generator = unsupervised_data_generator(x_train, y_train, batch_size,
                                                       size_factor=self.loss_fn in ['nb', 'zinb'],
