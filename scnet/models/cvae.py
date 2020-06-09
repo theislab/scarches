@@ -812,6 +812,7 @@ class CVAE(object):
 
         self.cvae_model.fit_generator(generator=train_generator,
                                       validation_data=valid_generator,
+                                      steps_per_epoch=train_adata.shape[0] // batch_size,
                                       epochs=n_epochs,
                                       verbose=fit_verbose,
                                       use_multiprocessing=True,
