@@ -752,7 +752,7 @@ class CVAE(object):
                 raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
 
         train_expr = train_adata.X.toarray() if sparse.issparse(train_adata.X) else train_adata.X
-        valid_expr = train_adata.X.toarray() if sparse.issparse(valid_adata.X) else valid_adata.X
+        valid_expr = valid_adata.X.toarray() if sparse.issparse(valid_adata.X) else valid_adata.X
 
         if self.loss_fn in ['nb', 'zinb']:
             train_raw_expr = train_adata.raw.X.A if sparse.issparse(train_adata.raw.X) else train_adata.raw.X
