@@ -6,7 +6,7 @@ from scipy.sparse import issparse
 def desparse(data):
     if issparse(data):
         data = data.A
-    return data
+    return data.reshape(-1, )
 
 
 class UnsupervisedDataGenerator(keras.utils.Sequence):
@@ -102,3 +102,48 @@ class SupervisedDataGenerator(keras.utils.Sequence):
         self.indexes = np.arange(len(self.adata))
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
+
+
+def unsupervised_data_generator(x, y, batch_size=128, size_factor=False, use_mmd=True):
+    if size_factor:
+        expression, one_hot_condition, size_factors = x
+        raw_expression, = y
+    elif use_mmd:
+        expression, one_hot_condition = x
+        encoded_condition, = y
+    else:
+        expression, one_hot_condition = x
+
+    n_samples = len(expression)
+    batch_expression_source, batch_expression_target = [], []
+    batch_encoded_condition, batch_one_hot_condition = [], []
+    batch_size_factors = []
+
+    while True:
+        for _ in range(batch_size):
+            index = np.random.choice(n_samples, 1)[0]
+            batch_expression_source.append(desparse(expression[index]))
+            batch_one_hot_condition.append(one_hot_condition[index])
+            if size_factor:
+                batch_size_factors.append(size_factors[index])
+                batch_expression_target.append(desparse(raw_expression[index]))
+            elif use_mmd:
+                batch_encoded_condition.append(encoded_condition[index])
+                batch_expression_target.append(desparse(expression[index]))
+            else:
+                batch_expression_target.append(desparse(expression[index]))
+
+        if size_factor:
+            x_batch = [np.array(batch_expression_source), np.array(batch_one_hot_condition),
+                       np.array(batch_one_hot_condition), np.array(batch_size_factors)]
+            y_batch = [np.array(batch_expression_target)]
+        elif use_mmd:
+            x_batch = [np.array(batch_expression_source), np.array(batch_one_hot_condition),
+                       np.array(batch_one_hot_condition)]
+            y_batch = [np.array(batch_expression_target), np.array(batch_encoded_condition)]
+        else:
+            x_batch = [np.array(batch_expression_source), np.array(batch_one_hot_condition),
+                       np.array(batch_one_hot_condition)]
+            y_batch = [np.array(batch_expression_target)]
+
+        yield x_batch, y_batch
