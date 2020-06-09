@@ -73,12 +73,6 @@ def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True,
     if scale:
         sc.pp.scale(adata)
 
-    if sparse.issparse(adata_count.X):
-        adata_count.X = adata_count.X.A
-
-    if sparse.issparse(adata.X):
-        adata.X = adata.X.A
-
     if size_factors or logtrans_input:
         adata.raw = adata_count.copy()
     else:
