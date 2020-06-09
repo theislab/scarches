@@ -736,6 +736,7 @@ class CVAE(object):
                 ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
 
         """
+        adata = remove_sparsity(adata)
         train_adata, valid_adata = train_test_split(adata, train_size)
 
         if self.gene_names is None:
@@ -752,6 +753,8 @@ class CVAE(object):
                 raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
 
         if self.loss_fn in ['nb', 'zinb']:
+            if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
+                train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
             if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
                 valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
 
@@ -779,8 +782,6 @@ class CVAE(object):
         else:
             x_train = [train_adata.X, train_conditions_onehot]
             y_train = None
-
-            valid_adata = remove_sparsity(valid_adata)
 
             x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
             y_valid = [valid_adata.X]

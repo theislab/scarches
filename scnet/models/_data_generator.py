@@ -3,12 +3,6 @@ import numpy as np
 from scipy.sparse import issparse
 
 
-def desparse(data):
-    if issparse(data):
-        data = data.A
-    return data.reshape(-1, )
-
-
 class UnsupervisedDataGenerator(keras.utils.Sequence):
     def __init__(self, adata, encoded_conditions, n_conditions=1, size_factor_key=None,
                  batch_size=32, use_mmd=True,
@@ -30,13 +24,13 @@ class UnsupervisedDataGenerator(keras.utils.Sequence):
         end = index + self.batch_size
         indexes = self.indexes[start:end]
 
-        expression = desparse(self.adata.X[indexes])
+        expression = self.adata.X[indexes]
         encoded_condition = self.encoded_conditions[indexes]
         one_hot_condition = keras.utils.to_categorical(encoded_condition, num_classes=self.n_conditions)
 
         if self.size_factor_key:
             X = [expression, one_hot_condition, one_hot_condition, self.adata.obs[self.size_factor_key].values[indexes]]
-            target_expression = desparse(self.adata.raw.X[indexes])
+            target_expression = self.adata.raw.X[indexes]
         else:
             X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
@@ -78,7 +72,7 @@ class SupervisedDataGenerator(keras.utils.Sequence):
         end = index + self.batch_size
         indexes = self.indexes[start:end]
 
-        expression = desparse(self.adata.X[indexes])
+        expression = self.adata.X[indexes]
         encoded_condition = self.encoded_conditions[indexes]
         encoded_cell_type = self.encoded_cell_types[indexes]
         one_hot_condition = keras.utils.to_categorical(encoded_condition, num_classes=self.n_conditions)
@@ -86,7 +80,7 @@ class SupervisedDataGenerator(keras.utils.Sequence):
 
         if self.size_factor_key:
             X = [expression, one_hot_condition, one_hot_condition, self.adata.obs[self.size_factor_key].values[indexes]]
-            target_expression = desparse(self.adata.raw.X[indexes])
+            target_expression = self.adata.raw.X[indexes]
         else:
             X = [expression, one_hot_condition, one_hot_condition]
             target_expression = expression
@@ -122,16 +116,16 @@ def unsupervised_data_generator(x, y, batch_size=128, size_factor=False, use_mmd
     while True:
         for _ in range(batch_size):
             index = np.random.choice(n_samples, 1)[0]
-            batch_expression_source.append(desparse(expression[index]))
+            batch_expression_source.append(expression[index])
             batch_one_hot_condition.append(one_hot_condition[index])
             if size_factor:
                 batch_size_factors.append(size_factors[index])
-                batch_expression_target.append(desparse(raw_expression[index]))
+                batch_expression_target.append(raw_expression[index])
             elif use_mmd:
                 batch_encoded_condition.append(encoded_condition[index])
-                batch_expression_target.append(desparse(expression[index]))
+                batch_expression_target.append(expression[index])
             else:
-                batch_expression_target.append(desparse(expression[index]))
+                batch_expression_target.append(expression[index])
 
         if size_factor:
             x_batch = [np.array(batch_expression_source), np.array(batch_one_hot_condition),
