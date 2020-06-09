@@ -82,6 +82,7 @@ class CVAE(object):
         self.gene_names = kwargs.get("gene_names", None)
         self.model_name = kwargs.get("model_name", "cvae")
         self.class_name = kwargs.get("class_name", 'CVAE')
+        self.n_threads = kwargs.get("n_threads", 4)
 
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
 
@@ -107,6 +108,7 @@ class CVAE(object):
             "freeze_expression_input": self.freeze_expression_input,
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
+            "n_threads": self.n_threads,
         }
 
         self.training_kwargs = {
@@ -816,7 +818,7 @@ class CVAE(object):
                                       verbose=fit_verbose,
                                       use_multiprocessing=True,
                                       callbacks=callbacks,
-                                      workers=8)
+                                      workers=self.n_threads)
         if save:
             self.update_kwargs()
             self.save(make_dir=True)

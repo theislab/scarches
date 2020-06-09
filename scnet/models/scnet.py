@@ -436,7 +436,7 @@ class scNet(CVAE):
                                       verbose=fit_verbose,
                                       use_multiprocessing=True,
                                       callbacks=callbacks,
-                                      workers=8)
+                                      workers=self.n_threads)
         if save:
             self.update_kwargs()
             self.save(make_dir=True)
