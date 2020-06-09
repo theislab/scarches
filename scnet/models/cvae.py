@@ -13,6 +13,7 @@ from scipy import sparse
 
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
+from scnet.models._data_generator import UnsupervisedDataGenerator
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import sample_z, print_message, print_progress
@@ -157,7 +158,6 @@ class CVAE(object):
             "clip_value": self.clip_value,
             "model_path": self.model_path,
         }
-
 
     @classmethod
     def from_config(cls, config_path, new_params=None, compile=True, construct=True):
@@ -736,9 +736,6 @@ class CVAE(object):
         """
         train_adata, valid_adata = train_test_split(adata, train_size)
 
-        train_adata = remove_sparsity(train_adata)
-        valid_adata = remove_sparsity(valid_adata)
-
         if self.gene_names is None:
             self.gene_names = train_adata.var_names.tolist()
         else:
@@ -768,23 +765,15 @@ class CVAE(object):
             self.restore_model_weights()
             return
 
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+        train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
+                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    n_conditions=len(self.condition_encoder),
+                                                    batch_size=batch_size)
 
-        if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
-                       train_adata.obs[self.size_factor_key].values]
-            y_train = train_adata.raw.X
-
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
-                       valid_adata.obs[self.size_factor_key].values]
-            y_valid = valid_adata.raw.X
-        else:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-            y_train = train_adata.X
-
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = valid_adata.X
+        valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
+                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                    n_conditions=len(self.condition_encoder),
+                                                    batch_size=batch_size)
 
         callbacks = [
             History(),
@@ -814,13 +803,13 @@ class CVAE(object):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit(x=x_train,
-                            y=y_train,
-                            validation_data=(x_valid, y_valid),
-                            epochs=n_epochs,
-                            batch_size=batch_size,
-                            verbose=fit_verbose,
-                            callbacks=callbacks,
-                            )
+        self.cvae_model.fit_generator(generator=train_generator,
+                                      validation_data=valid_generator,
+                                      epochs=n_epochs,
+                                      verbose=fit_verbose,
+                                      use_multiprocessing=True,
+                                      callbacks=callbacks,
+                                      workers=8)
         if save:
+            self.update_kwargs()
             self.save(make_dir=True)
