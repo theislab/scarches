@@ -4,7 +4,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, model_from_json
 from keras.utils import to_categorical
@@ -13,10 +13,9 @@ from scipy import sparse
 
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
-from scnet.models._data_generator import UnsupervisedDataGenerator, unsupervised_data_generator
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
-from scnet.models._utils import sample_z, print_message, print_progress
+from scnet.models._utils import sample_z, print_progress
 from scnet.utils import label_encoder, remove_sparsity, create_condition_encoder, train_test_split
 
 
@@ -82,7 +81,6 @@ class CVAE(object):
         self.gene_names = kwargs.get("gene_names", None)
         self.model_name = kwargs.get("model_name", "cvae")
         self.class_name = kwargs.get("class_name", 'CVAE')
-        self.n_threads = kwargs.get("n_threads", 4)
 
         self.freeze_expression_input = kwargs.get("freeze_expression_input", False)
 
@@ -108,7 +106,6 @@ class CVAE(object):
             "freeze_expression_input": self.freeze_expression_input,
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
-            "n_threads": self.n_threads,
         }
 
         self.training_kwargs = {
@@ -755,6 +752,9 @@ class CVAE(object):
             train_raw_expr = train_adata.raw.X.A if sparse.issparse(train_adata.raw.X) else train_adata.raw.X
             valid_raw_expr = valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X
 
+        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
+        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
+
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
 
@@ -764,23 +764,6 @@ class CVAE(object):
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
             return
-
-        if self.loss_fn in ['zinb', 'nb']:
-            size_factor_key = self.size_factor_key
-        else:
-            size_factor_key = None
-
-        train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
-                                                    size_factor_key=size_factor_key,
-                                                    n_conditions=len(self.condition_encoder),
-                                                    use_mmd=False,
-                                                    batch_size=batch_size)
-
-        valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
-                                                    size_factor_key=size_factor_key,
-                                                    n_conditions=len(self.condition_encoder),
-                                                    use_mmd=False,
-                                                    batch_size=batch_size)
 
         callbacks = [
             History(),
@@ -810,15 +793,30 @@ class CVAE(object):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit_generator(generator=train_generator,
-                                      validation_data=valid_generator,
-                                      steps_per_epoch=train_adata.shape[0] // batch_size,
-                                      epochs=n_epochs,
-                                      verbose=fit_verbose,
-                                      use_multiprocessing=True,
-                                      callbacks=callbacks,
-                                      workers=self.n_threads
-                                      )
+        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+
+        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
+        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+
+        if self.loss_fn in ['nb', 'zinb']:
+            x_train.append(train_adata.obs[self.size_factor_key].values)
+            y_train = train_raw_expr
+
+            x_valid.append(valid_adata.obs[self.size_factor_key].values)
+            y_valid = valid_raw_expr
+        else:
+            y_train = train_expr
+            y_valid = valid_expr
+
+        self.cvae_model.fit(x=x_train,
+                            y=y_train,
+                            validation_data=(x_valid, y_valid),
+                            epochs=n_epochs,
+                            batch_size=batch_size,
+                            verbose=fit_verbose,
+                            callbacks=callbacks,
+                            )
         if save:
             self.update_kwargs()
             self.save(make_dir=True)

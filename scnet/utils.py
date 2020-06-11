@@ -1,4 +1,5 @@
 import numpy as np
+import scanpy as sc
 from scipy import sparse
 
 
@@ -52,7 +53,8 @@ def remove_sparsity(adata):
             Annotated dataset.
     """
     if sparse.issparse(adata.X):
-        adata.X = adata.X.A
+        new_adata = sc.AnnData(X=adata.X.A, obs=adata.obs.copy(deep=True), var=adata.var.copy(deep=True))
+        return new_adata
 
     return adata
 
