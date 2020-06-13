@@ -4,7 +4,7 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import EarlyStopping, History, ReduceLROnPlateau, LambdaCallback
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, model_from_json
 from keras.utils import to_categorical
@@ -15,7 +15,7 @@ from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
-from scnet.models._utils import sample_z, print_message, print_progress
+from scnet.models._utils import sample_z, print_progress
 from scnet.utils import label_encoder, remove_sparsity, create_condition_encoder, train_test_split
 
 
@@ -157,7 +157,6 @@ class CVAE(object):
             "clip_value": self.clip_value,
             "model_path": self.model_path,
         }
-
 
     @classmethod
     def from_config(cls, config_path, new_params=None, compile=True, construct=True):
@@ -736,9 +735,6 @@ class CVAE(object):
         """
         train_adata, valid_adata = train_test_split(adata, train_size)
 
-        train_adata = remove_sparsity(train_adata)
-        valid_adata = remove_sparsity(valid_adata)
-
         if self.gene_names is None:
             self.gene_names = train_adata.var_names.tolist()
         else:
@@ -753,10 +749,11 @@ class CVAE(object):
                 raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
 
         if self.loss_fn in ['nb', 'zinb']:
-            if train_adata.raw is not None and sparse.issparse(train_adata.raw.X):
-                train_adata.raw = anndata.AnnData(X=train_adata.raw.X.A)
-            if valid_adata.raw is not None and sparse.issparse(valid_adata.raw.X):
-                valid_adata.raw = anndata.AnnData(X=valid_adata.raw.X.A)
+            train_raw_expr = train_adata.raw.X.A if sparse.issparse(train_adata.raw.X) else train_adata.raw.X
+            valid_raw_expr = valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X
+
+        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
+        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
 
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
@@ -767,24 +764,6 @@ class CVAE(object):
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
             return
-
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-
-        if self.loss_fn in ['nb', 'zinb']:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot,
-                       train_adata.obs[self.size_factor_key].values]
-            y_train = train_adata.raw.X
-
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot,
-                       valid_adata.obs[self.size_factor_key].values]
-            y_valid = valid_adata.raw.X
-        else:
-            x_train = [train_adata.X, train_conditions_onehot, train_conditions_onehot]
-            y_train = train_adata.X
-
-            x_valid = [valid_adata.X, valid_conditions_onehot, valid_conditions_onehot]
-            y_valid = valid_adata.X
 
         callbacks = [
             History(),
@@ -814,6 +793,22 @@ class CVAE(object):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
+        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+
+        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
+        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+
+        if self.loss_fn in ['nb', 'zinb']:
+            x_train.append(train_adata.obs[self.size_factor_key].values)
+            y_train = train_raw_expr
+
+            x_valid.append(valid_adata.obs[self.size_factor_key].values)
+            y_valid = valid_raw_expr
+        else:
+            y_train = train_expr
+            y_valid = valid_expr
+
         self.cvae_model.fit(x=x_train,
                             y=y_train,
                             validation_data=(x_valid, y_valid),
@@ -823,4 +818,5 @@ class CVAE(object):
                             callbacks=callbacks,
                             )
         if save:
+            self.update_kwargs()
             self.save(make_dir=True)

@@ -439,16 +439,23 @@ class scANet(CVAE):
         if not retrain and self.restore_model_weights():
             return
 
+        if self.loss_fn in ['zinb', 'nb']:
+            size_factor_key = self.size_factor_key
+        else:
+            size_factor_key = None
+
         train_generator = SupervisedDataGenerator(train_adata, train_conditions_encoded, train_cell_types_encoded,
-                                                  use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                  size_factor_key=size_factor_key,
                                                   n_conditions=self.n_conditions,
                                                   n_cell_types=self.n_classes,
+                                                  use_mmd=True,
                                                   batch_size=batch_size)
 
         valid_generator = SupervisedDataGenerator(valid_adata, valid_conditions_encoded, valid_cell_types_encoded,
-                                                  use_raw=self.loss_fn in ['zinb', 'nb'],
+                                                  size_factor_key=size_factor_key,
                                                   n_conditions=self.n_conditions,
                                                   n_cell_types=self.n_classes,
+                                                  use_mmd=True,
                                                   batch_size=batch_size)
         callbacks = [
             History(),
@@ -482,7 +489,7 @@ class scANet(CVAE):
                                       verbose=fit_verbose,
                                       use_multiprocessing=True,
                                       callbacks=callbacks,
-                                      workers=8)
+                                      workers=self.n_threads)
         if save:
             self.update_kwargs()
             self.save(make_dir=True)

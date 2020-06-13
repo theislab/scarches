@@ -9,11 +9,12 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
+from scipy import sparse
 
 from scnet.models import CVAE
 from scnet.models._activations import ACTIVATIONS
 from scnet.models._callbacks import ScoreCallback
-from scnet.models._data_generator import UnsupervisedDataGenerator
+from scnet.models._data_generator import UnsupervisedDataGenerator, unsupervised_data_generator
 from scnet.models._layers import LAYERS
 from scnet.models._losses import LOSSES
 from scnet.models._utils import print_progress
@@ -325,9 +326,8 @@ class scNet(CVAE):
 
         return adata_pred
 
-    def train(self, adata, condition_key,
-              cell_type_key='cell_type',
-              train_size=0.8,
+    def train(self, adata,
+              condition_key, train_size=0.8, cell_type_key='cell_type',
               n_epochs=25, batch_size=32,
               early_stop_limit=20, lr_reducer=10,
               n_per_epoch=0, score_filename=None,
@@ -345,7 +345,7 @@ class scNet(CVAE):
             condition_key: str
                 column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
             train_size: float
-                fraction of samples used to train scNet.
+                fraction of samples in `adata` used to train scNet.
             n_epochs: int
                 number of epochs.
             batch_size: int
@@ -370,12 +370,15 @@ class scNet(CVAE):
             if set(self.gene_names).issubset(set(train_adata.var_names)):
                 train_adata = train_adata[:, self.gene_names]
             else:
-                raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
 
             if set(self.gene_names).issubset(set(valid_adata.var_names)):
                 valid_adata = valid_adata[:, self.gene_names]
             else:
-                raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
+                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+
+        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
+        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
 
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
@@ -383,18 +386,10 @@ class scNet(CVAE):
         valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
 
-        if not retrain and self.restore_model_weights():
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.restore_model_weights()
             return
 
-        train_generator = UnsupervisedDataGenerator(train_adata, train_conditions_encoded,
-                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
-                                                    n_conditions=len(self.condition_encoder),
-                                                    batch_size=batch_size)
-
-        valid_generator = UnsupervisedDataGenerator(valid_adata, valid_conditions_encoded,
-                                                    use_raw=self.loss_fn in ['zinb', 'nb'],
-                                                    n_conditions=len(self.condition_encoder),
-                                                    batch_size=batch_size)
         callbacks = [
             History(),
         ]
@@ -423,13 +418,23 @@ class scNet(CVAE):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit_generator(generator=train_generator,
-                                      validation_data=valid_generator,
-                                      epochs=n_epochs,
-                                      verbose=fit_verbose,
-                                      use_multiprocessing=True,
-                                      callbacks=callbacks,
-                                      workers=8)
+        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+
+        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
+        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+
+        y_train = [train_expr, train_conditions_encoded]
+        y_valid = [valid_expr, valid_conditions_encoded]
+
+        self.cvae_model.fit(x=x_train,
+                            y=y_train,
+                            validation_data=(x_valid, y_valid),
+                            epochs=n_epochs,
+                            batch_size=batch_size,
+                            verbose=fit_verbose,
+                            callbacks=callbacks,
+                            )
         if save:
             self.update_kwargs()
             self.save(make_dir=True)
