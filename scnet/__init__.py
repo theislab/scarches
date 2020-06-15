@@ -40,6 +40,35 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
             ) -> Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB]:
+    """Performs architecture surgery on the pre-trained `network`.
+
+        Parameters
+        ----------
+        network: :class:`~scnet.models.*`
+            scNet Network object.
+        new_task_name: str
+            Name of the query task you want fine-tune the model on.
+        new_conditions: list or str
+            list of new conditions (studies or domains) in the query dataset. If only one condition exists in
+            query dataset, Can pass a string to this argument.
+        init: str
+            Method used for initializing new weights of the new model.
+        version: str
+            Version of scNet you want to use after performing surgery. Can be one of `scNet`, `scNet v1` and `scNet v2`.
+        remove_dropout: bool
+            Whether to remove the dropout layers.
+        print_summary: bool
+            Whether to print the summary of the new model.
+        new_training_kwargs: dict
+            Dictionary containing new training hyper-parameters used to compile and train model with.
+        new_network_kwargs: dict
+            Dictionary containing new network configuration used to create the new model.
+
+        Returns
+        -------
+        new_network: :class:`~scnet.models.*`
+            object of the new model.
+    """
     version = version.lower()
     if version == 'scnet':
         freeze = True
@@ -211,9 +240,31 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
                                        version: str = 'scNet',
                                        **kwargs,
                                        ):
+    """Performs architecture surgery on the pre-trained `network`.
+
+        Parameters
+        ----------
+        path_or_link: str
+            Path to the zip file of pre-trained model or direct downloadable link.
+        prev_task_name: str
+            Name of the previous task name the model pre-trained on.
+        model_path: str
+            Path to save the new model and extract the pre-trained model.
+        new_task: str
+            Name of the query task you want to train the model on.
+        target_conditions: list
+            list of new conditions (studies or domains) in the query dataset.
+        version: str
+            Version of scNet you want to use after performing surgery. Can be one of `scNet`, `scNet v1` and `scNet v2`.
+
+        Returns
+        -------
+        new_network: :class:`~scnet.models.*`
+            object of the new model.
+    """
     if not os.path.isdir(path_or_link):
         downloaded_path = os.path.join(model_path, prev_task_name + ".zip")
-        downloaded_path = download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
+        downloaded_path = __download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
     else:
         downloaded_path = path_or_link
 
@@ -231,7 +282,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
     config_path = os.path.join(extract_dir, config_filename)
     pre_trained_scNet = models.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
 
-    pre_trained_scNet.model_path = model_path
+    pre_trained_scNet.model_path = os.path.join(model_path, f"{prev_task_name}/")
     pre_trained_scNet.task_name = prev_task_name
 
     pre_trained_scNet.restore_model_weights(compile=True)
@@ -245,15 +296,14 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
                     print_summary=False,
                     )
 
-    scNet.task_name = new_task
-    scNet.model_path = os.path.join(model_path)
+    scNet.model_path = os.path.join(model_path, f"{new_task}/")
 
     return scNet
 
 
-def download_pretrained_scNet(download_link: str,
-                              save_path: str = './',
-                              make_dir=False):
+def __download_pretrained_scNet(download_link: str,
+                                save_path: str = './',
+                                make_dir=False):
     if download_link != '':
         file_path, response = download_file(download_link, save_path, make_dir)
         return file_path
