@@ -2,7 +2,7 @@ scArches - single-cell architecture surgery
 =========================================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/scNet/master/sketch.png
-   :width: 500px
+   :width: 200px
    :align: center
 
 
