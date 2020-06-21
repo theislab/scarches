@@ -17,10 +17,6 @@ Usage
 See `here <https://scanpy.readthedocs.io/en/stable/>`_ for documentation and tutorials.
 
 
-
-
-
-
 Support and contribute
 =========================================================================
 If you have a question or new architchuture or a model that could be integrated in to our pipe-line, you can
@@ -28,5 +24,5 @@ post an `issue <https://github.com/theislab/scNet/issues/new>`__ or reach us by 
 
 Reference
 =========================================================================
-Lotfollai et al. (2020), Query to reference single-cell integration with transfer learning `biorxiv <https:link>`_.
+Lotfollahi et al. (2020), Query to reference single-cell integration with transfer learning `biorxiv <https:link>`_.
 
