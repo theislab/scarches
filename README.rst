@@ -1,8 +1,7 @@
 scArches - single-cell architecture surgery 
 =========================================================================
 
-<img align="center" src="sketch.png?raw=true">
-
+ <img src="https://user-images.githubusercontent.com/33202701/85222703-bbd96980-b3bd-11ea-927b-00d21153f97b.jpg" width="400px" align="left">
 
 Reproducing the results
 -----------------------
