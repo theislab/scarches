@@ -231,14 +231,14 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
     return new_network
 
 
-def create_scNet_from_pre_trained_task(path_or_link: str,
-                                       prev_task_name: str,
-                                       model_path: str,
-                                       new_task: str,
-                                       target_conditions: list,
-                                       version: str = 'scNet',
-                                       **kwargs,
-                                       ):
+def create_scArches_from_pretrained_task(path_or_link: str,
+                                         prev_task_name: str,
+                                         model_path: str,
+                                         new_task: str,
+                                         target_conditions: list,
+                                         version: str = 'scArches',
+                                         **kwargs,
+                                         ):
     """Performs architecture surgery on the pre-trained `network`.
 
         Parameters
@@ -254,7 +254,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
         target_conditions: list
             list of new conditions (studies or domains) in the query dataset.
         version: str
-            Version of scNet you want to use after performing surgery. Can be one of `scNet`, `scNet v1` and `scNet v2`.
+            Version of scArches you want to use after performing surgery. Can be one of `scArches`, `scArches v1` and `scArches v2`.
 
         Returns
         -------
@@ -263,7 +263,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
     """
     if not os.path.isdir(path_or_link):
         downloaded_path = os.path.join(model_path, prev_task_name + ".zip")
-        downloaded_path = __download_pretrained_scNet(path_or_link, save_path=downloaded_path, make_dir=True)
+        downloaded_path = __download_pretrained_scArches(path_or_link, save_path=downloaded_path, make_dir=True)
     else:
         downloaded_path = path_or_link
 
@@ -271,22 +271,22 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
         extract_dir = os.path.join(model_path, f"{prev_task_name}/")
         unzip_model_directory(downloaded_path, extract_dir=extract_dir)
     elif not os.path.isdir(downloaded_path):
-        raise ValueError("`model_path` should be either path to downloaded zip file or scNet pre-trained directory")
+        raise ValueError("`model_path` should be either path to downloaded zip file or scArches pre-trained directory")
 
     downloaded_files = os.listdir(extract_dir)
     for file in downloaded_files:
-        if file.startswith("scNet") and file.endswith(".json"):
+        if file.startswith("scArches") and file.endswith(".json"):
             config_filename = file
 
     config_path = os.path.join(extract_dir, config_filename)
-    pre_trained_scNet = models.scArches.from_config(config_path, new_params=kwargs, construct=True, compile=True)
+    pre_trained_scArches = models.scArches.from_config(config_path, new_params=kwargs, construct=True, compile=True)
 
-    pre_trained_scNet.model_path = os.path.join(model_path, f"{prev_task_name}/")
-    pre_trained_scNet.task_name = prev_task_name
+    pre_trained_scArches.model_path = os.path.join(model_path, f"{prev_task_name}/")
+    pre_trained_scArches.task_name = prev_task_name
 
-    pre_trained_scNet.restore_model_weights(compile=True)
+    pre_trained_scArches.restore_model_weights(compile=True)
 
-    scNet = operate(pre_trained_scNet,
+    scArches = operate(pre_trained_scArches,
                     new_conditions=target_conditions,
                     new_task_name=new_task,
                     init='Xavier',
@@ -295,12 +295,12 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
                     print_summary=False,
                     )
 
-    scNet.model_path = os.path.join(model_path, f"{new_task}/")
+    scArches.model_path = os.path.join(model_path, f"{new_task}/")
 
-    return scNet
+    return scArches
 
 
-def __download_pretrained_scNet(download_link: str,
+def __download_pretrained_scArches(download_link: str,
                                 save_path: str = './',
                                 make_dir=False):
     if download_link != '':
