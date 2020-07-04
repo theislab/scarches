@@ -80,7 +80,7 @@ class CVAE(object):
         self.use_batchnorm = kwargs.get("use_batchnorm", True)
         self.architecture = kwargs.get("architecture", [128, 32])
         self.size_factor_key = kwargs.get("size_factor_key", 'size_factors')
-        self.train_device = kwargs.get("train_device", "cpu")
+        self.device = kwargs.get("device", "cpu")
         self.gene_names = kwargs.get("gene_names", None)
         self.model_name = kwargs.get("model_name", "cvae")
         self.class_name = kwargs.get("class_name", 'CVAE')
@@ -109,7 +109,7 @@ class CVAE(object):
             "freeze_expression_input": self.freeze_expression_input,
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
-            "train_device": self.train_device,
+            "train_device": self.device,
         }
 
         self.training_kwargs = {
@@ -150,7 +150,7 @@ class CVAE(object):
             "freeze_expression_input": self.freeze_expression_input,
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
-            "train_device": self.train_device,
+            "train_device": self.device,
         }
 
         self.training_kwargs = {
@@ -738,7 +738,7 @@ class CVAE(object):
 
         """
 
-        if self.train_device == 'gpu':
+        if self.device == 'gpu':
             return self._fit(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size, early_stop_limit,
                              lr_reducer, n_per_epoch, score_filename, save, retrain, verbose)
         else:
