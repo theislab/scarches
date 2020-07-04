@@ -874,8 +874,13 @@ class CVAE(object):
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
-        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
-        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
+        if sparse.issparse(train_adata.X):
+            is_sparse = True
+        else:
+            is_sparse = False
+
+        train_expr = train_adata.X
+        valid_expr = valid_adata.X.A if is_sparse else valid_adata.X
         x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
 
         if self.loss_fn in ['nb', 'zinb']:
@@ -884,12 +889,13 @@ class CVAE(object):
         else:
             y_valid = valid_expr
 
+        es_patience, best_val_loss = 0, 1e10
         for i in range(n_epochs):
             train_loss = train_recon_loss = train_kl_loss = 0.0
             for j in range(min(100, train_adata.shape[0] // batch_size)):
                 batch_indices = np.random.choice(train_adata.shape[0], batch_size)
 
-                batch_expr = train_expr[batch_indices, :]
+                batch_expr = train_expr[batch_indices, :].A if is_sparse else train_expr[batch_indices, :]
 
                 x_train = [batch_expr, train_conditions_onehot[batch_indices], train_conditions_onehot[batch_indices]]
 
@@ -907,6 +913,15 @@ class CVAE(object):
                 train_kl_loss += batch_kl_loss / batch_size
 
             valid_loss, valid_recon_loss, valid_kl_loss = self.cvae_model.evaluate(x_valid, y_valid, verbose=0)
+
+            if valid_loss < best_val_loss:
+                best_val_loss = valid_loss
+                es_patience = 0
+            else:
+                es_patience += 1
+                if es_patience == early_stop_limit:
+                    print("Training stopped with Early Stopping")
+                    break
 
             logs = {"loss": train_loss, "recon_loss": train_recon_loss, "kl_loss": train_kl_loss,
                     "val_loss": valid_loss, "val_recon_loss": valid_recon_loss, "val_kl_loss": valid_kl_loss}
