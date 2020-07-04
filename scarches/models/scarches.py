@@ -439,6 +439,7 @@ class scArches(CVAE):
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
+        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
         valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
         x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
 
@@ -454,9 +455,7 @@ class scArches(CVAE):
             for j in range(min(100, train_adata.shape[0] // batch_size)):
                 batch_indices = np.random.choice(train_adata.shape[0], batch_size)
 
-                batch_expr = train_adata.X[batch_indices, :]
-
-                batch_expr = batch_expr.A if sparse.issparse(batch_expr) else batch_expr
+                batch_expr = train_expr[batch_indices, :]
 
                 x_train = [batch_expr, train_conditions_onehot[batch_indices], train_conditions_onehot[batch_indices]]
 
