@@ -1,7 +1,7 @@
 Utility functions
 =================
 
-.. automodule:: scnet.utils
+.. automodule:: scarches.utils
     :members:
     :undoc-members:
     :show-inheritance:

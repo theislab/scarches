@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 from sklearn.neighbors import KNeighborsTransformer
 
-from scnet.utils import remove_sparsity
+from scarches.utils import remove_sparsity
 
 
 def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=0.5,

@@ -5,7 +5,7 @@ from sklearn.metrics import silhouette_score, adjusted_rand_score, normalized_mu
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
 
-from scnet.utils import remove_sparsity
+from scarches.utils import remove_sparsity
 
 
 def __entropy_from_indices(indices):

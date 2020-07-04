@@ -9,20 +9,20 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
-from sklearn.metrics import classification_report, confusion_matrix
+from scipy import sparse
 
-from scnet.models import CVAE
-from scnet.models._activations import ACTIVATIONS
-from scnet.models._callbacks import ScoreCallback
-from scnet.models._data_generator import SupervisedDataGenerator
-from scnet.models._layers import LAYERS
-from scnet.models._losses import LOSSES
-from scnet.models._utils import print_progress
-from scnet.utils import label_encoder, remove_sparsity, train_test_split
+from scarches.models import CVAE
+from scarches.models._activations import ACTIVATIONS
+from scarches.models._callbacks import ScoreCallback
+from scarches.models._data_generator import UnsupervisedDataGenerator, unsupervised_data_generator
+from scarches.models._layers import LAYERS
+from scarches.models._losses import LOSSES
+from scarches.models._utils import print_progress
+from scarches.utils import label_encoder, remove_sparsity, train_test_split
 
 
-class scANet(CVAE):
-    """scNet class. This class contains the implementation of scNet network.
+class scArches(CVAE):
+    """scArches class. This class contains the implementation of scArches network.
 
         Parameters
         ----------
@@ -30,8 +30,6 @@ class scANet(CVAE):
             number of gene expression space dimensions.
         n_conditions: int
             number of conditions used for one-hot encoding.
-        n_classes: int
-            number of cell types used to build a classifier on the top of scNet
         z_dimension: int
             number of latent space dimensions.
         task_name: str
@@ -39,7 +37,7 @@ class scANet(CVAE):
 
         kwargs:
             `learning_rate`: float
-                scNet's optimizer's step size (learning rate).
+                scArches's optimizer's step size (learning rate).
             `alpha`: float
                 KL divergence coefficient in the loss function.
             `beta`: float
@@ -47,48 +45,63 @@ class scANet(CVAE):
             `eta`: float
                 Reconstruction coefficient in the loss function.
             `dropout_rate`: float
-                dropout rate for Dropout layers in scNet's architecture.
+                dropout rate for Dropout layers in scArches' architecture.
             `model_path`: str
                 path to save model config and its weights.
             `clip_value`: float
                 Optimizer's clip value used for clipping the computed gradients.
             `output_activation`: str
-                Output activation of scNet which Depends on the range of data.
+                Output activation of scArches which Depends on the range of data.
             `use_batchnorm`: bool
-                Whether use batch normalization in scNet or not.
+                Whether use batch normalization in scArches or not.
             `architecture`: list
-                Architecture of scNet. Must be a list of integers.
+                Architecture of scArches. Must be a list of integers.
             `gene_names`: list
-                names of genes fed as scNet's input. Must be a list of strings.
+                names of genes fed as scArches' input. Must be a list of strings.
     """
 
-    def __init__(self, x_dimension, n_conditions, n_classes, task_name="unknown", z_dimension=100, **kwargs):
+    def __new__(cls, *args, **kwargs):
+        loss_fn = kwargs.get("loss_fn", "nb")
+        if loss_fn in ['nb', 'zinb']:
+            if loss_fn == 'nb':
+                from .scarchesnb import scArchesNB
+                return scArchesNB(*args, **kwargs)
+            elif loss_fn == 'zinb':
+                from .scarcheszinb import scArchesZINB
+                return scArchesZINB(*args, **kwargs)
+        else:
+            return super(scArches, cls).__new__(cls)
+
+    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
         self.beta = kwargs.pop('beta', 20.0)
         self.n_mmd_conditions = kwargs.pop("n_mmd_conditions", n_conditions)
         self.mmd_computation_method = kwargs.pop("mmd_computation_method", "general")
-        self.n_classes = n_classes
-        self.gamma = kwargs.pop("gamma", 1.0)
-        self.cell_type_encoder = kwargs.get("cell_type_encoder", None)
 
         if kwargs.get("loss_fn", "mse") in ['nb', 'zinb']:
             kwargs['loss_fn'] = 'mse'
 
-        kwargs.update({"model_name": "cvae_mlp", "class_name": "scANet"})
+        kwargs.update({"model_name": "cvae", "class_name": "scArches"})
 
         super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
 
-    def update_kwargs(self):
-        super().update_kwargs()
         self.network_kwargs.update({
-            "n_classes": self.n_classes,
             "n_mmd_conditions": self.n_mmd_conditions,
             "mmd_computation_method": self.mmd_computation_method,
-            "cell_type_encoder": self.cell_type_encoder,
         })
 
         self.training_kwargs.update({
             "beta": self.beta,
-            "gamma": self.gamma,
+        })
+
+    def update_kwargs(self):
+        super().update_kwargs()
+        self.network_kwargs.update({
+            "n_mmd_conditions": self.n_mmd_conditions,
+            "mmd_computation_method": self.mmd_computation_method,
+        })
+
+        self.training_kwargs.update({
+            "beta": self.beta,
         })
 
     @classmethod
@@ -98,13 +111,13 @@ class scANet(CVAE):
         Parameters
         ----------
         config_path: str
-            Path to scNet's config json file.
+            Path to scArches' config json file.
         new_params: dict, optional
             Python dict of parameters which you wanted to assign new values to them.
         compile: bool
-            ``True`` by default. if ``True``, will compile scNet's model after creating an instance.
+            ``True`` by default. if ``True``, will compile scArches' model after creating an instance.
         construct: bool
-            ``True`` by default. if ``True``, will construct scNet's model after creating an instance.
+            ``True`` by default. if ``True``, will construct scArches' model after creating an instance.
         """
         import json
         with open(config_path, 'rb') as f:
@@ -143,12 +156,10 @@ class scANet(CVAE):
             if idx == 0:
                 h_mmd = h
             h = Dropout(self.dr_rate)(h)
-        logits = Dense(self.n_classes, kernel_initializer=self.init_w, use_bias=False, activation='softmax')(h_mmd)
         model_inputs, model_outputs = self._output_decoder(h)
         model = Model(inputs=model_inputs, outputs=model_outputs, name=name)
         mmd_model = Model(inputs=model_inputs, outputs=h_mmd, name='mmd_decoder')
-        classifier_model = Model(inputs=model_inputs, outputs=logits, name="classifier")
-        return model, mmd_model, classifier_model
+        return model, mmd_model
 
     def construct_network(self):
         """
@@ -159,7 +170,7 @@ class scANet(CVAE):
             constructing decoder part of scNet.
         """
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
-        self.decoder_model, self.decoder_mmd_model, self.classifier_model = self._decoder(name="decoder")
+        self.decoder_model, self.decoder_mmd_model = self._decoder(name="decoder")
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
         encoder_outputs = self.encoder_model(inputs[:2])[2]
@@ -167,14 +178,12 @@ class scANet(CVAE):
 
         decoder_outputs = self.decoder_model(decoder_inputs)
         decoder_mmd_outputs = self.decoder_mmd_model(decoder_inputs)
-        decoder_classifier_outputs = self.classifier_model(decoder_inputs)
 
-        reconstruction_output = Lambda(lambda x: x, name="recon")(decoder_outputs)
+        reconstruction_output = Lambda(lambda x: x, name="reconstruction")(decoder_outputs)
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_mmd_outputs)
-        classifier_output = Lambda(lambda x: x, name='class')(decoder_classifier_outputs)
 
         self.cvae_model = Model(inputs=inputs,
-                                outputs=[reconstruction_output, mmd_output, classifier_output],
+                                outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
 
         self.custom_objects = {'mean_activation': ACTIVATIONS['mean_activation'],
@@ -195,10 +204,8 @@ class scANet(CVAE):
         mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
         kl_loss = LOSSES['kl'](self.mu, self.log_var)
         recon_loss = LOSSES[f'{self.loss_fn}_recon']
-        cce_loss = LOSSES['cce'](self.gamma)
-        acc = LOSSES['acc']
 
-        return loss, mmd_loss, kl_loss, recon_loss, cce_loss, acc
+        return loss, mmd_loss, kl_loss, recon_loss
 
     def compile_models(self):
         """
@@ -206,14 +213,15 @@ class scANet(CVAE):
             Adam optimizer with its pre-defined hyper-parameters.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
-        loss, mmd_loss, kl_loss, recon_loss, cce_loss, acc = self._calculate_loss()
+        loss, mmd_loss, kl_loss, recon_loss = self._calculate_loss()
 
         self.cvae_model.compile(optimizer=optimizer,
-                                loss=[loss, mmd_loss, cce_loss],
-                                metrics={"class": acc}
+                                loss=[loss, mmd_loss],
+                                metrics={self.cvae_model.outputs[0].name: loss,
+                                         self.cvae_model.outputs[1].name: mmd_loss}
                                 )
 
-        print(f"{self.class_name}'s network has been successfully compiled!")
+        print("scNet's network has been successfully compiled!")
 
     def to_mmd_layer(self, adata, batch_key):
         """
@@ -318,94 +326,12 @@ class scANet(CVAE):
 
         return adata_pred
 
-    def annotate(self, adata, batch_key, cell_type_key):
-        adata = remove_sparsity(adata)
-
-        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
-
-        cvae_inputs = [adata.X, encoder_labels, decoder_labels]
-
-        encoded_labels = self.cvae_model.predict(cvae_inputs)[2].argmax(axis=1)
-
-        self._reverse_cell_type_encoder()
-        labels = []
-        for encoded_label in encoded_labels:
-            labels.append(self.inv_cell_type_encoder[encoded_label])
-
-        adata.obs[f'pred_{cell_type_key}'] = np.array(labels)
-
-    def _reverse_cell_type_encoder(self):
-        assert self.cell_type_encoder is not None
-        if hasattr(self, "inv_cell_type_encoder"):
-            if self.cell_type_encoder and self.inv_cell_type_encoder is None:
-                self.inv_cell_type_encoder = {k: v for v, k in self.cell_type_encoder.items()}
-
-    def evaluate(self, adata, batch_key):
-        adata = remove_sparsity(adata)
-
-        encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-        decoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
-
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
-
-        cvae_inputs = [adata.X, encoder_labels, decoder_labels]
-
-        encoded_labels = self.cvae_model.predict(cvae_inputs)[2].argmax(axis=1)
-
-        self._reverse_cell_type_encoder()
-        labels = []
-        for encoded_label in encoded_labels:
-            labels.append(self.inv_cell_type_encoder[encoded_label])
-
-        labels = np.array(labels)
-        true_labels = adata.obs[batch_key].values
-        accuracy = np.mean(labels == true_labels)
-
-        print(classification_report(true_labels, labels))
-
-        return accuracy, confusion_matrix(true_labels, labels)
-
-    def train(self, adata, condition_key, cell_type_key,
-              train_size=0.8,
-              n_epochs=25, batch_size=32,
-              early_stop_limit=20, lr_reducer=10,
-              n_per_epoch=0, score_filename=None,
-              save=True, retrain=True, verbose=3):
-        """
-            Trains scNet with ``n_epochs`` times given ``train_adata``
-            and validates the model using ``valid_adata``
-            This function is using ``early stopping`` and ``learning rate reduce on plateau``
-            techniques to prevent over-fitting.
-
-            Parameters
-            ----------
-            adata: :class:`~anndata.AnnData`
-                Annotated dataset used to train & evaluate scNet.
-            condition_key: str
-                column name for conditions in the `obs` matrix of `train_adata` and `valid_adata`.
-            train_size: float
-                fraction of samples used to train scNet.
-            n_epochs: int
-                number of epochs.
-            batch_size: int
-                number of samples in the mini-batches used to optimize scNet.
-            early_stop_limit: int
-                patience of EarlyStopping
-            lr_reducer: int
-                patience of LearningRateReduceOnPlateau.
-            save: bool
-                Whether to save scNet after the training or not.
-            verbose: int
-                Verbose level
-            retrain: bool
-                ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
-
-        """
+    def _fit(self, adata,
+             condition_key, train_size=0.8, cell_type_key='cell_type',
+             n_epochs=25, batch_size=32,
+             early_stop_limit=20, lr_reducer=10,
+             n_per_epoch=0, score_filename=None,
+             save=True, retrain=True, verbose=3):
         train_adata, valid_adata = train_test_split(adata, train_size)
 
         if self.gene_names is None:
@@ -414,12 +340,15 @@ class scANet(CVAE):
             if set(self.gene_names).issubset(set(train_adata.var_names)):
                 train_adata = train_adata[:, self.gene_names]
             else:
-                raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
 
             if set(self.gene_names).issubset(set(valid_adata.var_names)):
                 valid_adata = valid_adata[:, self.gene_names]
             else:
-                raise Exception("set of gene names in valid adata are inconsistent with scNet's gene_names")
+                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+
+        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
+        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
 
         train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
@@ -427,36 +356,10 @@ class scANet(CVAE):
         valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
                                                                          condition_key=condition_key)
 
-        train_cell_types_encoded, encoder = label_encoder(train_adata, le=self.cell_type_encoder,
-                                                          condition_key=cell_type_key)
-
-        if self.cell_type_encoder is None:
-            self.cell_type_encoder = encoder
-
-        valid_cell_types_encoded, _ = label_encoder(valid_adata, le=self.cell_type_encoder,
-                                                    condition_key=cell_type_key)
-
-        if not retrain and self.restore_model_weights():
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.restore_model_weights()
             return
 
-        if self.loss_fn in ['zinb', 'nb']:
-            size_factor_key = self.size_factor_key
-        else:
-            size_factor_key = None
-
-        train_generator = SupervisedDataGenerator(train_adata, train_conditions_encoded, train_cell_types_encoded,
-                                                  size_factor_key=size_factor_key,
-                                                  n_conditions=self.n_conditions,
-                                                  n_cell_types=self.n_classes,
-                                                  use_mmd=True,
-                                                  batch_size=batch_size)
-
-        valid_generator = SupervisedDataGenerator(valid_adata, valid_conditions_encoded, valid_cell_types_encoded,
-                                                  size_factor_key=size_factor_key,
-                                                  n_conditions=self.n_conditions,
-                                                  n_cell_types=self.n_classes,
-                                                  use_mmd=True,
-                                                  batch_size=batch_size)
         callbacks = [
             History(),
         ]
@@ -471,7 +374,9 @@ class scANet(CVAE):
         if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
             adata = train_adata.concatenate(valid_adata)
 
-            celltype_labels = np.concatenate([train_cell_types_encoded, valid_cell_types_encoded], axis=0)
+            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
 
             callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
                                            n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
@@ -483,13 +388,130 @@ class scANet(CVAE):
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
-        self.cvae_model.fit_generator(generator=train_generator,
-                                      validation_data=valid_generator,
-                                      epochs=n_epochs,
-                                      verbose=fit_verbose,
-                                      use_multiprocessing=True,
-                                      callbacks=callbacks,
-                                      workers=self.n_threads)
+        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+
+        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
+        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+
+        y_train = [train_expr, train_conditions_encoded]
+        y_valid = [valid_expr, valid_conditions_encoded]
+
+        self.cvae_model.fit(x=x_train,
+                            y=y_train,
+                            validation_data=(x_valid, y_valid),
+                            epochs=n_epochs,
+                            batch_size=batch_size,
+                            verbose=fit_verbose,
+                            callbacks=callbacks,
+                            )
+        if save:
+            self.update_kwargs()
+            self.save(make_dir=True)
+
+    def _train_on_batch(self, adata,
+                        condition_key, train_size=0.8, cell_type_key='cell_type',
+                        n_epochs=25, batch_size=32,
+                        early_stop_limit=20, lr_reducer=10,
+                        n_per_epoch=0, score_filename=None,
+                        save=True, retrain=True, verbose=3):
+        train_adata, valid_adata = train_test_split(adata, train_size)
+
+        if self.gene_names is None:
+            self.gene_names = train_adata.var_names.tolist()
+        else:
+            if set(self.gene_names).issubset(set(train_adata.var_names)):
+                train_adata = train_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
+
+            if set(self.gene_names).issubset(set(valid_adata.var_names)):
+                valid_adata = valid_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+
+        train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
+
+        valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
+                                                                         condition_key=condition_key)
+
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.restore_model_weights()
+            return
+
+        callbacks = [
+            History(),
+        ]
+
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
+
+        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
+            adata = train_adata.concatenate(valid_adata)
+
+            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+
+            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
+                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
+                                           n_celltype_labels=len(np.unique(celltype_labels))))
+
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
+
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
+
+        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
+        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
+
+        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
+        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
+
+        if self.loss_fn in ['nb', 'zinb']:
+            x_valid.append(valid_adata.obs[self.size_factor_key].values)
+            y_valid = [valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X,
+                       valid_conditions_encoded]
+        else:
+            y_valid = [valid_expr, valid_conditions_encoded]
+
+        for i in range(n_epochs):
+            train_loss = train_recon_loss = train_kl_loss = 0.0
+            for j in range(min(1000, train_adata.shape[0] // batch_size)):
+                batch_indices = np.random.choice(train_adata.shape[0], batch_size)
+
+                batch_expr = train_adata.X[batch_indices, :]
+
+                batch_expr = batch_expr.A if sparse.issparse(batch_expr) else batch_expr
+
+                x_train = [batch_expr, train_conditions_onehot[batch_indices], train_conditions_onehot[batch_indices]]
+
+                if self.loss_fn in ['nb', 'zinb']:
+                    x_train.append(train_adata.obs[self.size_factor_key].values[batch_indices])
+                    y_train = [train_adata.raw.X[batch_indices].A if sparse.issparse(
+                        train_adata.raw.X[batch_indices]) else train_adata.raw.X[batch_indices],
+                               train_conditions_encoded[batch_indices]]
+                else:
+                    y_train = [batch_expr, train_conditions_encoded[batch_indices]]
+
+                batch_loss, batch_recon_loss, batch_kl_loss = self.cvae_model.train_on_batch(x_train, y_train)
+
+                train_loss += batch_loss / batch_size
+                train_recon_loss += batch_recon_loss / batch_size
+                train_kl_loss += batch_kl_loss / batch_size
+
+            valid_loss, valid_recon_loss, valid_kl_loss = self.cvae_model.evaluate(x_valid, y_valid, verbose=0)
+
+            logs = {"loss": train_loss, "recon_loss": train_recon_loss, "kl_loss": train_kl_loss,
+                    "val_loss": valid_loss, "val_recon_loss": valid_recon_loss, "val_kl_loss": valid_kl_loss}
+            print_progress(i, logs, n_epochs)
+
         if save:
             self.update_kwargs()
             self.save(make_dir=True)

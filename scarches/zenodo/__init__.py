@@ -1,19 +1,19 @@
 from typing import Union
 
-from scnet.models import scNet, scNetZINB, scNetNB, CVAE
+from scarches.models import scArches, scArchesZINB, scArchesNB, CVAE
 from .file import *
 from .deposition import *
 from .zip import *
 
 
-def upload_model(model: Union[scNet, CVAE, scNetNB, scNetZINB],
+def upload_model(model: Union[scArches, CVAE, scArchesNB, scArchesZINB],
                  deposition_id: str,
                  access_token: str):
     """uploads trained ``model`` to Zenodo.
 
         Parameters
         ----------
-        model: :class:`~scnet.models.scNet`, :class:`~scnet.models.CVAE`, :class:`~scnet.models.CVAE_NB`, :class:`~scnet.models.CVAE_ZINB`
+        model: :class:`~scarches.models.scNet`, :class:`~scarches.models.CVAE`, :class:`~scarches.models.CVAE_NB`, :class:`~scarches.models.CVAE_ZINB`
             An instance of one of classes defined in ``scNet.models`` module.
         deposition_id: str
             ID of a deposition in your Zenodo account.

@@ -13,7 +13,7 @@ from scipy.stats import entropy, itemfreq
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, adjusted_rand_score, normalized_mutual_info_score
 from sklearn.neighbors import NearestNeighbors
-from scnet.utils import remove_sparsity, label_encoder
+from scarches.utils import remove_sparsity, label_encoder
 
 list_or_str = TypeVar('list_or_str', list, str)
 

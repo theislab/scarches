@@ -1,15 +1,15 @@
 Models
 ======
 
-* `scNet`_
+* `scArches`_
 * `CVAE`_
-* `CVAE_NB`_
-* `CVAE_ZINB`_
+* `scArchesNB`_
+* `scArchesZINB`_
 
-scNet
+scArches
 -----
 
-.. autoclass:: scnet.models.scNet
+.. autoclass:: scarches.models.scArches
     :members:
     :undoc-members:
     :show-inheritance:
@@ -17,24 +17,24 @@ scNet
 CVAE
 ----
 
-.. autoclass:: scnet.models.CVAE
+.. autoclass:: scarches.models.CVAE
     :members:
     :undoc-members:
     :show-inheritance:
 
-CVAE_NB
+scArchesNB
 -------
 
-.. autoclass:: scnet.models.CVAE_NB
+.. autoclass:: scnet.models.scArchesNB
     :members:
     :undoc-members:
     :show-inheritance:
 
 
-CVAE_ZINB
+scArchesZINB
 ---------
 
-.. autoclass:: scnet.models.CVAE_ZINB
+.. autoclass:: scnet.models.scArchesZINB
     :members:
     :undoc-members:
     :show-inheritance:

@@ -3,8 +3,8 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-from scnet.zenodo.file import download_file
-from scnet.zenodo.zip import unzip_model_directory
+from scarches.zenodo.file import download_file
+from scarches.zenodo.zip import unzip_model_directory
 
 import numpy as np
 from typing import Union
@@ -30,22 +30,22 @@ __email__ = ', '.join([
 ])
 
 
-def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB, models.scANet],
+def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, models.scArchesZINB, models.scANet],
             new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
-            version='scNet',
+            version='scArches',
             remove_dropout: bool = True,
             print_summary: bool = False,
             new_training_kwargs: dict = {},
             new_network_kwargs: dict = {},
-            ) -> Union[models.scNet, models.CVAE, models.scNetNB, models.scNetZINB]:
+            ) -> Union[models.scArches, models.CVAE, models.scArchesNB, models.scArchesZINB]:
     """Performs architecture surgery on the pre-trained `network`.
 
         Parameters
         ----------
-        network: :class:`~scnet.models.*`
-            scNet Network object.
+        network: :class:`~scarches.models.*`
+            scArches Network object.
         new_task_name: str
             Name of the query task you want fine-tune the model on.
         new_conditions: list or str
@@ -54,7 +54,7 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
         init: str
             Method used for initializing new weights of the new model.
         version: str
-            Version of scNet you want to use after performing surgery. Can be one of `scNet`, `scNet v1` and `scNet v2`.
+            Version of scArches you want to use after performing surgery. Can be one of `scArches`, `scArches v1` and `scArches v2`.
         remove_dropout: bool
             Whether to remove the dropout layers.
         print_summary: bool
@@ -66,21 +66,21 @@ def operate(network: Union[models.scNet, models.CVAE, models.scNetNB, models.scN
 
         Returns
         -------
-        new_network: :class:`~scnet.models.*`
+        new_network: :class:`~scarches.models.*`
             object of the new model.
     """
     version = version.lower()
-    if version == 'scnet':
+    if version == 'scarches':
         freeze = True
         freeze_expression_input = True
-    elif version == 'scnet v1':
+    elif version == 'scarches v1':
         freeze = True
         freeze_expression_input = False
-    elif version == 'scnet v2':
+    elif version == 'scarches v2':
         freeze = False
         freeze_expression_input = False
     else:
-        raise Exception("Invalid scNet version. Must be one of \'scNet\', \'scNet v1\', or \'scNet v2\'.")
+        raise Exception("Invalid scArches version. Must be one of \'scArches\', \'scArches v1\', or \'scArches v2\'.")
 
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
@@ -259,7 +259,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
 
         Returns
         -------
-        new_network: :class:`~scnet.models.*`
+        new_network: :class:`~scarches.models.*`
             object of the new model.
     """
     if not os.path.isdir(path_or_link):
@@ -280,7 +280,7 @@ def create_scNet_from_pre_trained_task(path_or_link: str,
             config_filename = file
 
     config_path = os.path.join(extract_dir, config_filename)
-    pre_trained_scNet = models.scNet.from_config(config_path, new_params=kwargs, construct=True, compile=True)
+    pre_trained_scNet = models.scArches.from_config(config_path, new_params=kwargs, construct=True, compile=True)
 
     pre_trained_scNet.model_path = os.path.join(model_path, f"{prev_task_name}/")
     pre_trained_scNet.task_name = prev_task_name

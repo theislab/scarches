@@ -1,9 +1,9 @@
-from scnet.models import CVAE
+from scarches.models import CVAE
 
 
-class scNetZINB(CVAE):
+class scArchesNB(CVAE):
     """
-        scNet network with ZINB for loss function class. This class contains the implementation of scNet network.
+        scArches network with NB for loss function class. This class contains the implementation of scNet network.
 
         Parameters
         ----------
@@ -39,15 +39,15 @@ class scNetZINB(CVAE):
                 names of genes fed as scNet's input. Must be a list of strings.
     """
 
-    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
-        kwargs.update({'loss_fn': 'zinb', 'beta': 0,
-                       "model_name": "cvae_zinb", "class_name": "scNetZINB"})
+    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=10, **kwargs):
+        kwargs.update({'loss_fn': 'nb', 'beta': 0,
+                       "model_name": "cvae_nb", "class_name": "scArchesNB"})
         super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
 
 
     @classmethod
     def from_config(cls, config_path, new_params=None, compile=True, construct=True):
-        """create CVAE_ZINB object from exsiting CVAE_ZINB's config file.
+        """create ``CVAE_NB`` object from exsiting ``CVAE_NB``'s config file.
 
         Parameters
         ----------

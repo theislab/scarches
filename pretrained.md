@@ -1,4 +1,4 @@
-# Pretrained scNet Models 
+# Pretrained scArches Models 
 
 | Task | model link | Description | 
 | ----------- | ----------- | ----------- |

@@ -1,6 +1,6 @@
 import matplotlib
 from matplotlib import pyplot as plt
-from scnet.plotting import _alluvial
+from scarches.plotting import _alluvial
 
 
 def sankey_diagram(data, save_path=None, show=False, **kwargs):

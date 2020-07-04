@@ -1,7 +1,7 @@
 Plotting
 ========
 
-.. automodule:: scnet.plotting
+.. automodule:: scarches.plotting
     :members:
     :undoc-members:
     :show-inheritance:

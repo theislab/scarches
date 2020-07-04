@@ -1,13 +1,13 @@
-site_name: scNet Documentation
-site_description: 'Documentation for ScNet'
+site_name: scArches Documentation
+site_description: 'Documentation for scArches'
 docs_dir: docs/sources
-repo_url: http://github.com/theislab/scnet
+repo_url: http://github.com/theislab/scarches
 
 pages:
   - Home: 'index.md'
   - Installation: 'installation.md'
   - Models:
-    - scNet: 'models/scNet.md'
+    - scNet: 'models/scArches.md'
     - utils: 'utils.md'
     - metrics: 'metrics.md'
     - plotting: 'plotting.md'

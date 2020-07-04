@@ -4,7 +4,7 @@ Zenodo
 * `Deposition helpers`_
 * `File helpers`_
 
-.. automodule:: scnet.zenodo
+.. automodule:: scarches.zenodo
     :members:
     :undoc-members:
     :show-inheritance:
@@ -12,7 +12,7 @@ Zenodo
 Deposition helpers
 ------------------
 
-.. automodule:: scnet.zenodo.deposition
+.. automodule:: scarches.zenodo.deposition
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,7 +20,7 @@ Deposition helpers
 File Helpers
 ------------
 
-.. automodule:: scnet.zenodo.file
+.. automodule:: scarches.zenodo.file
     :members:
     :undoc-members:
     :show-inheritance:

@@ -26,7 +26,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
-import scnet
+import scarches
 
 # -- Retrieve notebooks ------------------------------------------------------
 
@@ -36,6 +36,7 @@ notebooks = [
     'zenodo_pancreas_from_pretrained.ipynb',
     'zenodo_pancreas_from_scratch.ipynb',
     'pancreas_pipeline.ipynb',
+    'muris_senis_classification.ipynb',
 ]
 
 for nb in notebooks:
@@ -50,7 +51,7 @@ project = 'scNet'
 copyright = f'{datetime.now():%Y}, Mohsen Naghipourfar, Mohammad Lotfollahi'
 author = 'Mohsen Naghipourfar, Mohammad Lotfollahi'
 
-# version = scnet.__version__
+# version = scarches.__version__
 # release = version
 pygments_style = 'sphinx'
 todo_include_todos = True
@@ -145,7 +146,7 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
-    fn = os.path.relpath(fn, start=os.path.dirname(scnet.__file__))
+    fn = os.path.relpath(fn, start=os.path.dirname(scarches.__file__))
 
     github = f"https://github.com/theislab/scNet/blob/master/scnet/{fn}{linespec}"
     return github

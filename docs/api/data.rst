@@ -1,7 +1,7 @@
 Data Processing
 ===============
 
-.. automodule:: scnet.data
+.. automodule:: scarches.data
     :members:
     :undoc-members:
     :show-inheritance:
