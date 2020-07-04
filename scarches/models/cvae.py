@@ -871,34 +871,6 @@ class CVAE(object):
             self.restore_model_weights()
             return
 
-        callbacks = [
-            History(),
-        ]
-
-        if verbose > 2:
-            callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
-            fit_verbose = 0
-        else:
-            fit_verbose = verbose
-
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=self.n_conditions,
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
-        if early_stop_limit > 0:
-            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
-
-        if lr_reducer > 0:
-            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-
         train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
         valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
 
