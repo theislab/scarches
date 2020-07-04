@@ -91,10 +91,9 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
     network_kwargs = network.network_kwargs
     training_kwargs = network.training_kwargs
 
-    network_kwargs['n_conditions'] += n_new_conditions
+    network_kwargs['conditions'] += sorted(new_conditions)
 
-    if network_kwargs.get("n_mmd_conditions", None):
-        network_kwargs['n_mmd_conditions'] += n_new_conditions
+    if network_kwargs.get("mmd_computation_method", None):
         network_kwargs['mmd_computation_method'] = "general"
 
     network_kwargs['freeze_expression_input'] = freeze_expression_input

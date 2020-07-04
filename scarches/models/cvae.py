@@ -58,12 +58,13 @@ class CVAE(object):
 
     """
 
-    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=10, **kwargs):
+    def __init__(self, x_dimension, conditions, task_name="unknown", z_dimension=10, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.task_name = task_name
 
-        self.n_conditions = n_conditions
+        self.conditions = sorted(conditions)
+        self.n_conditions = len(self.conditions)
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.0001)
@@ -98,7 +99,7 @@ class CVAE(object):
         self.network_kwargs = {
             "x_dimension": self.x_dim,
             "z_dimension": self.z_dim,
-            "n_conditions": self.n_conditions,
+            "conditions": self.conditions,
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,
@@ -139,7 +140,7 @@ class CVAE(object):
         self.network_kwargs = {
             "x_dimension": self.x_dim,
             "z_dimension": self.z_dim,
-            "n_conditions": self.n_conditions,
+            "conditions": self.conditions,
             "dropout_rate": self.dr_rate,
             "loss_fn": self.loss_fn,
             "output_activation": self.output_activation,

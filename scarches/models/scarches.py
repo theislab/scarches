@@ -14,7 +14,6 @@ from scipy import sparse
 from scarches.models import CVAE
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
-from scarches.models._data_generator import UnsupervisedDataGenerator, unsupervised_data_generator
 from scarches.models._layers import LAYERS
 from scarches.models._losses import LOSSES
 from scarches.models._utils import print_progress
@@ -28,7 +27,7 @@ class scArches(CVAE):
         ----------
         x_dimension: int
             number of gene expression space dimensions.
-        n_conditions: int
+        conditions: int
             number of conditions used for one-hot encoding.
         z_dimension: int
             number of latent space dimensions.
@@ -72,9 +71,8 @@ class scArches(CVAE):
         else:
             return super(scArches, cls).__new__(cls)
 
-    def __init__(self, x_dimension, n_conditions, task_name="unknown", z_dimension=100, **kwargs):
+    def __init__(self, x_dimension, conditions, task_name="unknown", z_dimension=10, **kwargs):
         self.beta = kwargs.pop('beta', 20.0)
-        self.n_mmd_conditions = kwargs.pop("n_mmd_conditions", n_conditions)
         self.mmd_computation_method = kwargs.pop("mmd_computation_method", "general")
 
         if kwargs.get("loss_fn", "mse") in ['nb', 'zinb']:
@@ -82,10 +80,9 @@ class scArches(CVAE):
 
         kwargs.update({"model_name": "cvae", "class_name": "scArches"})
 
-        super().__init__(x_dimension, n_conditions, task_name, z_dimension, **kwargs)
+        super().__init__(x_dimension, conditions, task_name, z_dimension, **kwargs)
 
         self.network_kwargs.update({
-            "n_mmd_conditions": self.n_mmd_conditions,
             "mmd_computation_method": self.mmd_computation_method,
         })
 
@@ -96,7 +93,6 @@ class scArches(CVAE):
     def update_kwargs(self):
         super().update_kwargs()
         self.network_kwargs.update({
-            "n_mmd_conditions": self.n_mmd_conditions,
             "mmd_computation_method": self.mmd_computation_method,
         })
 
@@ -201,7 +197,7 @@ class scArches(CVAE):
             network.
         """
         loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
-        mmd_loss = LOSSES['mmd'](self.n_mmd_conditions, self.beta)
+        mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta)
         kl_loss = LOSSES['kl'](self.mu, self.log_var)
         recon_loss = LOSSES[f'{self.loss_fn}_recon']
 
