@@ -159,11 +159,11 @@ class scArches(CVAE):
 
     def construct_network(self):
         """
-            Constructs the whole scNet's network. It is step-by-step constructing the scNet network.
+            Constructs the whole scArches' network. It is step-by-step constructing the scArches network.
             First, It will construct the encoder part and get mu, log_var of
             latent space. Second, It will sample from the latent space to feed the
             decoder part in next step. Finally, It will reconstruct the data by
-            constructing decoder part of scNet.
+            constructing decoder part of scArches.
         """
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
         self.decoder_model, self.decoder_mmd_model = self._decoder(name="decoder")
@@ -193,7 +193,7 @@ class scArches(CVAE):
 
     def _calculate_loss(self):
         """
-            Defines the loss function of scNet's network after constructing the whole
+            Defines the loss function of scArches' network after constructing the whole
             network.
         """
         loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
@@ -205,7 +205,7 @@ class scArches(CVAE):
 
     def compile_models(self):
         """
-            Compiles scNet network with the defined loss functions and
+            Compiles scArches network with the defined loss functions and
             Adam optimizer with its pre-defined hyper-parameters.
         """
         optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value, epsilon=self.epsilon)
@@ -217,12 +217,12 @@ class scArches(CVAE):
                                          self.cvae_model.outputs[1].name: mmd_loss}
                                 )
 
-        print("scNet's network has been successfully compiled!")
+        print("scArches' network has been successfully compiled!")
 
     def to_mmd_layer(self, adata, batch_key):
         """
             Map ``adata`` in to the MMD space. This function will feed data
-            in ``mmd_model`` of scNet and compute the MMD space coordinates
+            in ``mmd_model`` of scArches and compute the MMD space coordinates
             for each sample in data.
 
             Parameters
@@ -231,9 +231,9 @@ class scArches(CVAE):
                 Annotated data matrix to be mapped to MMD latent space.
                 Please note that ``adata.X`` has to be in shape [n_obs, x_dimension]
             encoder_labels: :class:`~numpy.ndarray`
-                :class:`~numpy.ndarray` of labels to be fed as scNet's encoder condition array.
+                :class:`~numpy.ndarray` of labels to be fed as scArches' encoder condition array.
             decoder_labels: :class:`~numpy.ndarray`
-                :class:`~numpy.ndarray` of labels to be fed as scNet's decoder condition array.
+                :class:`~numpy.ndarray` of labels to be fed as scArches' decoder condition array.
 
             Returns
             -------
@@ -259,7 +259,7 @@ class scArches(CVAE):
         return adata_mmd
 
     def get_latent(self, adata, batch_key, return_z=False):
-        """ Transforms `adata` in latent space of scNet and returns the latent
+        """ Transforms `adata` in latent space of scArches and returns the latent
         coordinates in the annotated (adata) format.
 
         Parameters
@@ -279,7 +279,7 @@ class scArches(CVAE):
         if set(self.gene_names).issubset(set(adata.var_names)):
             adata = adata[:, self.gene_names]
         else:
-            raise Exception("set of gene names in train adata are inconsistent with scNet's gene_names")
+            raise Exception("set of gene names in train adata are inconsistent with scArches' gene_names")
 
         if self.beta == 0:
             return_z = True
@@ -293,16 +293,16 @@ class scArches(CVAE):
             return self.to_mmd_layer(adata, batch_key)
 
     def predict(self, adata, encoder_labels, decoder_labels):
-        """Feeds ``adata`` to scNet and produces the reconstructed data.
+        """Feeds ``adata`` to scArches and produces the reconstructed data.
 
             Parameters
             ----------
             adata: :class:`~anndata.AnnData`
                 Annotated data matrix whether in primary space.
             encoder_labels: :class:`~numpy.ndarray`
-                :class:`~numpy.ndarray` of labels to be fed as scNet's encoder condition array.
+                :class:`~numpy.ndarray` of labels to be fed as scArches' encoder condition array.
             decoder_labels: :class:`~numpy.ndarray`
-                :class:`~numpy.ndarray` of labels to be fed as scNet's decoder condition array.
+                :class:`~numpy.ndarray` of labels to be fed as scArches' decoder condition array.
 
             Returns
             -------
