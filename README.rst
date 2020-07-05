@@ -1,5 +1,4 @@
-.. image:: https://travis-ci.com/theislab/scarches.svg?branch=master
-.. image:: https://readthedocs.org/projects/scarches/badge/?version=latest
+|PyPI| |PyPIDownloads| |travis|
 
 scArches - single-cell architecture surgery
 =========================================================================
