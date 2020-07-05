@@ -16,7 +16,7 @@ What can you do with scArches?
 
 Usage
 =========================================================================
-See `here <https://scanpy.readthedocs.io/en/stable/>`_ for documentation and tutorials.
+See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
 
 
 Support and contribute
