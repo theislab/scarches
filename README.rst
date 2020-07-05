@@ -1,8 +1,6 @@
 .. image:: https://travis-ci.com/theislab/scarches.svg?branch=master
-    :target: https://travis-ci.com/theislab/scarches
 
 .. image:: https://readthedocs.org/projects/scarches/badge/?version=latest
-:target: https://scarches.readthedocs.io/en/latest/?badge=latest
 
 scArches - single-cell architecture surgery
 =========================================================================
