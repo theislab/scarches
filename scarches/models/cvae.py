@@ -10,6 +10,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, model_from_json
 from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
+from keras import backend as K
 from scipy import sparse
 
 from scarches.models._activations import ACTIVATIONS
@@ -80,7 +81,8 @@ class CVAE(object):
         self.use_batchnorm = kwargs.get("use_batchnorm", True)
         self.architecture = kwargs.get("architecture", [128, 32])
         self.size_factor_key = kwargs.get("size_factor_key", 'size_factors')
-        self.device = kwargs.get("device", "cpu")
+        self.device = kwargs.get("device", "gpu") if len(K.tensorflow_backend._get_available_gpus()) > 0 else 'cpu'
+
         self.gene_names = kwargs.get("gene_names", None)
         self.model_name = kwargs.get("model_name", "cvae")
         self.class_name = kwargs.get("class_name", 'CVAE')
