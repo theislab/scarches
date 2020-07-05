@@ -4,3 +4,13 @@ nbsphinx>=0.7
 scanpy
 setuptools
 sphinx_rtd_theme>=0.3
+requests
+numpy>=1.17
+scanpy
+scikit-learn
+scipy
+matplotlib
+setuptools>=41.0.0
+tensorflow==1.14.0
+tensorflow-gpu==1.14.0
+keras==2.2.4
