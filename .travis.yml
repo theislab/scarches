@@ -9,4 +9,4 @@ install:
   - python setup.py install
 
 script:
-  - PYTHONPATH=. pytest
+  - PYTHONPATH=./tests/ pytest
