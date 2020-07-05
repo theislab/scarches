@@ -1,4 +1,4 @@
-|PyPI| |PyPIDownloads| |travis| |Docs|
+|PyPI| |travis| |Docs|
 
 scArches - single-cell architecture surgery
 =========================================================================
