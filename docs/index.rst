@@ -55,19 +55,11 @@ Reference
 
 .. toctree::
    :maxdepth: 1
-   :caption: Pipeline Tutorial
-   :hidden:
-
-   pancreas_pipeline
-
-.. toctree::
-   :maxdepth: 1
    :caption: Examples
    :hidden:
 
    pancreas_pipeline
    zenodo_pancreas_from_pretrained
    zenodo_pancreas_from_scratch
-   COVID19_training
 
 
