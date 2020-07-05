@@ -706,8 +706,8 @@ class CVAE(object):
 
     def train(self, adata,
               condition_key, train_size=0.8, cell_type_key='cell_type',
-              n_epochs=25, batch_size=32,
-              early_stop_limit=20, lr_reducer=10,
+              n_epochs=200, batch_size=128,
+              early_stop_limit=10, lr_reducer=8,
               n_per_epoch=0, score_filename=None,
               save=True, retrain=True, verbose=3):
 
