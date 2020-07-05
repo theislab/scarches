@@ -1,12 +1,46 @@
-|PyPI| |Docs| |travis|
+|PyPI| |travis| |Docs|
 
-scArches - Query to reference single-cell integration with transfer learning
-============================================================================
+scArches - single-cell architecture surgery
+=========================================================================
+.. raw:: html
 
-<img src="https://user-images.githubusercontent.com/33202701/85222703-bbd96980-b3bd-11ea-927b-00d21153f97b.jpg" width="400px" align="left">
+ <img src="https://user-images.githubusercontent.com/33202701/85222703-bbd96980-b3bd-11ea-927b-00d21153f97b.jpg" width="400px" align="left">
 
-scArches is novel pipe-line which uses transfer learning and architectural surgery techniques in deep learning to address
-the challenge of integrating query datasets with reference atlases.
+scArches is a package to integrate newly produced single-cell datasets into integrated references atlases. Our method can facilitate large collaborative projects with decentralise training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of all conditional generative models for single-cell data. Start
+
+What can you do with scArches?
+-------------------------------
+- Integrate many singl-cell datasets and share the trained model and the data (if possible).
+- Download a pre-trained model for your atlas of interest, update it wih new datasets and share with your collaborators.
+- Project and integrate query datasets on the top of a reference and use latent repesentation for downstream tasks,e.g.:diff testing, clustering.
+
+Usage
+-------------------------------
+See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
+
+
+Support and contribute
+-------------------------------
+If you have a question or new architchuture or a model that could be integrated in to our pipe-line, you can
+post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us by `email <mailto:mo.lotfollahi@gmail.com>`_. Our package support tf/keras now but pytorch version will be added very soon.
+
+Reference
+-------------------------------
+
+
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
+   :target: https://pypi.org/project/scarches
+
+.. |PyPIDownloads| image:: https://pepy.tech/badge/scarches
+   :target: https://pepy.tech/project/scarches
+
+.. |Docs| image:: https://readthedocs.org/projects/scarches/badge/?version=latest
+   :target: https://scarches.readthedocs.io
+
+.. |travis| image:: https://travis-ci.org/theislab/scarches.svg?branch=master
+   :target: https://travis-ci.org/theislab/scarches
+
 
 .. toctree::
    :maxdepth: 1
@@ -35,43 +69,5 @@ the challenge of integrating query datasets with reference atlases.
    zenodo_pancreas_from_pretrained
    zenodo_pancreas_from_scratch
    COVID19_training
-
-
-Main Principles
----------------
-
-scArches has the following main principles:
-
-* **User Friendly**: scArches is an API designed for human beings, not machines. scArches offers consistent & simple APIs, it minimizes the number of user actions required for a common use case, and it provides clear feedback upon user error.
-
-* **Extendability**: It is very simple to add new modules, or extend a module in scArches. All modules are implemented in the way to work correctly independent of each other. Being able to easily create new modules allows scArches to be more suitable for advanced research.
-
-* **Python**: scArches is package implemented with Python language, which is compact, easier to debug, and allows for ease of extensibility.
-
-Support
--------
-
-Please feel free to ask questions:
-
-* `Mohammad Lotfollahi <mohammad.lotfollahi@helmholtz-muenchen.de>`_
-
-* `Mohsen Naghipourfar <naghipourfar@ce.sharif.edu>`_
-
-You can also post bug reports and feature requests in `GitHub issues <https://github.com/theislab/scarches/issues>`_.
-Please Make sure read our guidelines first.
-
-.. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
-   :target: https://pypi.org/project/scarches
-
-.. |PyPIDownloads| image:: https://pepy.tech/badge/scarches
-   :target: https://pepy.tech/project/scarches
-
-.. |Docs| image:: https://readthedocs.org/projects/scarches/badge/?version=latest
-   :target: https://scarches.readthedocs.io
-
-.. |travis| image:: https://travis-ci.org/theislab/scarches.svg?branch=master
-   :target: https://travis-ci.org/theislab/scarches
-
-.. _scanpy: https://scanpy.readthedocs.io
 
 
