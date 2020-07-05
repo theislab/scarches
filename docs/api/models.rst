@@ -25,7 +25,7 @@ CVAE
 scArchesNB
 ----------
 
-.. autoclass:: scnet.models.scArchesNB
+.. autoclass:: scarches.models.scArchesNB
     :members:
     :undoc-members:
     :show-inheritance:
@@ -34,7 +34,7 @@ scArchesNB
 scArchesZINB
 ------------
 
-.. autoclass:: scnet.models.scArchesZINB
+.. autoclass:: scarches.models.scArchesZINB
     :members:
     :undoc-members:
     :show-inheritance:

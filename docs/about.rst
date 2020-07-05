@@ -1,2 +1,2 @@
-About scNet
-===========
+About scArches
+==============
