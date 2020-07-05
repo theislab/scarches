@@ -1,10 +1,10 @@
 requests
 numpy
-scanpy==1.4.5.post2
-scikit-learn==0.22.1
-scipy==1.4.1
-matplotlib==3.0.3
+scanpy
+scikit-learn
+scipy
+matplotlib
+setuptools>=41.0.0
 tensorflow==1.14.0
 tensorflow-gpu==1.14.0
 keras==2.2.4
-
