@@ -9,11 +9,11 @@ python:
       - method: setuptools
         path: .
    system_packages: true
+
 sphinx:
   builder: html
   configuration: docs/conf.py
 
-requirements_file: requirements.txt
 
 formats:
     - epub
