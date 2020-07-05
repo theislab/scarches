@@ -1,7 +1,7 @@
 |PyPI| |PyPIDownloads| |Docs|
 
 scArches - Query to reference single-cell integration with transfer learning
-=========================================================================
+============================================================================
 
 scArches is novel pipe-line which uses transfer learning and architectural surgery techniques in deep learning to address
 the challenge of integrating query datasets with reference atlases.
