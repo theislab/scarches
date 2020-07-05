@@ -29,3 +29,15 @@ Reference
 =========================================================================
 
 
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
+   :target: https://pypi.org/project/scarches
+
+.. |PyPIDownloads| image:: https://pepy.tech/badge/scarches
+   :target: https://pepy.tech/project/scarches
+
+.. |Docs| image:: https://readthedocs.org/projects/scarches/badge/?version=latest
+   :target: https://scarches.readthedocs.io
+
+.. |travis| image:: https://travis-ci.org/theislab/scarches.svg?branch=master
+   :target: https://travis-ci.org/theislab/scarches
