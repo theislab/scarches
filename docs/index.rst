@@ -8,10 +8,6 @@ scArches - Query to reference single-cell integration with transfer learning
 scArches is novel pipe-line which uses transfer learning and architectural surgery techniques in deep learning to address
 the challenge of integrating query datasets with reference atlases.
 
-.. image:: https://raw.githubusercontent.com/theislab/scArches/master/sketch.png
-   :width: 500px
-   :align: center
-
 .. toctree::
    :maxdepth: 1
    :caption: Main
