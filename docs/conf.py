@@ -48,7 +48,7 @@ for nb in notebooks:
 
 # -- Project information -----------------------------------------------------
 
-project = 'scNet'
+project = 'scArches'
 copyright = f'{datetime.now():%Y}, Mohsen Naghipourfar, Mohammad Lotfollahi'
 author = 'Mohsen Naghipourfar, Mohammad Lotfollahi'
 
