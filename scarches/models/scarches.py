@@ -189,7 +189,7 @@ class scArches(CVAE):
                                'FirstLayer': LAYERS['FirstLayer']}
 
         get_custom_objects().update(self.custom_objects)
-        print(f"{self.class_name}'s network has been successfully constructed!")
+        print(f"{self.class_name}' network has been successfully constructed!")
 
     def _calculate_loss(self):
         """
@@ -457,7 +457,7 @@ class scArches(CVAE):
 
         es_patience, best_val_loss = 0, 1e10
         for i in range(n_epochs):
-            train_loss = train_recon_loss = train_kl_loss = 0.0
+            train_loss = train_recon_loss = train_mmd_loss = 0.0
             for j in range(min(500, train_adata.shape[0] // batch_size)):
                 batch_indices = np.random.choice(train_adata.shape[0], batch_size)
 
@@ -477,9 +477,9 @@ class scArches(CVAE):
 
                 train_loss += batch_loss / batch_size
                 train_recon_loss += batch_recon_loss / batch_size
-                train_kl_loss += batch_kl_loss / batch_size
+                train_mmd_loss += batch_kl_loss / batch_size
 
-            valid_loss, valid_recon_loss, valid_kl_loss = self.cvae_model.evaluate(x_valid, y_valid, verbose=0)
+            valid_loss, valid_recon_loss, valid_mmd_loss = self.cvae_model.evaluate(x_valid, y_valid, verbose=0)
 
             if valid_loss < best_val_loss:
                 best_val_loss = valid_loss
@@ -490,8 +490,8 @@ class scArches(CVAE):
                     print("Training stopped with Early Stopping")
                     break
 
-            logs = {"loss": train_loss, "recon_loss": train_recon_loss, "kl_loss": train_kl_loss,
-                    "val_loss": valid_loss, "val_recon_loss": valid_recon_loss, "val_kl_loss": valid_kl_loss}
+            logs = {"loss": train_loss, "recon_loss": train_recon_loss, "mmd_loss": train_mmd_loss,
+                    "val_loss": valid_loss, "val_recon_loss": valid_recon_loss, "val_mmd_loss": valid_mmd_loss}
             print_progress(i, logs, n_epochs)
 
         if save:
