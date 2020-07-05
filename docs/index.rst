@@ -36,6 +36,7 @@ the challenge of integrating query datasets with reference atlases.
    pancreas_pipeline
    zenodo_pancreas_from_pretrained
    zenodo_pancreas_from_scratch
+   COVID19_training
 
 
 Main Principles

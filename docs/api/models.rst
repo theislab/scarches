@@ -7,7 +7,7 @@ Models
 * `scArchesZINB`_
 
 scArches
------
+--------
 
 .. autoclass:: scarches.models.scArches
     :members:
@@ -23,7 +23,7 @@ CVAE
     :show-inheritance:
 
 scArchesNB
--------
+----------
 
 .. autoclass:: scnet.models.scArchesNB
     :members:
@@ -32,7 +32,7 @@ scArchesNB
 
 
 scArchesZINB
----------
+------------
 
 .. autoclass:: scnet.models.scArchesZINB
     :members:

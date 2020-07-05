@@ -31,19 +31,20 @@ import scarches
 # -- Retrieve notebooks ------------------------------------------------------
 
 from urllib.request import urlretrieve
-notebooks_url = 'https://github.com/theislab/scNet/raw/master/notebooks/'
+
+notebooks_url = 'https://github.com/theislab/scarches/raw/master/notebooks/'
 notebooks = [
     'zenodo_pancreas_from_pretrained.ipynb',
     'zenodo_pancreas_from_scratch.ipynb',
     'pancreas_pipeline.ipynb',
-    'muris_senis_classification.ipynb',
+    'COVID19_training.ipynb'
 ]
 
 for nb in notebooks:
     try:
         urlretrieve(notebooks_url + nb, nb)
-    except: pass
-
+    except:
+        pass
 
 # -- Project information -----------------------------------------------------
 
@@ -59,7 +60,7 @@ html_theme_options = dict(navigation_depth=3, titles_only=False)
 html_context = dict(
     display_github=True,
     github_user='theislab',
-    github_repo='scNet',
+    github_repo='scarches',
     github_version='master',
     conf_py_path='/docs/',
 )
@@ -85,6 +86,7 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
+    'sphinx_rtd_theme',
     'numpydoc',
 ]
 
@@ -148,5 +150,5 @@ def linkcode_resolve(domain, info):
 
     fn = os.path.relpath(fn, start=os.path.dirname(scarches.__file__))
 
-    github = f"https://github.com/theislab/scNet/blob/master/scnet/{fn}{linespec}"
+    github = f"https://github.com/theislab/scarches/blob/master/scarches/{fn}{linespec}"
     return github
