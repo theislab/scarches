@@ -24,5 +24,5 @@ post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us 
 
 Reference
 =========================================================================
-Lotfollahi et al. (2020), Query to reference single-cell integration with transfer learning `biorxiv <https:link>`_.
+
 
