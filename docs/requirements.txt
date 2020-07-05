@@ -1,0 +1,3 @@
+sphinx>=3.0.3
+ipykernel
+nbsphinx
