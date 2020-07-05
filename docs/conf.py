@@ -37,7 +37,6 @@ notebooks = [
     'zenodo_pancreas_from_pretrained.ipynb',
     'zenodo_pancreas_from_scratch.ipynb',
     'pancreas_pipeline.ipynb',
-    'COVID19_training.ipynb'
 ]
 
 for nb in notebooks:
