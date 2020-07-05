@@ -1,4 +1,7 @@
-scArches - single-cell architecture surgery 
+.. image:: https://travis-ci.com/theislab/scarches.svg?branch=master
+    :target: https://travis-ci.com/theislab/scarches
+
+scArches - single-cell architecture surgery
 =========================================================================
 .. raw:: html
 
