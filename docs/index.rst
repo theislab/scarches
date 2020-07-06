@@ -38,8 +38,8 @@ Reference
 .. |Docs| image:: https://readthedocs.org/projects/scarches/badge/?version=latest
    :target: https://scarches.readthedocs.io
 
-.. |travis| image:: https://travis-ci.org/theislab/scarches.svg?branch=master
-   :target: https://travis-ci.org/theislab/scarches
+.. |travis| image:: https://travis-ci.com/theislab/scarches.svg?branch=master
+    :target: https://travis-ci.com/theislab/scarches
 
 
 .. toctree::
