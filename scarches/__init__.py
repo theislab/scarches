@@ -17,6 +17,7 @@ from . import plotting as pl
 from . import utils
 from . import data
 from . import annotation as ann
+from . import datasets
 
 __author__ = ', '.join([
     'Mohsen Naghipourfar',

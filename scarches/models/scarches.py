@@ -72,7 +72,7 @@ class scArches(CVAE):
             return super(scArches, cls).__new__(cls)
 
     def __init__(self, x_dimension, conditions, task_name="unknown", z_dimension=10, **kwargs):
-        self.beta = kwargs.pop('beta', 20.0)
+        self.beta = kwargs.pop('beta', 0.0)
         self.mmd_computation_method = kwargs.pop("mmd_computation_method", "general")
 
         if kwargs.get("loss_fn", "mse") in ['nb', 'zinb']:
@@ -258,7 +258,7 @@ class scArches(CVAE):
 
         return adata_mmd
 
-    def get_latent(self, adata, batch_key, return_z=False):
+    def get_latent(self, adata, batch_key, return_z=True):
         """ Transforms `adata` in latent space of scArches and returns the latent
         coordinates in the annotated (adata) format.
 

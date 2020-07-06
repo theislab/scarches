@@ -70,7 +70,7 @@ class CVAE(object):
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.0001)
         self.eta = kwargs.get("eta", 1.0)
-        self.dr_rate = kwargs.get("dropout_rate", 0.05)
+        self.dr_rate = kwargs.get("dropout_rate", 0.1)
         self.model_path = os.path.join(kwargs.get("model_path", "./models/CVAE/"), self.task_name)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
@@ -79,7 +79,7 @@ class CVAE(object):
         self.epsilon = kwargs.get('epsilon', 0.01)
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.use_batchnorm = kwargs.get("use_batchnorm", True)
-        self.architecture = kwargs.get("architecture", [128, 32])
+        self.architecture = kwargs.get("architecture", [128, 128])
         self.size_factor_key = kwargs.get("size_factor_key", 'size_factors')
         self.device = kwargs.get("device", "gpu") if len(K.tensorflow_backend._get_available_gpus()) > 0 else 'cpu'
 
