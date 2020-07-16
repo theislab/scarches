@@ -52,8 +52,6 @@ Reference
    api/index.rst
    model_sharing
    training_tips
-   release_notes
-   references
 
 .. toctree::
    :maxdepth: 1

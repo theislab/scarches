@@ -1,7 +1,7 @@
 How to share your models?
 ============
 
-Once you have uploaded your model according to  this `toturial <https://github.com/theislab/scarches/>`_,please share
+Once you have uploaded your model according to  this `toturial <https://scarches.readthedocs.io/en/latest/zenodo_pancreas_from_scratch.html>`_, please share
 the information about the model and the data you have used by filling `this <https://docs.google.com/forms/d/1_j65-sRbHAGZsfDAXGVWLw4yEDe1czdtTCypfS6SPkw/edit?ts=5f02c493>`_ form.
 
 
