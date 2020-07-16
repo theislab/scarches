@@ -77,7 +77,7 @@ class CVAE(object):
         self.scale_factor = kwargs.get("scale_factor", 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
         self.epsilon = kwargs.get('epsilon', 0.01)
-        self.output_activation = kwargs.get("output_activation", 'relu')
+        self.output_activation = kwargs.get("output_activation", 'linear')
         self.use_batchnorm = kwargs.get("use_batchnorm", True)
         self.architecture = kwargs.get("architecture", [128, 128])
         self.size_factor_key = kwargs.get("size_factor_key", 'size_factors')

@@ -50,7 +50,8 @@ class scArches(CVAE):
             `clip_value`: float
                 Optimizer's clip value used for clipping the computed gradients.
             `output_activation`: str
-                Output activation of scArches which Depends on the range of data.
+                Output activation of scArches which Depends on the range of data. For positive value you can use "relu" or "linear" but if your data
+                have negative value set to "linear" which is default.
             `use_batchnorm`: bool
                 Whether use batch normalization in scArches or not.
             `architecture`: list
