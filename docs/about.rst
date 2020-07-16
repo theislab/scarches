@@ -14,10 +14,10 @@ What can you do with scArches?
 - Download a pre-trained model for your atlas of interest, update it wih new datasets and share with your collaborators.
 - Project and integrate query datasets on the top of a reference and use latent repesentation for downstream tasks,e.g.:diff testing, clustering.
 
-Usage
+Where to start?
 --------------------------------
-See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
-
+To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html`__.
+For examples on how to use or construct and share pretrained models check examples.
 
 Support and contribute
 --------------------------------
