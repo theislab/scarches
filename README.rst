@@ -12,7 +12,7 @@ What can you do with scArches?
 -------------------------------
 - Integrate many single-cell datasets and share the trained model and the data (if possible).
 - Download a pre-trained model for your atlas of interest, update it wih new datasets and share with your collaborators.
-- Project and integrate query datasets on the top of a reference and use latent repesentation for downstream tasks,e.g.:diff testing, clustering.
+- Project and integrate query datasets on the top of a reference and use latent repesentation for downstream tasks, e.g.: diff testing, clustering.
 
 Usage
 -------------------------------
