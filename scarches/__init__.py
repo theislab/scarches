@@ -214,10 +214,6 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
             if decoder_layer.name != 'first_layer':
                 decoder_layer.trainable = False
 
-        if isinstance(new_network, models.scANet):
-            for layer in new_network.classifier_model.layers:
-                layer.trainable = False
-
         new_network.compile_models()
 
     # Print summary of new network
