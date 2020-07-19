@@ -31,7 +31,7 @@ __email__ = ', '.join([
 ])
 
 
-def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, models.scArchesZINB, models.scANet],
+def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, models.scArchesZINB],
             new_task_name: str,
             new_conditions: Union[list, str],
             init: str = 'Xavier',
