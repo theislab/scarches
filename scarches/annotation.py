@@ -50,7 +50,7 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
     uncertainties = []
     pred_labels = []
     for i in range(len(weights)):
-        unique_labels = y_train_labels[top_k_indices[i]].unique().tolist()
+        unique_labels = np.unique(y_train_labels[top_k_indices[i]])
         best_label, best_prob = None, 0.0
         for candidate_label in unique_labels:
             candidate_prob = weights[i, y_train_labels[top_k_indices[i]] == candidate_label].sum()
