@@ -38,6 +38,7 @@ __email__ = ', '.join([
 def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, models.scArchesZINB],
             new_task_name: str,
             new_conditions: Union[list, str],
+            adaptors: list = [],
             init: str = 'Xavier',
             version='scArches',
             remove_dropout: bool = True,
@@ -56,6 +57,8 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
         new_conditions: list or str
             list of new conditions (studies or domains) in the query dataset. If only one condition exists in
             query dataset, Can pass a string to this argument.
+        adaptors: list of `scarches.models.Adaptor` objects
+            list of pre-trained adaptors to be attached to the reference network.
         init: str
             Method used for initializing new weights of the new model.
         version: str
@@ -74,6 +77,14 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
         new_network: :class:`~scarches.models.*`
             object of the new model.
     """
+    if len(adaptors) > 0:
+        network = attach_adaptors(network,
+                                  adaptors,
+                                  new_task_name=f"{network.task_name}_with_adaptors",
+                                  remove_dropout=remove_dropout,
+                                  print_summary=False,
+                                  )
+
     version = version.lower()
     if version == 'scarches':
         freeze = True
@@ -120,41 +131,24 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
                                 print_summary=False)
 
     # Get Previous Model's weights
-    used_bias_encoder = network.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
-    used_bias_decoder = network.cvae_model.get_layer("decoder").get_layer("first_layer").use_bias
 
-    prev_weights = {}
+    prev_biases_encoder = None
     for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_weights['c'] = K.batch_get_value(w)
+            prev_condition_weights_encoder = K.batch_get_value(w)
         elif "expression_kernel" in w.name:
-            prev_weights['i'] = K.batch_get_value(w)
+            prev_input_weights_encoder = K.batch_get_value(w)
         else:
-            prev_weights['b'] = K.batch_get_value(w)
+            prev_biases_encoder = K.batch_get_value(w)
 
-    if used_bias_encoder:
-        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = \
-            prev_weights['i'], prev_weights['c'], prev_weights['b']
-
-    else:
-        prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = \
-            prev_weights['i'], prev_weights['c'], None
-
-    prev_weights = {}
+    prev_biases_decoder = None
     for w in network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_weights['c'] = K.batch_get_value(w)
+            prev_condition_weights_decoder = K.batch_get_value(w)
         elif "expression_kernel" in w.name:
-            prev_weights['i'] = K.batch_get_value(w)
+            prev_latent_weights_decoder = K.batch_get_value(w)
         else:
-            prev_weights['b'] = K.batch_get_value(w)
-
-    if used_bias_decoder:
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = \
-            prev_weights['i'], prev_weights['c'], prev_weights['b']
-    else:
-        prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = \
-            prev_weights['i'], prev_weights['c'], None
+            prev_biases_decoder = K.batch_get_value(w)
 
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
