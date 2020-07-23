@@ -466,8 +466,8 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
     return new_network
 
 
-def extract_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.scArchesZINB],
-                         new_conditions: Union[list, str]):
+def extract_adaptors(network: Union[models.scArches, models.scArchesNB, models.scArchesZINB],
+                     conditions: Union[list, str]):
     """
     Extracts new adaptors from the trained network.
 
@@ -476,8 +476,8 @@ def extract_new_adaptors(network: Union[models.scArches, models.scArchesNB, mode
     network: :class:`~scarches.models.*`
         Trained network object. Has to be object of one of `scArches`, `scArchesNB`, and `scArchesZINB` class.
 
-    new_conditions: list
-        List of query conditions (studies).
+    conditions: list
+        List of conditions (studies).
 
     Returns
     -------
@@ -485,10 +485,10 @@ def extract_new_adaptors(network: Union[models.scArches, models.scArchesNB, mode
         List of query adaptors.
 
     """
-    if isinstance(new_conditions, str):
-        new_conditions = [new_conditions]
+    if isinstance(conditions, str):
+        conditions = [conditions]
 
-    condition_indices = [network.condition_encoder[new_condition] for new_condition in new_conditions]
+    condition_indices = [network.condition_encoder[new_condition] for new_condition in conditions]
 
     for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
@@ -499,8 +499,8 @@ def extract_new_adaptors(network: Union[models.scArches, models.scArchesNB, mode
             condition_weights_decoder = K.batch_get_value(w)
 
     adaptors = []
-    for i in range(len(new_conditions)):
-        adaptor = Adaptor(study=new_conditions[i],
+    for i in range(len(conditions)):
+        adaptor = Adaptor(study=conditions[i],
                           encoder_weights=condition_weights_encoder[condition_indices[i]],
                           decoder_weights=condition_weights_decoder[condition_indices[i]]
                           )
