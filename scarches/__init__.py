@@ -466,8 +466,25 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
     return new_network
 
 
-def save_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.scArchesZINB],
-                      new_conditions: Union[list, str]):
+def extract_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.scArchesZINB],
+                         new_conditions: Union[list, str]):
+    """
+    Extracts new adaptors from the trained network.
+
+    Parameters
+    ----------
+    network: :class:`~scarches.models.*`
+        Trained network object. Has to be object of one of `scArches`, `scArchesNB`, and `scArchesZINB` class.
+
+    new_conditions: list
+        List of query conditions (studies).
+
+    Returns
+    -------
+    adaptors: list
+        List of query adaptors.
+
+    """
     if isinstance(new_conditions, str):
         new_conditions = [new_conditions]
 
@@ -488,7 +505,6 @@ def save_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.
                           decoder_weights=condition_weights_decoder[condition_indices[i]]
                           )
 
-        pickle.dump(adaptor, file=open(os.path.join(network.model_path, f"{new_conditions[i]}.pkl"), 'wb'))
         adaptors.append(adaptor)
 
     return adaptors
@@ -497,7 +513,7 @@ def save_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.
 def download_adaptor(download_link: str,
                      path_to_save: str,
                      make_dir: bool = False):
-    """Performs architecture surgery on the pre-trained `network`.
+    """Downloads an adaptor via given `download_link`.
 
     Parameters
     ----------
