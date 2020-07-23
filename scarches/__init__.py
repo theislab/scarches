@@ -492,3 +492,29 @@ def save_new_adaptors(network: Union[models.scArches, models.scArchesNB, models.
         adaptors.append(adaptor)
 
     return adaptors
+
+
+def download_adaptor(download_link: str,
+                     path_to_save: str,
+                     make_dir: bool = False):
+    """Performs architecture surgery on the pre-trained `network`.
+
+    Parameters
+    ----------
+    download_link: str
+        Direct downloadable link.
+    path_to_save: str
+        Path to save the adaptor.
+    make_dir: bool
+        Whether to make directory if it does not exist.
+
+    Returns
+    -------
+    adaptor: :class:`~scarches.models.Adaptor`
+        object of the new Adaptor.
+        """
+    import pickle
+    if download_link != "":
+        file_path, response = download_file(download_link, path_to_save, make_dir=make_dir)
+        adaptor = pickle.load(open(file_path, 'rb'))
+        return adaptor
