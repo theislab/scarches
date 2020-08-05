@@ -8,8 +8,6 @@ warnings.filterwarnings('ignore')
 from scarches.zenodo.file import download_file
 from scarches.zenodo.zip import unzip_model_directory
 
-import pickle
-
 import numpy as np
 from typing import Union
 
