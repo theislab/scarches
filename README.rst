@@ -26,7 +26,7 @@ post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us 
 
 Reference
 -------------------------------
-
+To read more about scArches, please have a look at our `preprint <https://www.biorxiv.org/content/10.1101/2020.07.16.205997v1/>`_
 
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
