@@ -4,7 +4,7 @@ scArches - single-cell architecture surgery
 =========================================================================
 .. raw:: html
 
- <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" align="center">
+ <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="900px" align="center">
 
 scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralise training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_, and hosts efficient implementations of all conditional generative models for single-cell data.
 
@@ -19,11 +19,11 @@ Usage and installation
 -------------------------------
 See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
 
-
 Support and contribute
 -------------------------------
 If you have a question or new architecture or a model that could be integrated into our pipeline, you can
 post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us by `email <mailto:mo.lotfollahi@gmail.com,mohsen.naghipourfar@gmail.com>`_. Our package supports tf/keras now but pytorch version will be added very soon.
+
 
 Reference
 -------------------------------
