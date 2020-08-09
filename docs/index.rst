@@ -4,28 +4,37 @@ scArches - single-cell architecture surgery
 =========================================================================
 .. raw:: html
 
- <img src="https://user-images.githubusercontent.com/33202701/85222703-bbd96980-b3bd-11ea-927b-00d21153f97b.jpg" width="400px" align="left">
+ <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="700px" align="center">
 
 scArches is a package to integrate newly produced single-cell datasets into integrated references atlases. Our method can facilitate large collaborative projects with decentralised training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of all conditional generative models for single-cell data. 
 
 What can you do with scArches?
 -------------------------------
-- Integrate many single-cell datasets and share the trained model. Data sharing is also possible, but optional.
+- Integrate many single-cell datasets and share the trained model and the data (if possible).
 - Download a pre-trained model for your atlas of interest, update it wih new datasets and share with your collaborators.
-- Project and integrate query datasets on the top of a reference and use latent repesentation for downstream tasks, e.g. differential testing and clustering.
+- Construct a customized reference by downloading a reference atlas, add a few  pre-trained adaptors (datasets) and project your own data in to this customized reference atlas.
+- Project and integrate query datasets on the top of a reference and use latent representation for downstream tasks, e.g.:diff testing, clustering.
 
-Usage
--------------------------------
-See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
+What is an adaptor?
+--------------------------------
+.. raw:: html
+
+    <img src="https://user-images.githubusercontent.com/33202701/89730296-bdc6bd00-da3d-11ea-9012-410e22fa200a.png" width="200px" height="200px" align="right">
+
+In scArches, each query datasets is added to the reference model by
+training a set of weights called `adaptor`. Each `adaptor` is a sharable
+object. This will enable users to download a reference model, customise
+that reference model with a set of `adaptors` (datasets) and finally
+add user data as a new `adaptor` and also share this adaptor with others.
 
 
-Support and contribute
--------------------------------
-If you have questions or a new architecture or a model that could be integrated in to our pipeline, you can
-post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us by `email <mailto:mo.lotfollahi@gmail.com>`_. Our package supports tf/keras now but a pytorch version will be added very soon.
+Where to start?
+---------------
+To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html>`__ tutorial.
+For examples on how to use or construct and share pre-trained models check examples.
 
-Reference
--------------------------------
+
+
 
 
 
