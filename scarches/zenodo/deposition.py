@@ -7,7 +7,7 @@ def create_deposition(access_token: str,
                       title: str,
                       description: str,
                       **kwargs):
-    """Creates A deposition in your Zenodo account.
+    """Creates a deposition in your Zenodo account.
 
         Parameters
         ----------
@@ -56,7 +56,7 @@ def update_deposition(deposition_id: str,
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
         metadata: dict
 
     """

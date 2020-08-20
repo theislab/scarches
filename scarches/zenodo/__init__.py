@@ -10,7 +10,7 @@ from .zip import *
 def upload_model(model: Union[scArches, CVAE, scArchesNB, scArchesZINB],
                  deposition_id: str,
                  access_token: str):
-    """uploads trained ``model`` to Zenodo.
+    """Uploads trained ``model`` to Zenodo.
 
         Parameters
         ----------
@@ -40,7 +40,7 @@ def upload_model(model: Union[scArches, CVAE, scArchesNB, scArchesZINB],
 def upload_adaptor(adaptor: Adaptor,
                    deposition_id: str,
                    access_token: str):
-    """uploads trained ``model`` to Zenodo.
+    """Uploads trained ``model`` to Zenodo.
 
         Parameters
         ----------
@@ -70,7 +70,7 @@ def upload_adaptor(adaptor: Adaptor,
 def upload_adaptors(adaptors: list,
                     deposition_id: str,
                     access_token: str):
-    """uploads trained ``model`` to Zenodo.
+    """Uploads trained ``model`` to Zenodo.
 
         Parameters
         ----------

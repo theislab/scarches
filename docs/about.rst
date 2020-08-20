@@ -20,7 +20,9 @@ What can you do with scArches?
 
 Where to start?
 --------------------------------
-To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html`__.
+
+
+To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html>`_ example.
 For examples on how to use or construct and share pre-trained models check examples.
 
 What is an adaptor?
