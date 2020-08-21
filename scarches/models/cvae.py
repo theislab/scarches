@@ -71,7 +71,8 @@ class CVAE(object):
         self.alpha = kwargs.get("alpha", 0.0001)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.1)
-        self.model_path = os.path.join(kwargs.get("model_path", "./models/CVAE/"), self.task_name)
+        self.model_base_path = kwargs.get("model_path", "./models/CVAE/")
+        self.model_path = os.path.join(self.model_base_path, self.task_name)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get("scale_factor", 1.0)
@@ -121,7 +122,7 @@ class CVAE(object):
             "ridge": self.ridge,
             "scale_factor": self.scale_factor,
             "clip_value": self.clip_value,
-            "model_path": self.model_path,
+            "model_path": self.model_base_path,
         }
 
         self.init_w = keras.initializers.glorot_normal()
@@ -162,7 +163,7 @@ class CVAE(object):
             "ridge": self.ridge,
             "scale_factor": self.scale_factor,
             "clip_value": self.clip_value,
-            "model_path": self.model_path,
+            "model_path": self.model_base_path,
         }
 
     @classmethod

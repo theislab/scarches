@@ -112,7 +112,6 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
 
     network_kwargs['freeze_expression_input'] = freeze_expression_input
 
-    training_kwargs['model_path'] = network.model_path.split(network.task_name)[0]
     training_kwargs['gamma'] = 0.0
 
     if remove_dropout:

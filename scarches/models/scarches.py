@@ -126,6 +126,8 @@ class scArches(CVAE):
         if new_params:
             class_config.update(new_params)
 
+        model_path = class_config.get("model_path", './')
+
         return cls(**class_config)
 
     def _output_decoder(self, h):
