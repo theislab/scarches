@@ -7,12 +7,12 @@ def create_deposition(access_token: str,
                       title: str,
                       description: str,
                       **kwargs):
-    """Creates A deposition in your Zenodo account.
+    """Creates a deposition in your Zenodo account.
 
         Parameters
         ----------
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
         upload_type: str
 
         title: str
@@ -56,7 +56,7 @@ def update_deposition(deposition_id: str,
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
         metadata: dict
 
     """
@@ -101,7 +101,7 @@ def publish_deposition(deposition_id: str,
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------
@@ -122,7 +122,7 @@ def get_all_deposition_ids(access_token: str):
         Parameters
         ----------
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------

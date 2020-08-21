@@ -9,8 +9,8 @@ class scArchesZINB(CVAE):
         ----------
         x_dimension: int
             number of gene expression space dimensions.
-        n_conditions: int
-            number of conditions used for one-hot encoding.
+        n_conditions: list
+            list of unique conditions (i.e. batch ids) in the data used for one-hot encoding.
         z_dimension: int
             number of latent space dimensions.
         task_name: str

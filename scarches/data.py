@@ -3,28 +3,17 @@ from scipy import sparse
 import numpy as np
 
 
-def read(filename, **kwargs):
-    """Reads the dataset. For more information about this function, read `here <scanpy.readthedocs.io>`_.
-
-        Parameters
-        ----------
-        filename: str
-            path to the dataset.
-        kwargs:
-            Other ``scanpy.read`` function arguments.
-
-        Returns
-        -------
-        adata: :class:`~anndata.AnnData`
-            Annotated dataset.
-
-    """
-    return sc.read(filename, **kwargs)
 
 
 def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True, scale=True,
                   target_sum=None, n_top_genes=2000):
-    """Normalizes, and select highly variable genes of ``adata``.
+    """
+        This function receives ``adata`` containing ``adata.X`` with count values, perform normalization according to
+        scanpy `pp.normalize_total` function, log transform data and  then selects `n_top_genes`
+         select highly variable genes of ``adata``. We always require normalized log transformed data to train all kind
+         of models.
+
+
         Parameters
         ----------
         adata: :class:`~anndata.AnnData`
@@ -34,7 +23,9 @@ def normalize_hvg(adata, batch_key=None, size_factors=True, logtrans_input=True,
             used for selecting highly variable genes.
         size_factors: bool
             whether to add size factors (or n_counts) as a column after normalization in ``adata.obs`` matrix or not.
-            if `True`, the added column name is ``size_factors``.
+            if `True`, the added column name is ``size_factors``. ``size_factors`` are constanst values for each cell
+            which the value of counts for that cell has been divided to this value. This is needed in order to train
+            count models when the loss is set o negative binomial (``nb``) or ZINB (``zinb``).
         logtrans_input: bool
             If ``True``, will apply ``scanpy.pp.log1p`` function on ``adata.X`` after normalizing per cell.
         target_sum: float

@@ -6,6 +6,7 @@ from scipy import sparse
 def label_encoder(adata, le=None, condition_key='condition'):
     """
         Encode labels of Annotated `adata` matrix.
+
         Parameters
         ----------
         adata: :class:`~anndata.AnnData`
