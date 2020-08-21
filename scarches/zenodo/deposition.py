@@ -12,7 +12,7 @@ def create_deposition(access_token: str,
         Parameters
         ----------
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
         upload_type: str
 
         title: str
@@ -101,7 +101,7 @@ def publish_deposition(deposition_id: str,
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------
@@ -122,7 +122,7 @@ def get_all_deposition_ids(access_token: str):
         Parameters
         ----------
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------

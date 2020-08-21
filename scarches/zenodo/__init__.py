@@ -19,7 +19,7 @@ def upload_model(model: Union[scArches, CVAE, scArchesNB, scArchesZINB],
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------
@@ -49,7 +49,7 @@ def upload_adaptor(adaptor: Adaptor,
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------
@@ -75,11 +75,11 @@ def upload_adaptors(adaptors: list,
         Parameters
         ----------
         adaptors: list of :class:`~scarches.Adaptor`
-            Python's list of Adaptor's objects.
+            Python's list of adaptor's objects.
         deposition_id: str
             ID of a deposition in your Zenodo account.
         access_token: str
-            Your Zenodo Access token.
+            Your Zenodo access token.
 
         Returns
         -------
