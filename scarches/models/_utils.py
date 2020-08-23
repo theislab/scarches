@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
+from tensorflow.keras import backend as K
 import sys
 
 
@@ -81,15 +81,15 @@ def sample_z(args):
 
 
 def _nan2zero(x):
-    return tf.where(tf.is_nan(x), tf.zeros_like(x), x)
+    return tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
 
 
 def _nan2inf(x):
-    return tf.where(tf.is_nan(x), tf.zeros_like(x) + np.inf, x)
+    return tf.where(tf.math.is_nan(x), tf.zeros_like(x) + np.inf, x)
 
 
 def _nelem(x):
-    nelem = tf.reduce_sum(tf.cast(~tf.is_nan(x), tf.float32))
+    nelem = tf.reduce_sum(tf.cast(~tf.math.is_nan(x), tf.float32))
     return tf.cast(tf.where(tf.equal(nelem, 0.), 1., nelem), x.dtype)
 
 
@@ -111,14 +111,13 @@ def print_message(epoch, logs, n_epochs=10000, duration=50):
 def print_progress(epoch, logs, n_epochs=10000):
     message = f' - loss: {logs["loss"]:.4f}'
     train_keys = [key for key in sorted(list(logs.keys())) if (not key.startswith('val_') and key != 'loss')]
-    
+
     for key in train_keys:
         message += f' - {key}: {logs[key]:.4f}'
-    
 
     message += f' - val_loss: {logs["val_loss"]:.4f}'
     valid_keys = [key for key in sorted(list(logs.keys())) if (key.startswith('val_') and key != 'val_loss')]
-    
+
     for key in valid_keys:
         message += f' - {key}: {logs[key]:.4f}'
 

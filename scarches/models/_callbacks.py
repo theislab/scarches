@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import time
 import anndata
-from keras.callbacks import Callback
-from keras.models import Model
-from keras.utils import to_categorical
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.models import Model
+from tensorflow.keras.utils import to_categorical
 from scipy.stats import entropy, itemfreq
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, adjusted_rand_score, normalized_mutual_info_score

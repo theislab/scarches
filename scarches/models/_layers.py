@@ -1,7 +1,7 @@
-from keras import backend as K
-from keras.engine import Layer
-from keras.layers import Dense
-from keras import initializers, regularizers, constraints
+import tensorflow as tf
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Layer, Dense
+from tensorflow.keras import initializers, regularizers, constraints
 
 
 class SliceLayer(Layer):
@@ -21,6 +21,11 @@ class SliceLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[self.index]
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({'index': self.index})
+        return config
 
 
 class ColwiseMultLayer(Layer):
@@ -54,7 +59,6 @@ class FirstLayer(Layer):
         self.bias_regularizer = bias_regularizer
         self.bias_constraint = bias_constraint
         super().__init__(**kwargs)
-        Dense
 
     def build(self, input_shape):
         if not isinstance(input_shape, list):
@@ -98,12 +102,12 @@ class FirstLayer(Layer):
 
         genes_output = K.dot(inputs[0], self.expression_kernel)
         condition_output = K.dot(inputs[1], self.condition_kernel)
-        
+
         if len(inputs) == 3:
             cell_type_output = K.dot(inputs[2], self.cell_type_kernel)
         else:
             cell_type_output = K.zeros_like(condition_output)
-        
+
         output = genes_output + condition_output + cell_type_output
         if self.use_bias:
             output = K.bias_add(output, self.bias, data_format='channels_last')
@@ -120,19 +124,32 @@ class FirstLayer(Layer):
 
     def get_config(self):
         base_config = super(FirstLayer, self).get_config()
-        config = {}
-        config['units'] = self.units
-        config['kernel_initializer'] = initializers.serialize(self.kernel_initializer)
-        config['kernel_regularizer'] = regularizers.serialize(self.kernel_regularizer)
-        config['use_bias'] = self.use_bias
-        config['bias_initializer'] = self.bias_initializer
-        config['bias_regularizer'] = self.bias_regularizer
-        config['bias_constraint'] = constraints.serialize(self.bias_constraint)
-        return dict(list(base_config.items()) + list(config.items()))
-        
+        base_config.update({
+            'units': self.units,
+            'kernel_initializer': initializers.serialize(self.kernel_initializer),
+            'kernel_regularizer': initializers.serialize(self.kernel_regularizer),
+            'use_bias': self.use_bias,
+            'bias_initializer': self.bias_initializer,
+            'bias_regularizer': self.bias_regularizer,
+            'bias_constraint': constraints.serialize(self.bias_constraint),
+        })
+        return base_config
+
+
+class Sampling(Layer):
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+
 
 LAYERS = {
     "SliceLayer": SliceLayer,
     "ColWiseMultLayer": ColwiseMultLayer,
     "FirstLayer": FirstLayer,
+    "Sampling": Sampling
 }

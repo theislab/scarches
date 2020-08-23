@@ -1,7 +1,6 @@
 import tensorflow as tf
-from keras import backend as K
-from keras.layers import Activation, Lambda
-from keras.layers.advanced_activations import LeakyReLU
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Activation, LeakyReLU
 
 
 def mean_activation(x):
