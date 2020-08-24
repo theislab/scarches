@@ -10,6 +10,7 @@ from tensorflow.keras.utils import get_custom_objects
 from scarches.models import CVAE
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
+from scarches.models._data_generator import make_dataset
 from scarches.models._layers import LAYERS
 from scarches.models._losses import LOSSES
 from tensorflow.keras.layers import Input, Dense
@@ -109,7 +110,6 @@ class scArchesNB(CVAE):
         get_custom_objects().update(self.custom_objects)
         print(f"{self.class_name}'s network has been successfully constructed!")
 
-
     def _output_decoder(self, h):
         h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w, use_bias=True)(h)
         h_mean = ACTIVATIONS['mean_activation'](h_mean)
@@ -126,7 +126,13 @@ class scArchesNB(CVAE):
         return model_inputs, model_outputs
 
     def call(self, x, training=None, mask=None):
-        expression, encoder_labels, decoder_labels, size_factors = x
+        if isinstance(x, list):
+            expression, encoder_labels, decoder_labels, size_factors = x
+        else:
+            expression = x['expression']
+            encoder_labels = x['encoder_label']
+            decoder_labels = x['decoder_label']
+            size_factors = x['size_factor']
 
         z_mean, z_log_var, z = self.encoder([expression, encoder_labels])
 
@@ -135,6 +141,8 @@ class scArchesNB(CVAE):
 
     def forward_with_loss(self, data):
         x, y = data
+
+        y = y['reconstruction']
         y_pred, z_mean, z_log_var, disp = self.call(x)
         loss, recon_loss, kl_loss = self.calc_losses(y, y_pred, z_mean, z_log_var, disp)
 
@@ -145,6 +153,7 @@ class scArchesNB(CVAE):
             Defines the loss function of class' network after constructing the whole
             network.
         """
+
         loss = LOSSES[self.loss_fn](disp, z_mean, z_log_var, self.scale_factor, self.alpha,
                                     self.eta)(y_true, y_pred)
         recon_loss = LOSSES[f'{self.loss_fn}_wo_kl'](disp, self.scale_factor, self.eta)(y_true, y_pred)
@@ -179,6 +188,79 @@ class scArchesNB(CVAE):
             class_config.update(new_params)
 
         return cls(**class_config)
+
+    def _fit_dataset(self, adata,
+                     condition_key, train_size=0.8, cell_type_key='cell_type',
+                     n_epochs=100, batch_size=128, steps_per_epoch=100,
+                     early_stop_limit=10, lr_reducer=8,
+                     n_per_epoch=0, score_filename=None,
+                     save=True, retrain=True, verbose=3):
+        train_adata, valid_adata = train_test_split(adata, train_size)
+
+        if self.gene_names is None:
+            self.gene_names = train_adata.var_names.tolist()
+        else:
+            if set(self.gene_names).issubset(set(train_adata.var_names)):
+                train_adata = train_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
+
+            if set(self.gene_names).issubset(set(valid_adata.var_names)):
+                valid_adata = valid_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.restore_model_weights()
+            return
+
+        callbacks = [
+            History(),
+        ]
+
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
+
+        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
+            adata = train_adata.concatenate(valid_adata)
+
+            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+
+            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae,
+                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
+                                           n_celltype_labels=len(np.unique(celltype_labels))))
+
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
+
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
+
+        train_dataset, self.condition_encoder = make_dataset(train_adata, condition_key, self.condition_encoder,
+                                                             batch_size, n_epochs, True,
+                                                             self.loss_fn, self.n_conditions, self.size_factor_key)
+        valid_dataset, _ = make_dataset(valid_adata, condition_key, self.condition_encoder, valid_adata.shape[0],
+                                        n_epochs, False,
+                                        self.loss_fn, self.n_conditions, self.size_factor_key)
+
+        self.fit(train_dataset,
+                 validation_data=valid_dataset,
+                 epochs=n_epochs,
+                 batch_size=batch_size,
+                 verbose=fit_verbose,
+                 callbacks=callbacks,
+                 steps_per_epoch=steps_per_epoch,
+                 validation_steps=1,
+                 )
+        if save:
+            self.update_kwargs()
+            self.save(make_dir=True)
 
     def _fit(self, adata,
              condition_key, train_size=0.8, cell_type_key='cell_type',

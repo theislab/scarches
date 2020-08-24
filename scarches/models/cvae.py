@@ -14,6 +14,7 @@ from tensorflow.keras.utils import to_categorical
 
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
+from scarches.models._data_generator import make_dataset
 from scarches.models._layers import LAYERS
 from scarches.models._losses import LOSSES
 from scarches.models._utils import print_progress
@@ -102,9 +103,9 @@ class CVAE(Model):
 
         print(f"Start running on {self.device}...")
 
-        self.x = Input(shape=(self.x_dim,), name="data")
-        self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
-        self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
+        self.x = Input(shape=(self.x_dim,), name="expression")
+        self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_label")
+        self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_label")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.network_kwargs = {
@@ -283,7 +284,12 @@ class CVAE(Model):
         print(f"{self.class_name}'s network has been successfully compiled!")
 
     def call(self, x, training=None, mask=None):
-        expression, encoder_labels, decoder_labels = x
+        if isinstance(x, list):
+            expression, encoder_labels, decoder_labels = x
+        else:
+            expression = x['expression']
+            encoder_labels = x['encoder_label']
+            decoder_labels = x['decoder_label']
 
         z_mean, z_log_var, z = self.encoder([expression, encoder_labels])
 
@@ -315,6 +321,7 @@ class CVAE(Model):
 
     def forward_with_loss(self, data):
         x, y = data
+        y = y['reconstruction']
         y_pred, z_mean, z_log_var = self.call(x)
         loss, recon_loss, kl_loss = self.calc_losses(y, y_pred, z_mean, z_log_var)
 
@@ -608,7 +615,7 @@ class CVAE(Model):
 
     def train(self, adata,
               condition_key, train_size=0.8, cell_type_key='cell_type',
-              n_epochs=200, batch_size=128,
+              n_epochs=200, batch_size=128, steps_per_epoch=100,
               early_stop_limit=10, lr_reducer=8,
               n_per_epoch=0, score_filename=None,
               save=True, retrain=True, verbose=3):
@@ -643,12 +650,87 @@ class CVAE(Model):
         """
 
         # if self.device == 'gpu':
-        return self._fit(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size, early_stop_limit,
-                         lr_reducer, n_per_epoch, score_filename, save, retrain, verbose)
+        return self._fit_dataset(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size, steps_per_epoch,
+                                 early_stop_limit,
+                                 lr_reducer, n_per_epoch, score_filename, save, retrain, verbose)
         # else:
         #     return self._train_on_batch(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size,
         #                                 early_stop_limit, lr_reducer, n_per_epoch, score_filename, save, retrain,
         #                                 verbose)
+
+    def _fit_dataset(self, adata,
+                     condition_key, train_size=0.8, cell_type_key='cell_type',
+                     n_epochs=100, batch_size=128, steps_per_epoch=100,
+                     early_stop_limit=10, lr_reducer=8,
+                     n_per_epoch=0, score_filename=None,
+                     save=True, retrain=True, verbose=3):
+        train_adata, valid_adata = train_test_split(adata, train_size)
+
+        if self.gene_names is None:
+            self.gene_names = train_adata.var_names.tolist()
+        else:
+            if set(self.gene_names).issubset(set(train_adata.var_names)):
+                train_adata = train_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
+
+            if set(self.gene_names).issubset(set(valid_adata.var_names)):
+                valid_adata = valid_adata[:, self.gene_names]
+            else:
+                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+
+        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
+            self.restore_model_weights()
+            return
+
+        callbacks = [
+            History(),
+        ]
+
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
+
+        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
+            adata = train_adata.concatenate(valid_adata)
+
+            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
+            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
+            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
+
+            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.encoder,
+                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
+                                           n_celltype_labels=len(np.unique(celltype_labels))))
+
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
+
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
+
+        train_dataset, self.condition_encoder = make_dataset(train_adata, condition_key, self.condition_encoder,
+                                                             batch_size, n_epochs,
+                                                             is_training=True, loss_fn=self.loss_fn,
+                                                             n_conditions=self.n_conditions)
+        valid_dataset, _ = make_dataset(valid_adata, condition_key, self.condition_encoder, valid_adata.shape[0],
+                                        n_epochs,
+                                        is_training=False, loss_fn=self.loss_fn, n_conditions=self.n_conditions)
+
+        self.fit(train_dataset,
+                 validation_data=valid_dataset,
+                 epochs=n_epochs,
+                 batch_size=batch_size,
+                 verbose=fit_verbose,
+                 callbacks=callbacks,
+                 steps_per_epoch=steps_per_epoch,
+                 validation_steps=1,
+                 )
+        if save:
+            self.update_kwargs()
+            self.save(make_dir=True)
 
     def _fit(self, adata,
              condition_key, train_size=0.8, cell_type_key='cell_type',
