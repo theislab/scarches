@@ -13,7 +13,7 @@ A few tips on training models
 
 
 
-- If you want to increase the mixing of the different batches then try to increase `alpha` when tou construct the the model. Maximum value of `alpha` can be 1. Increasing alpha will give you better mixing but it is a trade off! Increase `alpha` might also merge some small cell types or conditions. You can start with very small values (e.g 0.0001) and then increase that (0.001 ->0.005->0.01 and even 0.1 and finally 0.5)
+- If you want to increase the mixing of the different batches then try to increase `alpha` when tou construct the the model. Maximum value of `alpha` can be 1. Increasing alpha will give you better mixing but it is a trade off! Increase `alpha` might also merge some small cell types or conditions. You can start with very small values (e.g 0.0001) and then increase that (0.001 ->0.005->0.01 and even 0.1 and finally 0.5).
 
 
 - It is important to use highly variable genes for training. We recommend to use at least 2000 hvgs and if you have more complicated datasets, conditions then try to increase it to 5000 or so to include enough information for the model.
