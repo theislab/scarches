@@ -31,7 +31,8 @@ add user data as a new `adaptor` and also share this adaptor with others.
 Where to start?
 ---------------
 To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html>`__ tutorial.
-To find out how to construct and share or use pre-trained models. Check `this <https://scarches.readthedocs.io/en/latest/zenodo_intestine.html>`__ example for to learn how to pre-process data for the model.
+To find out how to construct and share or use pre-trained models example sections. Check `this <https://scarches.readthedocs.io/en/latest/zenodo_intestine.html>`__ example to learn how to start with a raw data  and pre-process data for the model.
+
 It is always good to have a look at our `training tips <https://scarches.readthedocs.io/en/latest/training_tips.html>`__.
 
 
