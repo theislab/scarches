@@ -11,6 +11,7 @@ from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Input, L
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.utils import get_custom_objects
 from tensorflow.keras.utils import to_categorical
+from tensorflow.random import set_seed
 
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
@@ -88,6 +89,9 @@ class CVAE(Model):
         self.class_name = kwargs.pop("class_name", 'CVAE')
         self.freeze_expression_input = kwargs.pop("freeze_expression_input", False)
         self.condition_encoder = kwargs.pop("condition_encoder", None)
+        self.seed = kwargs.pop('seed', 2020)
+        set_seed(self.seed)
+
         construct_model = kwargs.pop("construct_model", True)
         compile_model = kwargs.pop("compile_model", True)
         print_summary = kwargs.pop("print_summary", False)
