@@ -12,7 +12,7 @@ from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
 from keras import backend as K
 from scipy import sparse
-from tensorflow.random import set_seed
+from tensorflow.random import set_random_seed
 
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
@@ -85,7 +85,7 @@ class CVAE(object):
         self.size_factor_key = kwargs.get("size_factor_key", 'size_factors')
         self.device = kwargs.get("device", "gpu") if len(K.tensorflow_backend._get_available_gpus()) > 0 else 'cpu'
         self.seed = kwargs.get('seed', 2020)
-        set_seed(self.seed)
+        set_random_seed(self.seed)
 
 
         self.gene_names = kwargs.get("gene_names", None)
