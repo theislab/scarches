@@ -8,6 +8,10 @@ scArches requires Python 3.6 or 3.7. We recommend to use Miniconda.
    We suggest you to use Python 3.6 or 3.7.
 
 
+.. note::
+
+   Please install development version for the latest features.
+
 PyPI
 --------
 
