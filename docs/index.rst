@@ -33,7 +33,13 @@ Where to start?
 To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/pancreas_pipeline.html>`__ tutorial.
 To find out how to construct and share or use pre-trained models example sections. Check `this <https://scarches.readthedocs.io/en/latest/zenodo_intestine.html>`__ example to learn how to start with a raw data  and pre-process data for the model.
 
-It is always good to have a look at our `training tips <https://scarches.readthedocs.io/en/latest/training_tips.html>`__.
+It is always good to have a look at our `training tips <https://scarches.readthedocs.io/en/latest/training_tips.html>`__ to
+help you train more optimal models.
+
+
+Reference
+-------------------------------
+If scArches is useful in your research, please consider to cite the `preprint <https://www.biorxiv.org/content/10.1101/2020.07.16.205997v1/>`_.
 
 
 
