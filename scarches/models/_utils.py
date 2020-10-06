@@ -129,7 +129,7 @@ def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, leng
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filled_len = int(length * iteration // total)
     bar = fill * filled_len + '-' * (length - filled_len)
-    sys.stdout.write(f'\r{prefix} |{bar}| {percent}% {suffix}'.encode("utf-8")),
+    sys.stdout.write(str(f'\r{prefix} |{bar}| {percent}% {suffix}'.encode("utf-8"), "utf-8")),
     if iteration == total:
         sys.stdout.write('\n')
     sys.stdout.flush()
