@@ -22,7 +22,7 @@ See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
 Support and contribute
 -------------------------------
 If you have a question or new architecture or a model that could be integrated into our pipeline, you can
-post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us by `email <mailto:mo.lotfollahi@gmail.com,mohsen.naghipourfar@gmail.com>`_. Our package supports tf/keras now but pytorch version will be added very soon.
+post an `issue <https://github.com/theislab/scarches/issues/new>`__. Our package supports tf/keras now but pytorch version will be added very soon.
 
 
 Reference
