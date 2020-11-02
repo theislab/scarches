@@ -499,6 +499,9 @@ class CVAE(Model):
             # Update class attributes
             for key, value in scArches_config.items():
                 setattr(self, key, value)
+                if key == 'model_path':            
+                    self.model_base_path = self.model_path
+                    self.model_path = os.path.join(self.model_base_path, self.task_name)
 
             if compile_and_consturct:
                 self.construct_network()
@@ -685,6 +688,7 @@ class CVAE(Model):
 
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
+            self.restore_class_config(compile_and_consturct=False)
             return
 
         callbacks = [
