@@ -10,7 +10,7 @@ except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
 
 setup(name='scArches',
-      version='0.1.2',
+      version='0.2.0',
       description='Transfer learning with Architecture Surgery on Single-cell data',
       long_description=long_description,
       long_description_content_type="text/markdown",
