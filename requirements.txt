@@ -6,6 +6,5 @@ scikit-learn
 scipy
 matplotlib
 setuptools>=41.0.0
-tensorflow
-#tensorflow-gpu==1.15.2
-keras
+tensorflow==2.3.0
+Keras==2.4.3

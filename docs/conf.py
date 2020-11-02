@@ -37,6 +37,8 @@ notebooks = [
     'zenodo_pancreas_from_pretrained.ipynb',
     'zenodo_pancreas_from_scratch.ipynb',
     'pancreas_pipeline.ipynb',
+    'zenodo_intestine.ipynb'
+
 ]
 
 for nb in notebooks:

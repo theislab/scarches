@@ -7,7 +7,7 @@ from scarches.utils import remove_sparsity
 
 
 def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=0.5,
-                 pred_unknown=True):
+                 pred_unknown=True, mode='package'):
     """Annotates ``valid_adata`` cells with a trained weighted KNN classifier on ``train_adata``.
 
         Parameters
@@ -27,6 +27,9 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
             ``True`` by default. Whether to annotate any cell as "unknown" or not. If `False`, will not use
             ``threshold`` and annotate each cell with the label which is the most common in its
             ``n_neighbors`` nearest cells.
+        mode: str
+            Has to be one of "paper" or "package". If mode is set to "package", uncertainties will be 1 - P(pred_label),
+            otherwise it will be 1 - P(true_label).
     """
     print(f'Weighted KNN with n_neighbors = {n_neighbors} and threshold = {threshold} ... ', end='')
     k_neighbors_transformer = KNeighborsTransformer(n_neighbors=n_neighbors, mode='distance',
@@ -66,13 +69,19 @@ def weighted_knn(train_adata, valid_adata, label_key, n_neighbors=50, threshold=
         else:
             pred_label = best_label
 
-        if pred_label == y_valid_labels[i]:
+        if mode == 'package':
             uncertainties.append(max(1 - best_prob, 0))
+
+        elif mode == 'paper':
+            if pred_label == y_valid_labels[i]:
+                uncertainties.append(max(1 - best_prob, 0))
+            else:
+                true_prob = weights[i, y_train_labels[top_k_indices[i]] == y_valid_labels[i]].sum()
+                if true_prob > 0.5:
+                    pass
+                uncertainties.append(max(1 - true_prob, 0))
         else:
-            true_prob = weights[i, y_train_labels[top_k_indices[i]] == y_valid_labels[i]].sum()
-            if true_prob > 0.5:
-                pass
-            uncertainties.append(max(1 - true_prob, 0))
+            raise Exception("Invalid Mode!")
 
         pred_labels.append(pred_label)
 

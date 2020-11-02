@@ -13,6 +13,7 @@ from tensorflow.keras.utils import get_custom_objects
 from tensorflow.keras.utils import to_categorical
 from tensorflow.random import set_seed
 
+
 from scarches.models._activations import ACTIVATIONS
 from scarches.models._callbacks import ScoreCallback
 from scarches.models._data_generator import make_dataset
@@ -71,7 +72,7 @@ class CVAE(Model):
         self.conditions = list(sorted(conditions))
         self.n_conditions = len(self.conditions)
 
-        self.lr = kwargs.pop("learning_rate", 0.001)
+        self.lr = kwargs.pop("lr", 0.001)
         self.alpha = kwargs.pop("alpha", 0.0001)
         self.eta = kwargs.pop("eta", 1.0)
         self.dr_rate = kwargs.pop("dropout_rate", 0.1)
@@ -125,6 +126,7 @@ class CVAE(Model):
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
             "train_device": self.device,
+            "seed": self.seed,
         }
 
         self.training_kwargs = {
@@ -162,6 +164,7 @@ class CVAE(Model):
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
             "device": self.device,
+            "seed": self.seed,
         }
 
         self.training_kwargs = {
@@ -357,7 +360,7 @@ class CVAE(Model):
         """
         raise NotImplementedError("There are no MMD layer in CVAE")
 
-    def get_latent(self, adata, batch_key):
+    def get_latent(self, adata, batch_key, return_mean=False):
         """ Transforms `adata` in latent space of CVAE and returns the latent
         coordinates in the annotated (adata) format.
 
@@ -365,11 +368,18 @@ class CVAE(Model):
         ----------
         adata: :class:`~anndata.AnnData`
             Annotated dataset matrix in Primary space.
+        batch_key: str
+            key for the observation that has batch labels in adata.obs.
+
+        return_mean: bool
+            if False, z will be sampled. Set to `True` if want a fix z value every time you call
+             get_latent.
 
         Returns
         -------
         latent_adata: :class:`~anndata.AnnData`
             Annotated dataset matrix in Latent space.
+
         """
         if set(self.gene_names).issubset(set(adata.var_names)):
             adata = adata[:, self.gene_names]
@@ -379,9 +389,9 @@ class CVAE(Model):
         encoder_labels, _ = label_encoder(adata, self.condition_encoder, batch_key)
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
-        return self.get_z_latent(adata, encoder_labels)
+        return self.get_z_latent(adata, encoder_labels, return_mean)
 
-    def get_z_latent(self, adata, encoder_labels):
+    def get_z_latent(self, adata, encoder_labels, return_mean=False):
         """
             Map ``adata`` in to the latent space. This function will feed data
             in encoder part of scNet and compute the latent space coordinates
@@ -395,6 +405,11 @@ class CVAE(Model):
             encoder_labels: :class:`~numpy.ndarray`
                 :class:`~numpy.ndarray` of labels to be fed as class' condition array.
 
+            return_mean: bool
+                if False, z will be sampled. Set to `True` if want a fix z value every time you call
+                get_latent.
+
+
             Returns
             -------
             adata_latent: :class:`~anndata.AnnData`
@@ -403,6 +418,10 @@ class CVAE(Model):
         adata = remove_sparsity(adata)
 
         encoder_inputs = [adata.X, encoder_labels]
+        if return_mean:
+            latent = self.encoder_model.predict(encoder_inputs)[0]
+        else:
+            latent = self.encoder_model.predict(encoder_inputs)[2]
 
         latent = self.encoder.predict(encoder_inputs)[2]
         latent = np.nan_to_num(latent, nan=0.0, posinf=0.0, neginf=0.0)
