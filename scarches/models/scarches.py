@@ -410,8 +410,8 @@ class scArches(CVAE):
 
     def _train_on_batch(self, adata,
                         condition_key, train_size=0.8, cell_type_key='cell_type',
-                        n_epochs=300, batch_size=512,
-                        early_stop_limit=10, lr_reducer=7,
+                        n_epochs=300, batch_size=64,
+                        early_stop_limit=10, lr_reducer=50,
                         n_per_epoch=0, score_filename=None,
                         save=True, retrain=True, verbose=3):
         train_adata, valid_adata = train_test_split(adata, train_size)
