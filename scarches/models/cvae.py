@@ -71,7 +71,7 @@ class CVAE(Model):
         self.conditions = list(sorted(conditions))
         self.n_conditions = len(self.conditions)
 
-        self.lr = kwargs.pop("learning_rate", 0.001)
+        self.lr = kwargs.pop("lr", 0.001)
         self.alpha = kwargs.pop("alpha", 0.0001)
         self.eta = kwargs.pop("eta", 1.0)
         self.dr_rate = kwargs.pop("dropout_rate", 0.1)
@@ -499,6 +499,9 @@ class CVAE(Model):
             # Update class attributes
             for key, value in scArches_config.items():
                 setattr(self, key, value)
+                if key == 'model_path':
+                    self.model_base_path = self.model_path
+                    self.model_path = os.path.join(self.model_base_path, self.task_name)
 
             if compile_and_consturct:
                 self.construct_network()
@@ -619,8 +622,8 @@ class CVAE(Model):
 
     def train(self, adata,
               condition_key, train_size=0.8, cell_type_key='cell_type',
-              n_epochs=200, batch_size=128, steps_per_epoch=100,
-              early_stop_limit=10, lr_reducer=8,
+              n_epochs=300, batch_size=64, steps_per_epoch=100,
+              early_stop_limit=15, lr_reducer=10,
               n_per_epoch=0, score_filename=None,
               save=True, retrain=True, verbose=3):
 
@@ -685,6 +688,7 @@ class CVAE(Model):
 
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
+            self.restore_class_config(compile_and_consturct=False)
             return
 
         callbacks = [
@@ -768,6 +772,7 @@ class CVAE(Model):
 
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
+            self.restore_class_config(compile_and_consturct=False)
             return
 
         callbacks = [
