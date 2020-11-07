@@ -112,8 +112,6 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
 
     network_kwargs['freeze_expression_input'] = freeze_expression_input
 
-    training_kwargs['gamma'] = 0.0
-
     if remove_dropout:
         network_kwargs['dropout_rate'] = 0.0
 
@@ -130,22 +128,22 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
     # Get Previous Model's weights
 
     prev_biases_encoder = None
-    for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+    for w in network.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_condition_weights_encoder = K.batch_get_value(w)
+            prev_condition_weights_encoder = K.get_value(w)
         elif "expression_kernel" in w.name:
-            prev_input_weights_encoder = K.batch_get_value(w)
+            prev_input_weights_encoder = K.get_value(w)
         else:
-            prev_biases_encoder = K.batch_get_value(w)
+            prev_biases_encoder = K.get_value(w)
 
     prev_biases_decoder = None
-    for w in network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+    for w in network.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_condition_weights_decoder = K.batch_get_value(w)
+            prev_condition_weights_decoder = K.get_value(w)
         elif "expression_kernel" in w.name:
-            prev_latent_weights_decoder = K.batch_get_value(w)
+            prev_latent_weights_decoder = K.get_value(w)
         else:
-            prev_biases_decoder = K.batch_get_value(w)
+            prev_biases_decoder = K.get_value(w)
 
     # Modify the weights of 1st encoder & decoder layers
     if init == 'ones':
@@ -174,7 +172,7 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
         [prev_condition_weights_decoder, to_be_added_weights_decoder_condition], axis=0)
 
     # Set new model's weights
-    for w in new_network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+    for w in new_network.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_encoder)
         elif "expression_kernel" in w.name:
@@ -182,7 +180,7 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
         else:
             K.set_value(w, prev_biases_encoder)
 
-    for w in new_network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+    for w in new_network.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_decoder)
         elif "expression_kernel" in w.name:
@@ -191,21 +189,21 @@ def operate(network: Union[models.scArches, models.CVAE, models.scArchesNB, mode
             K.set_value(w, prev_biases_decoder)
 
     # set weights of other parts of model
-    for idx, encoder_layer in enumerate(new_network.encoder_model.layers):
+    for idx, encoder_layer in enumerate(new_network.encoder.layers):
         if encoder_layer.name != 'first_layer' and encoder_layer.get_weights() != []:
-            encoder_layer.set_weights(network.encoder_model.layers[idx].get_weights())
+            encoder_layer.set_weights(network.encoder.layers[idx].get_weights())
 
-    for idx, decoder_layer in enumerate(new_network.decoder_model.layers):
+    for idx, decoder_layer in enumerate(new_network.decoder.layers):
         if decoder_layer.name != 'first_layer' and decoder_layer.get_weights():
-            decoder_layer.set_weights(network.decoder_model.layers[idx].get_weights())
+            decoder_layer.set_weights(network.decoder.layers[idx].get_weights())
 
     # Freeze old parts of cloned network
     if freeze:
-        for encoder_layer in new_network.encoder_model.layers:
+        for encoder_layer in new_network.encoder.layers:
             if encoder_layer.name != 'first_layer':
                 encoder_layer.trainable = False
 
-        for decoder_layer in new_network.decoder_model.layers:
+        for decoder_layer in new_network.decoder.layers:
             if decoder_layer.name != 'first_layer':
                 decoder_layer.trainable = False
 
@@ -369,17 +367,17 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
                                         print_summary=False)
 
     # Get Previous Model's weights
-    used_bias_encoder = reference_model.cvae_model.get_layer("encoder").get_layer("first_layer").use_bias
-    used_bias_decoder = reference_model.cvae_model.get_layer("decoder").get_layer("first_layer").use_bias
+    used_bias_encoder = reference_model.get_layer("encoder").get_layer("first_layer").use_bias
+    used_bias_decoder = reference_model.get_layer("decoder").get_layer("first_layer").use_bias
 
     prev_weights = {}
-    for w in reference_model.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+    for w in reference_model.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_weights['c'] = K.batch_get_value(w)
+            prev_weights['c'] = K.get_value(w)
         elif "expression_kernel" in w.name:
-            prev_weights['i'] = K.batch_get_value(w)
+            prev_weights['i'] = K.get_value(w)
         else:
-            prev_weights['b'] = K.batch_get_value(w)
+            prev_weights['b'] = K.get_value(w)
 
     if used_bias_encoder:
         prev_input_weights_encoder, prev_condition_weights_encoder, prev_biases_encoder = \
@@ -390,13 +388,13 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
             prev_weights['i'], prev_weights['c'], None
 
     prev_weights = {}
-    for w in reference_model.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+    for w in reference_model.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            prev_weights['c'] = K.batch_get_value(w)
+            prev_weights['c'] = K.get_value(w)
         elif "expression_kernel" in w.name:
-            prev_weights['i'] = K.batch_get_value(w)
+            prev_weights['i'] = K.get_value(w)
         else:
-            prev_weights['b'] = K.batch_get_value(w)
+            prev_weights['b'] = K.get_value(w)
 
     if used_bias_decoder:
         prev_latent_weights_decoder, prev_condition_weights_decoder, prev_biases_decoder = \
@@ -415,7 +413,7 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
         [prev_condition_weights_decoder, to_be_added_weights_decoder_condition], axis=0)
 
     # Set new model's weights
-    for w in new_network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+    for w in new_network.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_encoder)
         elif "expression_kernel" in w.name:
@@ -423,7 +421,7 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
         else:
             K.set_value(w, prev_biases_encoder)
 
-    for w in new_network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+    for w in new_network.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
             K.set_value(w, new_condition_weights_decoder)
         elif "expression_kernel" in w.name:
@@ -432,20 +430,20 @@ def attach_adaptors(reference_model: Union[models.scArches, models.CVAE, models.
             K.set_value(w, prev_biases_decoder)
 
     # set weights of other parts of model
-    for idx, encoder_layer in enumerate(new_network.encoder_model.layers):
+    for idx, encoder_layer in enumerate(new_network.encoder.layers):
         if encoder_layer.name != 'first_layer' and encoder_layer.get_weights() != []:
-            encoder_layer.set_weights(reference_model.encoder_model.layers[idx].get_weights())
+            encoder_layer.set_weights(reference_model.encoder.layers[idx].get_weights())
 
-    for idx, decoder_layer in enumerate(new_network.decoder_model.layers):
+    for idx, decoder_layer in enumerate(new_network.decoder.layers):
         if decoder_layer.name != 'first_layer' and decoder_layer.get_weights():
-            decoder_layer.set_weights(reference_model.decoder_model.layers[idx].get_weights())
+            decoder_layer.set_weights(reference_model.decoder.layers[idx].get_weights())
 
     # Freeze old parts of cloned network
-    for encoder_layer in new_network.encoder_model.layers:
+    for encoder_layer in new_network.encoder.layers:
         if encoder_layer.name != 'first_layer':
             encoder_layer.trainable = False
 
-    for decoder_layer in new_network.decoder_model.layers:
+    for decoder_layer in new_network.decoder.layers:
         if decoder_layer.name != 'first_layer':
             decoder_layer.trainable = False
 
@@ -487,13 +485,13 @@ def extract_adaptors(network: Union[models.scArches, models.scArchesNB, models.s
 
     condition_indices = [network.condition_encoder[new_condition] for new_condition in conditions]
 
-    for w in network.cvae_model.get_layer("encoder").get_layer("first_layer").weights:
+    for w in network.get_layer("encoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            condition_weights_encoder = K.batch_get_value(w)
+            condition_weights_encoder = K.get_value(w)
 
-    for w in network.cvae_model.get_layer("decoder").get_layer("first_layer").weights:
+    for w in network.get_layer("decoder").get_layer("first_layer").weights:
         if "condition_kernel" in w.name:
-            condition_weights_decoder = K.batch_get_value(w)
+            condition_weights_decoder = K.get_value(w)
 
     adaptors = []
     for i in range(len(conditions)):
