@@ -125,6 +125,7 @@ class CVAE(Model):
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
             "train_device": self.device,
+            "model_path": self.model_base_path,
             "seed": self.seed,
         }
 
@@ -162,6 +163,7 @@ class CVAE(Model):
             "freeze_expression_input": self.freeze_expression_input,
             "gene_names": self.gene_names,
             "condition_encoder": self.condition_encoder,
+            "model_path": self.model_base_path,
             "device": self.device,
             "seed": self.seed,
         }
