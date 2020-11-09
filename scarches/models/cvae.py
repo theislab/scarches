@@ -641,7 +641,7 @@ class CVAE(Model):
 
     def train(self, adata,
               condition_key, train_size=0.8,
-              n_epochs=300, batch_size=64, steps_per_epoch=100,
+              n_epochs=300, batch_size=32, steps_per_epoch=100,
               early_stop_limit=15, lr_reducer=10,
               save=True, retrain=True, verbose=3):
 
@@ -659,6 +659,8 @@ class CVAE(Model):
                 fraction of samples in `adata` used to train scNet.
             n_epochs: int
                 number of epochs.
+            steps_per_epoch: int
+                Total number of steps (batches of samples) before declaring one epoch finished and starting the next epoch.
             batch_size: int
                 number of samples in the mini-batches used to optimize scNet.
             early_stop_limit: int
