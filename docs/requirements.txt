@@ -7,10 +7,12 @@ setuptools
 sphinx_rtd_theme>=0.3
 requests
 numpy>=1.17
+pandas>=1.0
 scanpy
 scikit-learn
 scipy
 matplotlib
-tensorflow==1.15.2
-keras==2.2.4
+setuptools>=41.0.0
+tensorflow==2.3.0
+Keras==2.4.3
 numpydoc
