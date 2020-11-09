@@ -160,7 +160,7 @@ class scArchesNB(CVAE):
 
         kl_loss = LOSSES['kl'](z_mean, z_log_var)(y_true, y_pred)
 
-        return loss, recon_loss, kl_loss
+        return loss, self.eta*recon_loss, self.alpha*kl_loss
 
     @classmethod
     def from_config(cls, config_path, new_params=None, compile=True, construct=True):
@@ -263,7 +263,7 @@ class scArchesNB(CVAE):
             self.save(make_dir=True)
 
     def _fit(self, adata,
-             condition_key, train_size=0.8, cell_type_key='cell_type',
+             condition_key, train_size=0.9, cell_type_key='cell_type',
              n_epochs=100, batch_size=128,
              early_stop_limit=10, lr_reducer=8,
              n_per_epoch=0, score_filename=None,

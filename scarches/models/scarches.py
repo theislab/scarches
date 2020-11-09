@@ -317,8 +317,8 @@ class scArches(CVAE):
         return adata_pred
 
     def _fit_dataset(self, adata,
-                     condition_key, train_size=0.8, cell_type_key='cell_type',
-                     n_epochs=300, batch_size=512, steps_per_epoch=100,
+                     condition_key, train_size=0.9, cell_type_key='cell_type',
+                     n_epochs=300, batch_size=32, steps_per_epoch=50,
                      early_stop_limit=10, lr_reducer=7,
                      n_per_epoch=0, score_filename=None,
                      save=True, retrain=True, verbose=3):
@@ -472,97 +472,3 @@ class scArches(CVAE):
             self.update_kwargs()
             self.save(make_dir=True)
 
-    # def _train_on_batch(self, adata,
-    #                     condition_key, train_size=0.8, cell_type_key='cell_type',
-    #                     n_epochs=300, batch_size=512,
-    #                     early_stop_limit=10, lr_reducer=7,
-    #                     n_per_epoch=0, score_filename=None,
-    #                     n_gradients_per_epoch=100,
-    #                     save=True, retrain=True, verbose=3):
-    #     print("TRAIN_ON_BATCH")
-    #     train_adata, valid_adata = train_test_split(adata, train_size)
-    #
-    #     if self.gene_names is None:
-    #         self.gene_names = train_adata.var_names.tolist()
-    #     else:
-    #         if set(self.gene_names).issubset(set(train_adata.var_names)):
-    #             train_adata = train_adata[:, self.gene_names]
-    #         else:
-    #             raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
-    #
-    #         if set(self.gene_names).issubset(set(valid_adata.var_names)):
-    #             valid_adata = valid_adata[:, self.gene_names]
-    #         else:
-    #             raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
-    #
-    #     train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
-    #                                                                      condition_key=condition_key)
-    #
-    #     valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
-    #                                                                      condition_key=condition_key)
-    #
-    #     if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
-    #         self.restore_model_weights()
-    #         return
-    #
-    #     train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-    #     valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-    #
-    #     if sparse.issparse(train_adata.X):
-    #         is_sparse = True
-    #     else:
-    #         is_sparse = False
-    #
-    #     train_expr = train_adata.X
-    #     valid_expr = valid_adata.X.A if is_sparse else valid_adata.X
-    #     x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
-    #
-    #     if self.loss_fn in ['nb', 'zinb']:
-    #         x_valid.append(valid_adata.obs[self.size_factor_key].values)
-    #         y_valid = [valid_adata.raw.X.A if sparse.issparse(valid_adata.raw.X) else valid_adata.raw.X,
-    #                    valid_conditions_encoded]
-    #     else:
-    #         y_valid = [valid_expr, valid_conditions_encoded]
-    #
-    #     es_patience, best_val_loss = 0, 1e10
-    #     for i in range(n_epochs):
-    #         train_loss = train_recon_loss = train_mmd_loss = 0.0
-    #         for j in range(min(n_gradients_per_epoch, train_adata.shape[0] // batch_size)):
-    #             batch_indices = np.random.choice(train_adata.shape[0], batch_size)
-    #
-    #             batch_expr = train_expr[batch_indices, :].A if is_sparse else train_expr[batch_indices, :]
-    #
-    #             x_train = [batch_expr, train_conditions_onehot[batch_indices], train_conditions_onehot[batch_indices]]
-    #
-    #             if self.loss_fn in ['nb', 'zinb']:
-    #                 x_train.append(train_adata.obs[self.size_factor_key].values[batch_indices])
-    #                 y_train = [train_adata.raw.X[batch_indices].A if sparse.issparse(
-    #                     train_adata.raw.X[batch_indices]) else train_adata.raw.X[batch_indices],
-    #                            train_conditions_encoded[batch_indices]]
-    #             else:
-    #                 y_train = [batch_expr, train_conditions_encoded[batch_indices]]
-    #
-    #             batch_loss, batch_recon_loss, batch_kl_loss = self.cvae_model.train_on_batch(x_train, y_train)
-    #
-    #             train_loss += batch_loss / batch_size
-    #             train_recon_loss += batch_recon_loss / batch_size
-    #             train_mmd_loss += batch_kl_loss / batch_size
-    #
-    #         valid_loss, valid_recon_loss, valid_mmd_loss = self.cvae_model.evaluate(x_valid, y_valid, verbose=0)
-    #
-    #         if valid_loss < best_val_loss:
-    #             best_val_loss = valid_loss
-    #             es_patience = 0
-    #         else:
-    #             es_patience += 1
-    #             if es_patience == early_stop_limit:
-    #                 print("Training stopped with Early Stopping")
-    #                 break
-    #
-    #         logs = {"loss": train_loss, "recon_loss": train_recon_loss, "mmd_loss": train_mmd_loss,
-    #                 "val_loss": valid_loss, "val_recon_loss": valid_recon_loss, "val_mmd_loss": valid_mmd_loss}
-    #         print_progress(i, logs, n_epochs)
-    #
-    #     if save:
-    #         self.update_kwargs()
-    #         self.save(make_dir=True)

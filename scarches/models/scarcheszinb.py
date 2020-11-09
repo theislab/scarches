@@ -181,7 +181,7 @@ class scArchesZINB(CVAE):
         recon_loss = LOSSES[f'{self.loss_fn}_wo_kl'](pi, disp, self.ridge, self.eta)(y_true, y_pred)
         kl_loss = LOSSES['kl'](z_mean, z_log_var)(y_true, y_pred)
 
-        return loss, recon_loss, kl_loss
+        return loss, self.eta*recon_loss, self.alpha*kl_loss
 
     def forward_with_loss(self, data):
         x, y = data
@@ -281,8 +281,8 @@ class scArchesZINB(CVAE):
             self.save(make_dir=True)
 
     def _fit_dataset(self, adata,
-                     condition_key, train_size=0.8, cell_type_key='cell_type',
-                     n_epochs=100, batch_size=128, steps_per_epoch=100,
+                     condition_key, train_size=0.9, cell_type_key='cell_type',
+                     n_epochs=100, batch_size=32, steps_per_epoch=50,
                      early_stop_limit=10, lr_reducer=8,
                      n_per_epoch=0, score_filename=None,
                      save=True, retrain=True, verbose=3):
