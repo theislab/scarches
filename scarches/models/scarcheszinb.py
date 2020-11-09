@@ -165,7 +165,7 @@ class scArchesZINB(CVAE):
 
         # Building the model via calling it with a random input
         input_arr = [tf.random.uniform((1, self.x_dim)), tf.ones((1, self.n_conditions)),
-                     tf.ones((1, self.n_conditions)), tf.ones(1, 1, dtype=tf.float32)]
+                     tf.ones((1, self.n_conditions)), tf.ones(1, dtype=tf.float32)]
         self(input_arr)
 
         get_custom_objects().update(self.custom_objects)
@@ -185,6 +185,8 @@ class scArchesZINB(CVAE):
 
     def forward_with_loss(self, data):
         x, y = data
+    
+        y = y['reconstruction']    
         y_pred, z_mean, z_log_var, disp, pi = self.call(x)
         loss, recon_loss, kl_loss = self.calc_losses(y, y_pred, z_mean, z_log_var, disp, pi)
 

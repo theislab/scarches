@@ -110,8 +110,6 @@ class NB(object):
                     final = tf.divide(tf.reduce_sum(final), nelem)
                 else:
                     final = tf.reduce_mean(final)
-            else:
-                final = tf.reduce_sum(final)
 
         return final
 

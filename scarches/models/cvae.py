@@ -130,11 +130,10 @@ class CVAE(Model):
         }
 
         self.training_kwargs = {
-            "learning_rate": self.lr,
+            "lr": self.lr,
             "alpha": self.alpha,
             "eta": self.eta,
             "clip_value": self.clip_value,
-            "model_path": self.model_base_path,
         }
 
         self.init_w = keras.initializers.glorot_normal()
@@ -169,11 +168,10 @@ class CVAE(Model):
         }
 
         self.training_kwargs = {
-            "learning_rate": self.lr,
+            "lr": self.lr,
             "alpha": self.alpha,
             "eta": self.eta,
             "clip_value": self.clip_value,
-            "model_path": self.model_base_path,
         }
 
     @classmethod
@@ -422,9 +420,9 @@ class CVAE(Model):
 
         encoder_inputs = [adata.X, encoder_labels]
         if return_mean:
-            latent = self.encoder_model.predict(encoder_inputs)[0]
+            latent = self.encoder.predict(encoder_inputs)[0]
         else:
-            latent = self.encoder_model.predict(encoder_inputs)[2]
+            latent = self.encoder.predict(encoder_inputs)[2]
 
         latent = np.nan_to_num(latent, nan=0.0, posinf=0.0, neginf=0.0)
 
