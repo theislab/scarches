@@ -317,10 +317,9 @@ class scArches(CVAE):
         return adata_pred
 
     def _fit_dataset(self, adata,
-                     condition_key, train_size=0.9, cell_type_key='cell_type',
+                     condition_key, train_size=0.9,
                      n_epochs=300, batch_size=32, steps_per_epoch=50,
                      early_stop_limit=10, lr_reducer=7,
-                     n_per_epoch=0, score_filename=None,
                      save=True, retrain=True, verbose=3):
         train_adata, valid_adata = train_test_split(adata, train_size)
 
@@ -352,17 +351,6 @@ class scArches(CVAE):
         else:
             fit_verbose = verbose
 
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
 
@@ -376,99 +364,15 @@ class scArches(CVAE):
                                         n_epochs, False,
                                         self.loss_fn, self.n_conditions, use_mmd=True)
 
-        self.fit(train_dataset,
-                 validation_data=valid_dataset,
-                 epochs=n_epochs,
-                 batch_size=batch_size,
-                 verbose=fit_verbose,
-                 callbacks=callbacks,
-                 steps_per_epoch=steps_per_epoch,
-                 validation_steps=1,
-                 )
+        self.log_history = self.fit(train_dataset,
+                                    validation_data=valid_dataset,
+                                    epochs=n_epochs,
+                                    batch_size=batch_size,
+                                    verbose=fit_verbose,
+                                    callbacks=callbacks,
+                                    steps_per_epoch=steps_per_epoch,
+                                    validation_steps=1,
+                                    )
         if save:
             self.update_kwargs()
             self.save(make_dir=True)
-
-    def _fit(self, adata,
-             condition_key, train_size=0.8, cell_type_key='cell_type',
-             n_epochs=300, batch_size=512,
-             early_stop_limit=10, lr_reducer=7,
-             n_per_epoch=0, score_filename=None,
-             save=True, retrain=True, verbose=3):
-        train_adata, valid_adata = train_test_split(adata, train_size)
-
-        if self.gene_names is None:
-            self.gene_names = train_adata.var_names.tolist()
-        else:
-            if set(self.gene_names).issubset(set(train_adata.var_names)):
-                train_adata = train_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
-
-            if set(self.gene_names).issubset(set(valid_adata.var_names)):
-                valid_adata = valid_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
-
-        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
-        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
-
-        train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
-                                                                         condition_key=condition_key)
-
-        valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
-                                                                         condition_key=condition_key)
-
-        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
-            self.restore_model_weights()
-            return
-
-        callbacks = [
-            History(),
-        ]
-
-        if verbose > 2:
-            callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
-            fit_verbose = 0
-        else:
-            fit_verbose = verbose
-
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.cvae_model,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
-        if early_stop_limit > 0:
-            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
-
-        if lr_reducer > 0:
-            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-
-        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
-        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
-
-        y_train = [train_expr, train_conditions_encoded]
-        y_valid = [valid_expr, valid_conditions_encoded]
-
-        self.fit(x=x_train,
-                 y=y_train,
-                 validation_data=(x_valid, y_valid),
-                 epochs=n_epochs,
-                 batch_size=batch_size,
-                 verbose=fit_verbose,
-                 callbacks=callbacks,
-                 )
-        if save:
-            self.update_kwargs()
-            self.save(make_dir=True)
-
