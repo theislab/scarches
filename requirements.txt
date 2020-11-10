@@ -1,5 +1,5 @@
 requests
-numpy>=1.17
+numpy<1.19.0
 pandas>=1.0
 scanpy
 scikit-learn
