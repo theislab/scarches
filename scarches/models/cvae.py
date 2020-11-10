@@ -640,10 +640,9 @@ class CVAE(Model):
             raise Exception("Either condition_encoder or conditions have to be passed.")
 
     def train(self, adata,
-              condition_key, train_size=0.8, cell_type_key='cell_type',
-              n_epochs=300, batch_size=32, steps_per_epoch=50,
+              condition_key, train_size=0.8,
+              n_epochs=300, batch_size=32, steps_per_epoch=100,
               early_stop_limit=15, lr_reducer=10,
-              n_per_epoch=0, score_filename=None,
               save=True, retrain=True, verbose=3):
 
         """
@@ -660,6 +659,8 @@ class CVAE(Model):
                 fraction of samples in `adata` used to train scNet.
             n_epochs: int
                 number of epochs.
+            steps_per_epoch: int
+                Total number of steps (batches of samples) before declaring one epoch finished and starting the next epoch.
             batch_size: int
                 number of samples in the mini-batches used to optimize scNet.
             early_stop_limit: int
@@ -674,21 +675,14 @@ class CVAE(Model):
                 ``True`` by default. if ``True`` scNet will be trained regardless of existance of pre-trained scNet in ``model_path``. if ``False`` scNet will not be trained if pre-trained scNet exists in ``model_path``.
 
         """
-
-        # if self.device == 'gpu':
-        return self._fit_dataset(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size, steps_per_epoch,
+        return self._fit_dataset(adata, condition_key, train_size, n_epochs, batch_size, steps_per_epoch,
                                  early_stop_limit,
-                                 lr_reducer, n_per_epoch, score_filename, save, retrain, verbose)
-        # else:
-        #     return self._train_on_batch(adata, condition_key, train_size, cell_type_key, n_epochs, batch_size,
-        #                                 early_stop_limit, lr_reducer, n_per_epoch, score_filename, save, retrain,
-        #                                 verbose)
+                                 lr_reducer, save, retrain, verbose)
 
     def _fit_dataset(self, adata,
-                     condition_key, train_size=0.9, cell_type_key='cell_type',
-                     n_epochs=100, batch_size=32, steps_per_epoch=50,
+                     condition_key, train_size=0.8,
+                     n_epochs=100, batch_size=128, steps_per_epoch=100,
                      early_stop_limit=10, lr_reducer=8,
-                     n_per_epoch=0, score_filename=None,
                      save=True, retrain=True, verbose=3):
         train_adata, valid_adata = train_test_split(adata, train_size)
 
@@ -721,17 +715,6 @@ class CVAE(Model):
         else:
             fit_verbose = verbose
 
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.encoder,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
 
@@ -746,100 +729,55 @@ class CVAE(Model):
                                         n_epochs,
                                         is_training=False, loss_fn=self.loss_fn, n_conditions=self.n_conditions)
 
-        self.fit(train_dataset,
-                 validation_data=valid_dataset,
-                 epochs=n_epochs,
-                 batch_size=batch_size,
-                 verbose=fit_verbose,
-                 callbacks=callbacks,
-                 steps_per_epoch=steps_per_epoch,
-                 validation_steps=1,
-                 )
+        self.log_history = self.fit(train_dataset,
+                                    validation_data=valid_dataset,
+                                    epochs=n_epochs,
+                                    batch_size=batch_size,
+                                    verbose=fit_verbose,
+                                    callbacks=callbacks,
+                                    steps_per_epoch=steps_per_epoch,
+                                    validation_steps=1,
+                                    )
+
         if save:
             self.update_kwargs()
             self.save(make_dir=True)
 
-    def _fit(self, adata,
-             condition_key, train_size=0.8, cell_type_key='cell_type',
-             n_epochs=100, batch_size=128,
-             early_stop_limit=10, lr_reducer=8,
-             n_per_epoch=0, score_filename=None,
-             save=True, retrain=True, verbose=3):
-        train_adata, valid_adata = train_test_split(adata, train_size)
+    def plot_training_history(self):
+        from matplotlib import pyplot as plt
+        import numpy as np
 
-        if self.gene_names is None:
-            self.gene_names = train_adata.var_names.tolist()
-        else:
-            if set(self.gene_names).issubset(set(train_adata.var_names)):
-                train_adata = train_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in train adata are inconsistent with class' gene_names")
+        fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True, figsize=(20, 10))
+        fig.suptitle('Training History')
 
-            if set(self.gene_names).issubset(set(valid_adata.var_names)):
-                valid_adata = valid_adata[:, self.gene_names]
-            else:
-                raise Exception("set of gene names in valid adata are inconsistent with class' gene_names")
+        min_loss = min(self.log_history.history['val_loss'] + self.log_history.history['loss'])
+        max_loss = max(self.log_history.history['val_loss'] + self.log_history.history['loss'])
+        n_epochs = len(self.log_history.history['loss'])
+        ax1.plot(self.log_history.history['loss'], label='Train')
+        ax1.plot(self.log_history.history['val_loss'], label='Validation')
+        ax1.set_yticks(np.arange(min_loss, max_loss, (max_loss - min_loss) / 10))
+        ax1.set_xticks(np.arange(0, n_epochs + 1, int(n_epochs) // 10))
+        ax1.legend()
+        ax1.set_title('Total Loss')
 
-        train_expr = train_adata.X.A if sparse.issparse(train_adata.X) else train_adata.X
-        valid_expr = valid_adata.X.A if sparse.issparse(valid_adata.X) else valid_adata.X
+        min_loss = min(
+            self.log_history.history[f'val_{self.loss_fn}_loss'] + self.log_history.history[f'{self.loss_fn}_loss'])
+        max_loss = max(
+            self.log_history.history[f'val_{self.loss_fn}_loss'] + self.log_history.history[f'{self.loss_fn}_loss'])
+        ax2.plot(self.log_history.history[f'{self.loss_fn}_loss'], label='Train')
+        ax2.plot(self.log_history.history[f'val_{self.loss_fn}_loss'], label='Validation')
+        ax2.set_yticks(np.arange(min_loss, max_loss, (max_loss - min_loss) / 10))
+        ax2.set_xticks(np.arange(0, n_epochs + 1, int(n_epochs) // 10))
+        ax2.legend()
+        ax2.set_title('Reconstruction Loss')
 
-        train_conditions_encoded, self.condition_encoder = label_encoder(train_adata, le=self.condition_encoder,
-                                                                         condition_key=condition_key)
+        min_loss = min(self.log_history.history['val_kl_loss'] + self.log_history.history['kl_loss'])
+        max_loss = max(self.log_history.history['val_kl_loss'] + self.log_history.history['kl_loss'])
+        ax3.plot(self.log_history.history['kl_loss'], label='Train')
+        ax3.plot(self.log_history.history['val_kl_loss'], label='Validation')
+        ax3.set_yticks(np.arange(min_loss, max_loss, (max_loss - min_loss) / 10))
+        ax3.set_xticks(np.arange(0, n_epochs + 1, int(n_epochs) // 10))
+        ax3.legend()
+        ax3.set_title('KL Loss')
 
-        valid_conditions_encoded, self.condition_encoder = label_encoder(valid_adata, le=self.condition_encoder,
-                                                                         condition_key=condition_key)
-
-        if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
-            self.restore_model_weights()
-            self.restore_class_config(compile_and_consturct=False)
-            return
-
-        callbacks = [
-            History(),
-        ]
-
-        if verbose > 2:
-            callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
-            fit_verbose = 0
-        else:
-            fit_verbose = verbose
-
-        if (n_per_epoch > 0 or n_per_epoch == -1) and not score_filename:
-            adata = train_adata.concatenate(valid_adata)
-
-            train_celltypes_encoded, _ = label_encoder(train_adata, le=None, condition_key=cell_type_key)
-            valid_celltypes_encoded, _ = label_encoder(valid_adata, le=None, condition_key=cell_type_key)
-            celltype_labels = np.concatenate([train_celltypes_encoded, valid_celltypes_encoded], axis=0)
-
-            callbacks.append(ScoreCallback(score_filename, adata, condition_key, cell_type_key, self.encoder,
-                                           n_per_epoch=n_per_epoch, n_batch_labels=len(self.n_conditions),
-                                           n_celltype_labels=len(np.unique(celltype_labels))))
-
-        if early_stop_limit > 0:
-            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor='val_loss'))
-
-        if lr_reducer > 0:
-            callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
-
-        train_conditions_onehot = to_categorical(train_conditions_encoded, num_classes=self.n_conditions)
-        valid_conditions_onehot = to_categorical(valid_conditions_encoded, num_classes=self.n_conditions)
-
-        x_train = [train_expr, train_conditions_onehot, train_conditions_onehot]
-        x_valid = [valid_expr, valid_conditions_onehot, valid_conditions_onehot]
-
-        y_train = train_expr
-        y_valid = valid_expr
-
-        self.fit(x=x_train,
-                 y=y_train,
-                 validation_data=(x_valid, y_valid),
-                 epochs=n_epochs,
-                 batch_size=batch_size,
-                 verbose=fit_verbose,
-                 callbacks=callbacks,
-                 )
-        if save:
-            self.update_kwargs()
-            self.save(make_dir=True)
-
+        plt.show()
