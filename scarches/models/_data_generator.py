@@ -16,10 +16,11 @@ def preprocess_cvae_input(n_conditions):
 
 def make_dataset(adata, condition_key, le, batch_size, n_epochs, is_training, loss_fn, n_conditions,
                  size_factor_key=None, use_mmd=False):
-    if sparse.issparse(adata):
+    if sparse.issparse(adata.X):
         expressions = adata.X.A
     else:
         expressions = adata.X
+    
 
     encoded_conditions, le = label_encoder(adata, le, condition_key)
     if loss_fn == 'nb':
