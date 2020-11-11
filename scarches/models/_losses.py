@@ -64,7 +64,7 @@ def mmd(n_conditions, kernel_method='multi-scale-rbf', computation_method="gener
                 for j in range(i):
                     loss += _nan2zero(compute_mmd(conditions_mmd[i], conditions_mmd[j], kernel_method))
         if n_conditions == 1:
-            loss = _nan2zero(tf.zeros(shape=(1,)))
+            loss = _nan2zero(tf.zeros(shape=(1,)))[0]
         return loss
 
     return mmd_loss
