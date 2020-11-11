@@ -338,6 +338,7 @@ class scArches(CVAE):
 
         if not retrain and os.path.exists(os.path.join(self.model_path, f"{self.model_name}.h5")):
             self.restore_model_weights()
+            self.restore_class_config(compile_and_consturct=False)
             return
 
         callbacks = [
