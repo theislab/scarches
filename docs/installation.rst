@@ -3,14 +3,10 @@ Installation
 scArches requires Python 3.6 or 3.7. We recommend to use Miniconda.
 
 .. note::
+   **4.11.20**
 
-   Please note that scArches is not available for Python 3.8 or later.
-   We suggest you to use Python 3.6 or 3.7.
+   From `v0.2.0`, We have migrated to Tensorflow 2.0. `v0.2.0` is compatible with latest python version.
 
-
-.. note::
-
-   Please install development version for the latest features.
 
 PyPI
 --------
