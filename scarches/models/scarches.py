@@ -360,10 +360,10 @@ class scArches(CVAE):
 
         train_dataset, self.condition_encoder = make_dataset(train_adata, condition_key, self.condition_encoder,
                                                              batch_size, n_epochs, True,
-                                                             self.loss_fn, self.n_conditions, use_mmd=True)
+                                                             self.loss_fn, self.n_conditions, steps_per_epoch, use_mmd=True)
         valid_dataset, _ = make_dataset(valid_adata, condition_key, self.condition_encoder, valid_adata.shape[0],
                                         n_epochs, False,
-                                        self.loss_fn, self.n_conditions, use_mmd=True)
+                                        self.loss_fn, self.n_conditions, 1, use_mmd=True)
 
         self.log_history = self.fit(train_dataset,
                                     validation_data=valid_dataset,

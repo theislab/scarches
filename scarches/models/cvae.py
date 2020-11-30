@@ -722,11 +722,11 @@ class CVAE(Model):
             callbacks.append(ReduceLROnPlateau(monitor='val_loss', patience=lr_reducer))
 
         train_dataset, self.condition_encoder = make_dataset(train_adata, condition_key, self.condition_encoder,
-                                                             batch_size, n_epochs,
+                                                             batch_size, n_epochs, steps_per_epoch=steps_per_epoch,
                                                              is_training=True, loss_fn=self.loss_fn,
                                                              n_conditions=self.n_conditions)
         valid_dataset, _ = make_dataset(valid_adata, condition_key, self.condition_encoder, valid_adata.shape[0],
-                                        n_epochs,
+                                        n_epochs, steps_per_epoch=1,
                                         is_training=False, loss_fn=self.loss_fn, n_conditions=self.n_conditions)
 
         self.log_history = self.fit(train_dataset,
@@ -737,6 +737,8 @@ class CVAE(Model):
                                     callbacks=callbacks,
                                     steps_per_epoch=steps_per_epoch,
                                     validation_steps=1,
+                                    use_multiprocessing=True,
+                                    workers=8,
                                     )
 
         if save:

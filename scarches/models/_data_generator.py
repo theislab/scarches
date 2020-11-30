@@ -14,13 +14,12 @@ def preprocess_cvae_input(n_conditions):
     return preprocess
 
 
-def make_dataset(adata, condition_key, le, batch_size, n_epochs, is_training, loss_fn, n_conditions,
+def make_dataset(adata, condition_key, le, batch_size, n_epochs, is_training, loss_fn, n_conditions, steps_per_epoch,
                  size_factor_key=None, use_mmd=False):
     if sparse.issparse(adata.X):
         expressions = adata.X.A
     else:
         expressions = adata.X
-    
 
     encoded_conditions, le = label_encoder(adata, le, condition_key)
     if loss_fn == 'nb':
@@ -65,7 +64,7 @@ def make_dataset(adata, condition_key, le, batch_size, n_epochs, is_training, lo
                           num_parallel_calls=4,
                           deterministic=None)
     if is_training:
-        dataset = dataset.repeat(n_epochs)
+        dataset = dataset.repeat(steps_per_epoch * n_epochs)
     else:
         dataset = dataset.repeat()
 

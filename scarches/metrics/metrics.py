@@ -31,11 +31,13 @@ def entropy_batch_mixing(adata, label_key='batch',
     """
     adata = remove_sparsity(adata)
 
+    n_batches = len(np.unique(adata.obs[label_key]).tolist())
+
     neighbors = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
     indices = neighbors.kneighbors(adata.X, return_distance=False)[:, 1:]
     batch_indices = np.vectorize(lambda i: adata.obs[label_key].values[i])(indices)
 
-    entropies = np.apply_along_axis(__entropy_from_indices, axis=1, arr=batch_indices)
+    entropies = np.apply_along_axis(__entropy_from_indices, axis=1, arr=batch_indices, n_batches=n_batches)
 
     # average n_pools entropy results where each result is an average of n_samples_per_pool random samples.
     if n_pools == 1:
@@ -100,8 +102,8 @@ def knn_purity(adata, label_key, n_neighbors=30):
     return np.mean(res)
 
 
-def __entropy_from_indices(indices):
-    return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)))
+def __entropy_from_indices(indices, n_batches):
+    return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)), base=n_batches)
 
 
 def nmi_helper(adata, group1, group2, method="arithmetic"):
