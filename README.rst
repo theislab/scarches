@@ -34,22 +34,22 @@ Unsupervised
  This class of algortihms need no `cell type` labels, meaning that you can creat a reference and project a query without having access to cell type labeles.
  We implemented two algorithms:
 
- - **scVI**  (`Lopez et al.,2018 <https://www.nature.com/articles/s41592-018-0229-2>`_.): Requires access to raw counts values for data integration and assumes
+ - **scVI**  (`Lopez et al.,2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes
  count distribution on the data (NB, ZINB, Poission).
 
- - **trVAE** (`Lotfollahi et al.,2019 <https://arxiv.org/abs/1910.01791>`_.): It supports both normalized log tranformed or count data as input and applies additional MMD loss to have better mearging in the latent space.
+ - **trVAE** (`Lotfollahi et al.,2019 <https://arxiv.org/abs/1910.01791>`_): It supports both normalized log tranformed or count data as input and applies additional MMD loss to have better mearging in the latent space.
 
 Supervised and Semi-supervised
  This class of algorithmes assume the user has access to `cell type` labels when creating the reference data and usaully perfomr better integration
  compared to. unsupervised methods. However, the query data still can be unlabaled. In addition to integration , you can classify your query cells using
  these methods.
 
- - **scANVI** (`Xu et al.,2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_.): It neeeds cell type labels for reference data. Your query data can be either   unlabeled or labeled. In case of unlabeled query data you can use this method to also classify your query cells using reference labels.
+ - **scANVI** (`Xu et al.,2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It neeeds cell type labels for reference data. Your query data can be either   unlabeled or labeled. In case of unlabeled query data you can use this method to also classify your query cells using reference labels.
 
 Multi-modal
  These algorithms can be used to contstruct multi-modal references atlas and map query data from either modalities on the top of the reference.
 
- - **totalVI** (`Gayoso al.,2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_.): This model can be used to build multi-modal  CITE-seq reference atalses.
+ - **totalVI** (`Gayoso al.,2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
    Query datasets can be either from sc-RNAseq or CITE-seq. In addition to integrating query with reference one can use this model to impute the Proteins
    in the query datasets.
 
