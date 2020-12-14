@@ -8,6 +8,10 @@ scArches (PyTorch) - single-cell architecture surgery
 
 scArches is a package to integrate newly produced single-cell datasets into integrated references atlases. Our method can facilitate large collaborative projects with decentralised training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of all conditional generative models for single-cell data.
 
+.. note::
+
+   From version `0.3.0` we moved to PyTorch, however you can still install latest
+   Tensoflow version by installing `0.2.4`.
 
 What can you do with scArches?
 -------------------------------
