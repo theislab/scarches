@@ -1,5 +1,11 @@
 Installation
 ============
+
+.. note::
+
+   From version `0.3.0` we moved to PyTorch, however you can still install latest
+   Tensoflow version by installing `0.2.4`.
+   
 scArches requires Python 3.6 or 3.7. We recommend to use Miniconda.
 
 PyPI
