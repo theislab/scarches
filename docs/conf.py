@@ -34,11 +34,11 @@ from urllib.request import urlretrieve
 
 notebooks_url = 'https://github.com/theislab/scarches/raw/master/notebooks/'
 notebooks = [
-    'zenodo_pancreas_from_pretrained.ipynb',
-    'zenodo_pancreas_from_scratch.ipynb',
-    'pancreas_pipeline.ipynb',
-    'zenodo_intestine.ipynb'
-
+    'scanvi_surgery_pipeline.ipynb',
+    'scvi_surgery_pipeline.ipynb',
+    'totalvi_surgery_pipeline.ipynb',
+    'trvae_surgery_pipeline.ipynb',
+    'trVAE_zenodo_pipeline.ipynb'
 ]
 
 for nb in notebooks:
@@ -50,11 +50,9 @@ for nb in notebooks:
 # -- Project information -----------------------------------------------------
 
 project = 'scArches'
-copyright = f'{datetime.now():%Y}, Mohsen Naghipourfar, Mohammad Lotfollahi'
-author = 'Mohsen Naghipourfar, Mohammad Lotfollahi'
+author = 'Marco Wagenstetter, Mohammad Lotfollahi, Mohsen Naghipourfar, Sergei Rybakov'
+copyright = f'{datetime.now():%Y}, ' + author
 
-# version = scarches.__version__
-# release = version
 pygments_style = 'sphinx'
 todo_include_todos = True
 html_theme_options = dict(navigation_depth=3, titles_only=False)

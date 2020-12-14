@@ -83,4 +83,3 @@ def upload_file(file_path: str,
     filename = r_dict['filename']
     download_link = f"https://zenodo.org/record/{deposition_id}/files/{filename}?download=1"
     return download_link
-

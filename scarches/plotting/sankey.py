@@ -1,11 +1,10 @@
 import matplotlib
 from matplotlib import pyplot as plt
-from scarches.plotting import _alluvial
+from . import _alluvial
 
 
 def sankey_diagram(data, save_path=None, show=False, **kwargs):
     """Draws Sankey diagram for the given ``data``.
-
         Parameters
         ----------
         data: :class:`~numpy.ndarray`
@@ -16,7 +15,6 @@ def sankey_diagram(data, save_path=None, show=False, **kwargs):
             if ``True`` will show the diagram.
         kwargs:
             additional arguments for diagram configuration. See ``_alluvial.plot`` function.
-
     """
     font = {'family': 'Arial',
             'weight': 'bold',

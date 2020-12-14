@@ -5,7 +5,7 @@ from sklearn.metrics import silhouette_score, normalized_mutual_info_score, silh
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
 
-from scarches.utils import remove_sparsity
+from scarches.dataset.trvae.data_handling import remove_sparsity
 from .clustering import opt_louvain
 
 
@@ -30,14 +30,14 @@ def entropy_batch_mixing(adata, label_key='batch',
             EBM score. A float between zero and one.
     """
     adata = remove_sparsity(adata)
-
-    n_batches = len(np.unique(adata.obs[label_key]).tolist())
+    n_cat = len(adata.obs[label_key].unique().tolist())
+    print(f'Calculating EBM with n_cat = {n_cat}')
 
     neighbors = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(adata.X)
     indices = neighbors.kneighbors(adata.X, return_distance=False)[:, 1:]
     batch_indices = np.vectorize(lambda i: adata.obs[label_key].values[i])(indices)
 
-    entropies = np.apply_along_axis(__entropy_from_indices, axis=1, arr=batch_indices, n_batches=n_batches)
+    entropies = np.apply_along_axis(__entropy_from_indices, axis=1, arr=batch_indices, n_cat=n_cat)
 
     # average n_pools entropy results where each result is an average of n_samples_per_pool random samples.
     if n_pools == 1:
@@ -102,8 +102,8 @@ def knn_purity(adata, label_key, n_neighbors=30):
     return np.mean(res)
 
 
-def __entropy_from_indices(indices, n_batches):
-    return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)), base=n_batches)
+def __entropy_from_indices(indices, n_cat):
+    return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)), base=n_cat)
 
 
 def nmi_helper(adata, group1, group2, method="arithmetic"):
@@ -177,6 +177,7 @@ def silhouette_batch(adata, batch_key, group_key, metric='euclidean', verbose=Tr
     batch_enc = LabelEncoder()
     batch_enc.fit(glob_batches)
     sil_all = pd.DataFrame(columns=['group', 'silhouette_score'])
+
     for group in adata.obs[group_key].unique():
         adata_group = adata[adata.obs[group_key] == group]
         if adata_group.obs[batch_key].nunique() == 1:
@@ -196,31 +197,3 @@ def silhouette_batch(adata, batch_key, group_key, metric='euclidean', verbose=Tr
     if verbose:
         print(f'mean silhouette per cell: {sil_means}')
     return sil_all, sil_means
-
-
-def ari(adata, label_key):
-    """Computes Adjusted Rand Index (ARI) metric for ``adata`` given the batch column name.
-
-        Parameters
-        ----------
-        adata: :class:`~anndata.AnnData`
-            Annotated dataset.
-        label_key: str
-            Name of the column which contains information about different studies in ``adata.obs`` data frame.
-        Returns
-        -------
-        score: float
-            ARI score. A float between 0 and 1.
-
-    """
-    adata = remove_sparsity(adata)
-
-    n_labels = len(adata.obs[label_key].unique().tolist())
-    kmeans = KMeans(n_labels, n_init=200)
-
-    labels_pred = kmeans.fit_predict(adata.X)
-    labels = adata.obs[label_key].values
-    labels_encoded = LabelEncoder().fit_transform(labels)
-
-    return adjusted_rand_score(labels_encoded, labels_pred)
-

@@ -1,8 +1,3 @@
-from .cvae import CVAE
-from .scarches import scArches
-from .scarchesnb import scArchesNB
-from .scarcheszinb import scArchesZINB
-from ._adaptor import Adaptor
-__all__ = (
-    'scArches', 'CVAE', 'scArchesNB', 'scArchesZINB'
-)
+from .trvae import trVAE, TRVAE
+
+from scvi.model import SCVI, SCANVI, TOTALVI
