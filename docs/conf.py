@@ -38,7 +38,8 @@ notebooks = [
     'scvi_surgery_pipeline.ipynb',
     'totalvi_surgery_pipeline.ipynb',
     'trvae_surgery_pipeline.ipynb',
-    'trVAE_zenodo_pipeline.ipynb'
+    'trVAE_zenodo_pipeline.ipynb',
+    'reference_building_from_scratch.ipynb'
 ]
 
 for nb in notebooks:

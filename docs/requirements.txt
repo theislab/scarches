@@ -15,3 +15,4 @@ h5py~=2.10.0
 tqdm~=4.49.0
 scvi-tools>=0.8.0b0
 requests
+gdown

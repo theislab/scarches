@@ -101,3 +101,4 @@ If scArches is useful in your research, please consider to cite the `preprint <h
    totalvi_surgery_pipeline
    trvae_surgery_pipeline
    trVAE_zenodo_pipeline
+   reference_building_from_scratch
