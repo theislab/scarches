@@ -6,7 +6,7 @@ scArches (PyTorch) - single-cell architecture surgery
 
  <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="900px" align="center">
 
-This is a Pytorch version of scArches which can be found `here <https://github.com/theislab/scArches/>`_. scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralise training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_, and hosts efficient implementations of all conditional generative models for single-cell data.
+This is a Pytorch version of scArches which can be found `here <https://github.com/theislab/scArches/>`_. scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralise training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_, and hosts efficient implementations of several conditional generative models for single-cell data.
 
 
 
@@ -15,14 +15,6 @@ What can you do with scArches?
 - Construct single or multi-modal (CITE-seq) reference atlases and share the trained model and the data (if possible).
 - Download a pre-trained model for your atlas of interest, update it wih new datasets and share with your collaborators.
 - Project and integrate query datasets on the top of a reference and use latent representation for downstream tasks, e.g.:diff testing, clustering, classification
-
-
-What are the different models?
----------------
-scArches is itself and algorithm to map to project query on the top of reference datasets and is applicable
-to different models. Here we provide a short explanation and hints when to use which model. Our models are divided into
-three categories:
-
 
 What are different models?
 ---------------
