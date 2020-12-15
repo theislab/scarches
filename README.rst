@@ -17,7 +17,7 @@ What can you do with scArches?
 - Project and integrate query datasets on the top of a reference and use latent representation for downstream tasks, e.g.:diff testing, clustering, classification
 
 
-What are different models?
+What are the different models?
 ---------------
 scArches is itself and algorithm to map to project query on the top of reference datasets and is applicable
 to different models. Here we provide a short explanation and hints when to use which model. Our models are divided into
