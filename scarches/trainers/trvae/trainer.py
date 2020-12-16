@@ -226,10 +226,6 @@ class Trainer:
                                                                 collate_fn=custom_collate,
                                                                 num_workers=self.n_workers)
         if self.valid_data is not None:
-            print("Valid_data", len(self.valid_data))
-            for i in range(len(self.valid_data.unique_conditions)):
-                print("Condition:", i, "Counts in TrainData:", np.count_nonzero(self.valid_data.conditions == i))
-
             val_batch_size = self.batch_size
             if self.batch_size > len(self.valid_data):
                 val_batch_size = len(self.valid_data)
