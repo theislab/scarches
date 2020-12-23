@@ -1,6 +1,6 @@
 |PyPI| |travis| |Docs|
 
-scArches (PyTorch) - single-cell architecture surgery
+scArches - single-cell architecture surgery
 =========================================================================
 .. raw:: html
 
