@@ -28,7 +28,7 @@ Unsupervised
  - **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes
  count distribution on the data (NB, ZINB, Poisson).
 
- - **trVAE** (`Lotfollahi et al.,2019 <https://arxiv.org/abs/1910.01791>`_): It supports both normalized log transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
+ - **trVAE** (`Lotfollahi et al.,2020 <https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5>`_): It supports both normalized log transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
 
 Supervised and Semi-supervised
  This class of algorithms assumes the user has access to `cell type` labels when creating the reference data and usually perform better integration compared to. unsupervised methods. However, query data still can be unlabeled. In addition to integration, you can classify your query cells using
