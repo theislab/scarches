@@ -11,7 +11,8 @@ class trVAETrainer(Trainer):
            model: trVAE
                 Number of input features (i.e. gene in case of scRNA-seq).
            adata: : `~anndata.AnnData`
-                Annotated data matrix.
+                Annotated data matrix. Has to be count data for 'nb' and 'zinb' loss and normalized log transformed data
+                for 'mse' loss.
            condition_key: String
                 column name of conditions in `adata.obs` data frame.
            cell_type_key: String

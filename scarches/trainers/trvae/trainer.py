@@ -18,7 +18,8 @@ class Trainer:
        model: trVAE
             Number of input features (i.e. gene in case of scRNA-seq).
        adata: : `~anndata.AnnData`
-            Annotated data matrix.
+            Annotated data matrix. Has to be count data for 'nb' and 'zinb' loss and normalized log transformed data
+            for 'mse' loss.
        condition_key: String
             column name of conditions in `adata.obs` data frame.
        cell_type_key: String
@@ -187,10 +188,6 @@ class Trainer:
         Returns:
 
         """
-        use_normalized = False
-        if self.model.recon_loss == 'mse':
-            use_normalized = True
-
         # Create Train/Valid AnnotatetDataset objects
         self.train_data, self.valid_data = make_dataset(
             self.adata,
@@ -200,7 +197,6 @@ class Trainer:
             cell_type_key=self.cell_type_key,
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=None,
-            use_normalized=use_normalized,
         )
 
         if self.n_samples is None or self.n_samples > len(self.train_data):

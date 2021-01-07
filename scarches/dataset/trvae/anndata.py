@@ -24,9 +24,6 @@ class AnnotatedDataset(Dataset):
             dictionary of encoded celltypes. if `None`, will create one.
        unique_conditions: List or None
             List of all conditions in the data.
-       use_normalized: Boolean
-            If 'True', adata.X is getting normalized and used as input for the network, this is only necessary for
-            MSE loss.
     """
     def __init__(self,
                  adata,
@@ -35,7 +32,6 @@ class AnnotatedDataset(Dataset):
                  cell_type_key=None,
                  cell_type_encoder=None,
                  unique_conditions=None,
-                 use_normalized=False,
                  ):
 
         # Desparse Adata
@@ -43,7 +39,6 @@ class AnnotatedDataset(Dataset):
         if sparse.issparse(self.adata.X):
             self.adata = remove_sparsity(self.adata)
 
-        self.use_normalized = use_normalized
         self.X_norm = None
 
         self.condition_key = condition_key
@@ -54,16 +49,10 @@ class AnnotatedDataset(Dataset):
         self.cell_type_encoder = cell_type_encoder
         self.unique_cell_types = None
 
-        if self.use_normalized:
-            sc.pp.normalize_total(adata,
-                                  exclude_highly_expressed=True,
-                                  target_sum=1e4,
-                                  key_added='size_factors')
-        else:
-            size_factors = np.log(adata.X.sum(1))
-            if len(size_factors.shape) < 2:
-                size_factors = np.expand_dims(size_factors, axis=1)
-            adata.obs['size_factors'] = size_factors
+        size_factors = np.log(adata.X.sum(1))
+        if len(size_factors.shape) < 2:
+            size_factors = np.expand_dims(size_factors, axis=1)
+        adata.obs['size_factors'] = size_factors
 
         # Create Condition Encoder
         if self.condition_key is not None:
@@ -87,9 +76,7 @@ class AnnotatedDataset(Dataset):
         outputs = dict()
 
         outputs["x"] = torch.tensor(self.adata.X[index, :])
-
-        if not self.use_normalized:
-            outputs["sizefactor"] = torch.tensor(self.adata.obs['size_factors'][index])
+        outputs["sizefactor"] = torch.tensor(self.adata.obs['size_factors'][index])
 
         if self.condition_key:
             outputs["batch"] = torch.tensor(self.conditions[index])

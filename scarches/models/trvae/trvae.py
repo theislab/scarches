@@ -143,9 +143,11 @@ class trVAE(nn.Module):
 
            Returns
            -------
-                Returns array containing latent space encoding of 'x'.
+           Returns Torch Tensor containing latent space encoding of 'x'.
         """
         x_ = torch.log(1 + x)
+        if self.recon_loss == 'mse':
+            x_ = x
         z_mean, z_log_var = self.encoder(x_, c)
         latent = self.sampling(z_mean, z_log_var)
         if mean:
@@ -165,15 +167,21 @@ class trVAE(nn.Module):
 
            Returns
            -------
-           Returns array containing latent space encoding of 'x'
+           Returns Torch Tensor containing output of first decoder layer.
         """
-        z_mean, z_log_var = self.encoder(x, c)
+        x_ = torch.log(1 + x)
+        if self.recon_loss == 'mse':
+            x_ = x
+        z_mean, z_log_var = self.encoder(x_, c)
         latent = self.sampling(z_mean, z_log_var)
         output = self.decoder(latent, c)
         return output[-1]
 
     def forward(self, x=None, batch=None, sizefactor=None):
         x_log = torch.log(1 + x)
+        if self.recon_loss == 'mse':
+            x_log = x
+
         z1_mean, z1_log_var = self.encoder(x_log, batch)
         z1 = self.sampling(z1_mean, z1_log_var)
         outputs = self.decoder(z1, batch)

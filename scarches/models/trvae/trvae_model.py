@@ -166,7 +166,8 @@ class TRVAE(BaseMixin):
        Parameters
        ----------
        adata: : `~anndata.AnnData`
-            Annotated data matrix.
+            Annotated data matrix. Has to be count data for 'nb' and 'zinb' loss and normalized log transformed data
+            for 'mse' loss.
        condition_key: String
             column name of conditions in `adata.obs` data frame.
        conditions: List
@@ -327,6 +328,51 @@ class TRVAE(BaseMixin):
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
             latent = self.model.get_latent(x[batch,:], c[batch], mean)
+            latents += [latent.cpu().detach()]
+
+        return np.array(torch.cat(latents))
+
+    def get_y(
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+    ):
+        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
+           data.
+
+           Parameters
+           ----------
+           x
+                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+                If None, then `self.adata.X` is used.
+           c
+                `numpy nd-array` of original (unencoded) desired labels for each sample.
+           Returns
+           -------
+                Returns array containing output of first decoder layer.
+        """
+        device = next(self.model.parameters()).device
+        if x is None and c is None:
+            x = self.adata.X
+            if self.conditions_ is not None:
+                c = self.adata.obs[self.condition_key_]
+
+        if c is not None:
+            c = np.asarray(c)
+            if not set(c).issubset(self.conditions_):
+                raise ValueError("Incorrect conditions")
+            labels = np.zeros(c.shape[0])
+            for condition, label in self.model.condition_encoder.items():
+                labels[c == condition] = label
+            c = torch.tensor(labels, device=device)
+
+        x = torch.tensor(x, device=device)
+
+        latents = []
+        indices = torch.arange(x.size(0), device=device)
+        subsampled_indices = indices.split(512)
+        for batch in subsampled_indices:
+            latent = self.model.get_y(x[batch,:], c[batch])
             latents += [latent.cpu().detach()]
 
         return np.array(torch.cat(latents))
