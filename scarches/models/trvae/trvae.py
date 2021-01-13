@@ -36,7 +36,7 @@ class trVAE(nn.Module):
        recon_loss: String
             Definition of Reconstruction-Loss-Method, 'mse', 'nb' or 'zinb'.
        beta: Float
-            Scaling Factor for MMD loss. Higher beta values results in stonger batch-correction at a cost of lossing bilogical varation. 
+            Scaling Factor for MMD loss. Higher beta values result in stronger batch-correction at a cost of worse biological variation. 
        use_bn: Boolean
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean

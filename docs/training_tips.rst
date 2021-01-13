@@ -2,11 +2,11 @@ A few tips on training models
 ===================
 
 trVAE
- - We recommend you to set `recon_loss` = `nb` or `zinb`. These loss functions require access to count and not normalized data. You need to have normalized log-transformed data in `adata.X` and raw count data in `adata.raw.X`. You also need to have normalization factors for each cell in `adata.obs[scale_factors]`.        These normalization factors can be obtained with `scanpy.pp.normalize_total <https://github.com/theislab/scarches/blob/master/requirements.txt>`_  or other normalization methods such as `scran <https://bioconductor.org/packages/devel/bioc/vignettes/scran/inst/doc/scran.html>`_.
+ - We recommend you to set `recon_loss` = `nb` or `zinb`. These loss functions require access to count data. You need to have raw count data in `adata.raw.X`.
   
- - If you don't have access to count data and have normalized data then set `recon_loss` to  `mse`.
+ - If you don't have access to count data and have normalized log-transformed data then set `recon_loss` to  `mse`.
 
- - trVAE relies on an extra MMD term to force further integration of data sets. There is a parameter called `beta` (default=1) which regulates MMD effect in training. Higher values of `beta` will force extra mixing (might remove biological variation if too big!) while smaller values might result in less mixing (still batch effect). If you set   `beta` = `0` the model reduces to a Vanilla CVAE.
+ - trVAE relies on an extra MMD term to force further integration of data sets. There is a parameter called `beta` (default=1) which regulates MMD effect in training. Higher values of `beta` will force extra mixing (might remove biological variation if too big!) while smaller values might result in less mixing (still batch effect). If you set   `beta` = `0` the model reduces to a Vanilla CVAE, but it is better to set 'use_mmd' to 'False' when MMD should not be used.
 
  - It is important to use highly variable genes for training. We recommend to use at least 2000 HVGs and if you have more complicated datasets, conditions then try  to increase it to 5000 or so to include enough information for the model.
 
