@@ -22,7 +22,7 @@ class CondLayers(nn.Module):
         if self.n_cond == 0:
             out = self.expr_L(x)
         else:
-            expr, cond = torch.split(x, x.shape[1] - self.n_cond, dim=1)
+            expr, cond = torch.split(x, [x.shape[1] - self.n_cond, self.n_cond], dim=1)
             out = self.expr_L(expr) + self.cond_L(cond)
         return out
 
