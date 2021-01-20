@@ -1,7 +1,24 @@
 import torch
 import torch.nn as nn
 
+from typing import Optional
+
 from ._utils import one_hot_encoder
+
+
+class MaskedLinear(nn.Linear):
+    def __init__(self, n_in,  n_out, mask, bias=True):
+        # mask should have the same dimensions as the transposed linear weight
+        # n_input x n_output_nodes
+        if n_in != mask.shape[0] or n_out != mask.shape[1]:
+            raise ValueError('Incorrect shape of the mask.')
+
+        super().__init__(n_in, n_out, bias)
+
+        self.register_buffer('mask', mask.t())
+
+    def forward(self, input):
+        return nn.functional.linear(input, self.weight*self.mask, self.bias)
 
 
 class CondLayers(nn.Module):
@@ -11,10 +28,14 @@ class CondLayers(nn.Module):
             n_out: int,
             n_cond: int,
             bias: bool,
+            mask: Optional[torch.Tensor] = None
     ):
         super().__init__()
         self.n_cond = n_cond
-        self.expr_L = nn.Linear(n_in, n_out, bias=bias)
+        if mask is None:
+            self.expr_L = nn.Linear(n_in, n_out, bias=bias)
+        else:
+            self.expr_L = MaskedLinear(n_in, n_out, mask, bias=bias)
         if self.n_cond != 0:
             self.cond_L = nn.Linear(self.n_cond, n_out, bias=False)
 
@@ -56,7 +77,7 @@ class Encoder(nn.Module):
                  use_ln: bool,
                  use_dr: bool,
                  dr_rate: float,
-                 num_classes: int = None):
+                 num_classes: Optional[int] = None):
         super().__init__()
         self.n_classes = 0
         if num_classes is not None:
@@ -129,7 +150,7 @@ class Decoder(nn.Module):
                  use_ln: bool,
                  use_dr: bool,
                  dr_rate: float,
-                 num_classes: int = None):
+                 num_classes: Optional[int] = None):
         super().__init__()
         self.use_dr = use_dr
         self.recon_loss = recon_loss
