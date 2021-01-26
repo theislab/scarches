@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.distributions import Normal, kl_divergence
 import torch.nn.functional as F
 
-from .modules import Encoder, Decoder
+from .modules import Encoder, Decoder, MaskedLinearDecoder
 from .losses import mse, mmd, zinb, nb
 from ._utils import one_hot_encoder
 
@@ -36,7 +36,7 @@ class trVAE(nn.Module):
        recon_loss: String
             Definition of Reconstruction-Loss-Method, 'mse', 'nb' or 'zinb'.
        beta: Float
-            Scaling Factor for MMD loss. Higher beta values result in stronger batch-correction at a cost of worse biological variation. 
+            Scaling Factor for MMD loss. Higher beta values result in stronger batch-correction at a cost of worse biological variation.
        use_bn: Boolean
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
@@ -56,6 +56,7 @@ class trVAE(nn.Module):
                  beta: float = 1,
                  use_bn: bool = False,
                  use_ln: bool = True,
+                 mask: Optional[torch.Tensor] = None
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -102,14 +103,21 @@ class trVAE(nn.Module):
                                self.use_dr,
                                self.dr_rate,
                                self.n_conditions)
-        self.decoder = Decoder(decoder_layer_sizes,
-                               self.latent_dim,
-                               self.recon_loss,
-                               self.use_bn,
-                               self.use_ln,
-                               self.use_dr,
-                               self.dr_rate,
-                               self.n_conditions)
+        if mask is None:
+            self.decoder = Decoder(decoder_layer_sizes,
+                                   self.latent_dim,
+                                   self.recon_loss,
+                                   self.use_bn,
+                                   self.use_ln,
+                                   self.use_dr,
+                                   self.dr_rate,
+                                   self.n_conditions)
+        else:
+            self.recon_loss = "mse"
+            self.decoder = MaskedLinearDecoder(self.latent_dim,
+                                               self.input_dim,
+                                               self.n_conditions,
+                                               mask)
 
     def sampling(self, mu, log_var):
         """Samples from standard Normal distribution and applies re-parametrization trick.

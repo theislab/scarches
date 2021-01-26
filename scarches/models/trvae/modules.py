@@ -227,3 +227,16 @@ class Decoder(nn.Module):
         elif self.recon_loss == "nb":
             dec_mean_gamma = self.mean_decoder(x)
             return dec_mean_gamma, dec_latent
+
+
+class MaskedLinearDecoder(nn.Module):
+
+    def __init__(self, in_dim, out_dim, n_cond, mask):
+        self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, mask=mask)
+        self.A0 = nn.ReLU()
+
+    def forward(self, z, batch=None):
+        dec_latent = self.L0(z)
+        recon_x = self.A0(dec_latent)
+
+        return recon_x, dec_latent
