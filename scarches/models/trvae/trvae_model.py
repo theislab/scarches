@@ -463,6 +463,7 @@ class TRVAE(BaseMixin):
         new_model._load_expand_params_from_dict(model_state_dict)
 
         if freeze:
+            new_model.model.freeze = True
             for name, p in new_model.model.named_parameters():
                 p.requires_grad = False
                 if 'theta' in name:
