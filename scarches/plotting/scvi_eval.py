@@ -2,13 +2,12 @@ from scvi.data import get_from_registry
 
 from scarches.metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
 from scarches.models import SCVI, SCANVI, TOTALVI
-from scarches.trainers import scVITrainer, scANVITrainer, totalTrainer
 
 from scipy.sparse import issparse
 import numpy as np
 import scanpy as sc
 import torch
-from typing import Union
+from typing import Union, Optional
 from sklearn.metrics import f1_score
 import anndata
 import matplotlib.pyplot as plt
@@ -23,7 +22,7 @@ class SCVI_EVAL:
             self,
             model: Union[SCVI, SCANVI, TOTALVI],
             adata: anndata.AnnData,
-            trainer: Union[scVITrainer, scANVITrainer, totalTrainer] = None,
+            trainer: Optional['Trainer'] = None,
             cell_type_key: str = None,
             batch_key: str = None,
     ):
