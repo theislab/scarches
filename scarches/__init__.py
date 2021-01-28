@@ -1,5 +1,4 @@
 from . import metrics, models, dataset, trainers, zenodo, plotting
-from .surgery import scvi_operate, trvae_operate
 
 __author__ = ', '.join([
     'Marco Wagenstetter',

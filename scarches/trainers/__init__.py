@@ -1,9 +1,3 @@
-from .scvi import (
-    scVITrainer,
-    scANVITrainer,
-    totalTrainer
-)
-
 from .trvae import (
     trVAETrainer,
 )
