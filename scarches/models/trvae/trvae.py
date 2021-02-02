@@ -41,6 +41,9 @@ class trVAE(nn.Module):
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
             If `True` layer normalization will be applied to layers.
+       mask: Tensor or None
+            if not None, Tensor of 0s and 1s from utils.add_annotations to create VAE with a masked linear decoder.
+            Automatically sets recon_loss to 'mse'.
     """
 
     def __init__(self,
