@@ -104,7 +104,7 @@ class VIATrainer(trVAETrainer):
         super().on_iteration(batch_data)
 
         if self.prox_operator is not None:
-            self.prox_operator(self.model.decoder.L0.expr_L.weight)
+            self.prox_operator(self.model.decoder.L0.expr_L.weight.data)
 
     def check_early_stop(self):
         continue_training = super().check_early_stop()
