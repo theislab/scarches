@@ -44,6 +44,8 @@ class trVAE(nn.Module):
        mask: Tensor or None
             if not None, Tensor of 0s and 1s from utils.add_annotations to create VAE with a masked linear decoder.
             Automatically sets recon_loss to 'mse'.
+       use_decoder_relu: Boolean
+            Use ReLU after the linear layer in the interpretable (masked) linear decoder.
     """
 
     def __init__(self,
@@ -59,7 +61,8 @@ class trVAE(nn.Module):
                  beta: float = 1,
                  use_bn: bool = False,
                  use_ln: bool = True,
-                 mask: Optional[torch.Tensor] = None
+                 mask: Optional[torch.Tensor] = None,
+                 use_decoder_relu: bool = False
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -120,7 +123,8 @@ class trVAE(nn.Module):
             self.decoder = MaskedLinearDecoder(self.latent_dim,
                                                self.input_dim,
                                                self.n_conditions,
-                                               mask)
+                                               mask,
+                                               use_decoder_relu)
 
     def sampling(self, mu, log_var):
         """Samples from standard Normal distribution and applies re-parametrization trick.

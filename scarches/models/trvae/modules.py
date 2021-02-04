@@ -235,12 +235,28 @@ class Decoder(nn.Module):
 
 class MaskedLinearDecoder(nn.Module):
 
-    def __init__(self, in_dim, out_dim, n_cond, mask):
+    def __init__(self, in_dim, out_dim, n_cond, mask, use_relu=False):
+        super().__init__()
+
+        self.n_cond = 0
+        if n_cond is not None:
+            self.n_cond = n_cond
+
         self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, mask=mask)
-        self.A0 = nn.ReLU()
+        if use_relu:
+            self.A0 = nn.ReLU()
 
     def forward(self, z, batch=None):
-        dec_latent = self.L0(z)
-        recon_x = self.A0(dec_latent)
+        if batch is not None:
+            batch = one_hot_encoder(batch, n_cls=self.n_cond)
+            z_cat = torch.cat((z, batch), dim=-1)
+            dec_latent = self.L0(z_cat)
+        else:
+            dec_latent = self.L0(z)
+
+        if use_relu:
+            recon_x = self.A0(dec_latent)
+        else:
+            recon_x = dec_latent
 
         return recon_x, dec_latent
