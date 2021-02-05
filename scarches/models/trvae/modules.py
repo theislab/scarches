@@ -19,7 +19,7 @@ class MaskedLinear(nn.Linear):
 
         # zero out the weights for group lasso
         # gradient descent won't change these zero weights
-        self.weight.data = self.weight.data * self.mask
+        self.weight.data*=self.mask
 
     def forward(self, input):
         return nn.functional.linear(input, self.weight*self.mask, self.bias)
