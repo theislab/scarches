@@ -55,7 +55,7 @@ class VIATrainer(trVAETrainer):
                 are limited.
            clip_value: Float
                 If the value is greater than 0, all gradients with an higher value will be clipped during training.
-           weight decay: Float
+           weight_decay: Float
                 Defines the scaling factor for weight decay in the Adam optimizer.
            alpha_iter_anneal: Integer or None
                 If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every iteration until the input
@@ -95,6 +95,9 @@ class VIATrainer(trVAETrainer):
         self.prox_operator = None
 
         self.watch_lr = None
+
+        if self.omega is not None:
+            self.omega = self.omega.to(self.device)
 
     def on_iteration(self, batch_data):
         if self.prox_operator is None and self.alpha is not None:
