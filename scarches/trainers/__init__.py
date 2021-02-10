@@ -1,1 +1,1 @@
-from .trvae import trVAETrainer
+from .trvae import trVAETrainer, VIATrainer

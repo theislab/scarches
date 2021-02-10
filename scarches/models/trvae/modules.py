@@ -238,6 +238,9 @@ class MaskedLinearDecoder(nn.Module):
     def __init__(self, in_dim, out_dim, n_cond, mask, use_relu=False):
         super().__init__()
 
+        print("Decoder Architecture:")
+        print("\tMasked linear layer in, out and cond: ", in_dim, out_dim, n_cond)
+
         self.use_relu = use_relu
 
         self.n_cond = 0
@@ -247,6 +250,8 @@ class MaskedLinearDecoder(nn.Module):
         self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, mask=mask)
         if use_relu:
             self.A0 = nn.ReLU()
+            print("\tUsing ReLU after the masked linear layer.")
+
 
     def forward(self, z, batch=None):
         if batch is not None:
