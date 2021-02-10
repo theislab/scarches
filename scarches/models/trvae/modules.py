@@ -238,6 +238,8 @@ class MaskedLinearDecoder(nn.Module):
     def __init__(self, in_dim, out_dim, n_cond, mask, use_relu=False):
         super().__init__()
 
+        self.use_relu = use_relu
+
         self.n_cond = 0
         if n_cond is not None:
             self.n_cond = n_cond
@@ -254,7 +256,7 @@ class MaskedLinearDecoder(nn.Module):
         else:
             dec_latent = self.L0(z)
 
-        if use_relu:
+        if self.use_relu:
             recon_x = self.A0(dec_latent)
         else:
             recon_x = dec_latent
