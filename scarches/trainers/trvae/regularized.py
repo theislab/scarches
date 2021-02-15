@@ -119,3 +119,12 @@ class VIATrainer(trVAETrainer):
                 self.prox_operator = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
 
         return continue_training
+
+    def on_epoch_end(self):
+        n_deact_terms = self.model.decoder.n_inactive_terms()
+        msg = f'Number of deactivated terms: {n_deact_terms}'
+        if self.epoch > 0:
+            msg = '\n' + msg
+        print(msg)
+
+        super().on_epoch_end()
