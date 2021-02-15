@@ -4,3 +4,5 @@ __pycache__/
 docs/_build
 own_tests/
 *.egg-info
+build/
+dist/
