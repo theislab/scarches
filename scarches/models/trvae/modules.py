@@ -252,7 +252,6 @@ class MaskedLinearDecoder(nn.Module):
             self.A0 = nn.ReLU()
             print("\tUsing ReLU after the masked linear layer.")
 
-
     def forward(self, z, batch=None):
         if batch is not None:
             batch = one_hot_encoder(batch, n_cls=self.n_cond)
@@ -267,3 +266,8 @@ class MaskedLinearDecoder(nn.Module):
             recon_x = dec_latent
 
         return recon_x, dec_latent
+
+    def n_inactive_terms(self):
+        v = self.L0.expr_L.weight.data
+        n = (~(v.norm(p=2, dim=0)>0)).float().sum().cpu().numpy()
+        return int(n)
