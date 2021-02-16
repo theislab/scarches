@@ -267,7 +267,10 @@ class MaskedLinearDecoder(nn.Module):
 
         return recon_x, dec_latent
 
-    def n_inactive_terms(self):
+    def nonzero_terms(self):
         v = self.L0.expr_L.weight.data
-        n = (~(v.norm(p=2, dim=0)>0)).float().sum().cpu().numpy()
+        return (v.norm(p=2, dim=0)>0).cpu().numpy()
+
+    def n_inactive_terms(self):
+        n = (~self.nonzero_terms()).sum()
         return int(n)
