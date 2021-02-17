@@ -12,6 +12,17 @@ from scarches.trainers.trvae.unsupervised import trVAETrainer
 from ._utils import _validate_var_names
 
 class BaseMixin:
+    """ Adapted from
+        Title: scvi-tools
+        Authors: Romain Lopez <romain_lopez@gmail.com>,
+                 Adam Gayoso <adamgayoso@berkeley.edu>,
+                 Galen Xing <gx2113@columbia.edu>
+        Date: 14.12.2020
+        Code version: 0.8.0-beta.0
+        Availability: https://github.com/YosefLab/scvi-tools
+        Link to the used code:
+        https://github.com/YosefLab/scvi-tools/blob/0.8.0-beta.0/scvi/core/models/base.py
+    """
     def _get_user_attributes(self):
         # returns all the self attributes defined in a model class, eg, self.is_trained_
         attributes = inspect.getmembers(self, lambda a: not (inspect.isroutine(a)))
