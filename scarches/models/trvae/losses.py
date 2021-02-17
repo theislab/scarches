@@ -26,8 +26,8 @@ def mse(recon_x, x):
 
 
 def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
-    """Computes negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools.
-
+    """Computes negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools/blob/master/scvi/distributions/_negative_binomial.py.
+       All credit goes to original developer.
        Parameters
        ----------
        x: torch.Tensor
@@ -59,8 +59,8 @@ def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
 
 
 def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tensor, eps=1e-8):
-    """Computes zero inflated negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools.
-
+    """Computes zero inflated negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools/blob/master/scvi/distributions/_negative_binomial.py.
+       All credit goes to original developer.
        Parameters
        ----------
        x: torch.Tensor
