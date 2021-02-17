@@ -32,3 +32,12 @@ def _validate_var_names(adata, source_var_names):
             "adata used to train the model. For valid results, the vars "
             "need to be the same and in the same order as the adata used to train the model."
         )
+
+
+def pairwise_distance(x, y):
+    x = x.view(x.shape[0], x.shape[1], 1)
+    y = torch.transpose(y, 0, 1)
+    output = torch.sum((x - y) ** 2, 1)
+    output = torch.transpose(output, 0, 1)
+
+    return output

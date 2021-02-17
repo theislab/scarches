@@ -1,10 +1,8 @@
 import torch
-import numpy as np
-from functools import partial
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from ._utils import partition
+from ._utils import partition, pairwise_distance
 
 
 def mse(recon_x, x):
@@ -26,8 +24,17 @@ def mse(recon_x, x):
 
 
 def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
-    """Computes negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools/blob/master/scvi/distributions/_negative_binomial.py.
-       All credit goes to original developer.
+    """
+       This negative binomial function was taken from:
+       Title: scvi-tools
+       Authors: Romain Lopez <romain_lopez@gmail.com>,
+                Adam Gayoso <adamgayoso@berkeley.edu>,
+                Galen Xing <gx2113@columbia.edu>
+       Date: 16th November 2020
+       Code version: 0.8.1
+       Availability: https://github.com/YosefLab/scvi-tools/blob/8f5a9cc362325abbb7be1e07f9523cfcf7e55ec0/scvi/core/distributions/_negative_binomial.py
+
+       Computes negative binomial loss.
        Parameters
        ----------
        x: torch.Tensor
@@ -59,8 +66,17 @@ def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
 
 
 def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tensor, eps=1e-8):
-    """Computes zero inflated negative binomial loss. This function was taken from https://github.com/YosefLab/scvi-tools/blob/master/scvi/distributions/_negative_binomial.py.
-       All credit goes to original developer.
+    """
+       This zero-inflated negative binomial function was taken from:
+       Title: scvi-tools
+       Authors: Romain Lopez <romain_lopez@gmail.com>,
+                Adam Gayoso <adamgayoso@berkeley.edu>,
+                Galen Xing <gx2113@columbia.edu>
+       Date: 16th November 2020
+       Code version: 0.8.1
+       Availability: https://github.com/YosefLab/scvi-tools/blob/8f5a9cc362325abbb7be1e07f9523cfcf7e55ec0/scvi/core/distributions/_negative_binomial.py
+
+       Computes zero inflated negative binomial loss.
        Parameters
        ----------
        x: torch.Tensor
@@ -106,23 +122,7 @@ def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tenso
     return res
 
 
-def pairwise_distance(x, y):
-
-    if not len(x.shape) == len(y.shape) == 2:
-        raise ValueError('Both inputs should be matrices.')
-
-    if x.shape[1] != y.shape[1]:
-        raise ValueError('The number of features should be the same.')
-
-    x = x.view(x.shape[0], x.shape[1], 1)
-    y = torch.transpose(y, 0, 1)
-    output = torch.sum((x - y) ** 2, 1)
-    output = torch.transpose(output, 0, 1)
-
-    return output
-
-
-def gaussian_kernel_matrix(x, y, sigmas):
+def gaussian_kernel_matrix(x, y, alphas):
     """Computes multiscale-RBF kernel between x and y.
 
        Parameters
@@ -131,47 +131,28 @@ def gaussian_kernel_matrix(x, y, sigmas):
             Tensor with shape [batch_size, z_dim].
        y: torch.Tensor
             Tensor with shape [batch_size, z_dim].
-       sigmas: Tensor
+       alphas: Tensor
 
        Returns
        -------
        Returns the computed multiscale-RBF kernel between x and y.
     """
 
-    sigmas = sigmas.view(sigmas.shape[0], 1)
-    beta = 1. / (2. * sigmas)
     dist = pairwise_distance(x, y).contiguous()
     dist_ = dist.view(1, -1)
+
+    alphas = alphas.view(alphas.shape[0], 1)
+    beta = 1. / (2. * alphas)
+
     s = torch.matmul(beta, dist_)
 
     return torch.sum(torch.exp(-s), 0).view_as(dist)
 
 
-def maximum_mean_discrepancy(x, y, kernel=gaussian_kernel_matrix):
-    """Computes Maximum Mean Discrepancy(MMD) between x and y.
-
-       Parameters
-       ----------
-       x: torch.Tensor
-            Tensor with shape [batch_size, z_dim]
-       y: torch.Tensor
-            Tensor with shape [batch_size, z_dim]
-       kernel: gaussian_kernel_matrix
-
-       Returns
-       -------
-       Returns the computed MMD between x and y.
-    """
-
-    cost = torch.mean(kernel(x, x))
-    cost += torch.mean(kernel(y, y))
-    cost -= 2 * torch.mean(kernel(x, y))
-
-    return cost
-
-
 def mmd_loss_calc(source_features, target_features):
     """Initializes Maximum Mean Discrepancy(MMD) between source_features and target_features.
+
+       - Gretton, Arthur, et al. "A Kernel Two-Sample Test". 2012.
 
        Parameters
        ----------
@@ -184,25 +165,20 @@ def mmd_loss_calc(source_features, target_features):
        -------
        Returns the computed MMD between x and y.
     """
-
-    sigmas = [
+    alphas = [
         1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100,
         1e3, 1e4, 1e5, 1e6
     ]
-    if torch.cuda.is_available():
-        gaussian_kernel = partial(
-            gaussian_kernel_matrix, sigmas=Variable(torch.cuda.FloatTensor(sigmas))
-        )
-    else:
-        gaussian_kernel = partial(
-            gaussian_kernel_matrix, sigmas=Variable(torch.FloatTensor(sigmas))
-        )
-    loss_value = maximum_mean_discrepancy(source_features, target_features, kernel=gaussian_kernel)
+    alphas = Variable(torch.FloatTensor(alphas)).to(device=source_features.device)
 
-    return loss_value
+    cost = torch.mean(gaussian_kernel_matrix(source_features, source_features, alphas))
+    cost += torch.mean(gaussian_kernel_matrix(target_features, target_features, alphas))
+    cost -= 2 * torch.mean(gaussian_kernel_matrix(source_features, target_features, alphas))
+
+    return cost
 
 
-def mmd(n_conditions, beta, boundary):
+def mmd(y,c,n_conditions, beta, boundary):
     """Initializes Maximum Mean Discrepancy(MMD) between every different condition.
 
        Parameters
@@ -222,24 +198,23 @@ def mmd(n_conditions, beta, boundary):
        -------
        Returns MMD loss.
     """
-    def mmd_loss(y, c):
-        # partition separates y into num_cls subsets w.r.t. their labels c
-        conditions_mmd = partition(y, c, n_conditions)
-        loss = torch.tensor(0.0, device=y.device)
-        if boundary is not None:
-            for i in range(boundary):
-                for j in range(boundary, n_conditions):
-                    if conditions_mmd[i].size(0) < 2 or conditions_mmd[j].size(0) < 2:
-                        continue
-                    loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
-        else:
-            for i in range(len(conditions_mmd)):
-                if conditions_mmd[i].size(0) < 1:
-                    continue
-                for j in range(i):
-                    if conditions_mmd[j].size(0) < 1 or i == j:
-                        continue
-                    loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
-        return beta * loss
 
-    return mmd_loss
+    # partition separates y into num_cls subsets w.r.t. their labels c
+    conditions_mmd = partition(y, c, n_conditions)
+    loss = torch.tensor(0.0, device=y.device)
+    if boundary is not None:
+        for i in range(boundary):
+            for j in range(boundary, n_conditions):
+                if conditions_mmd[i].size(0) < 2 or conditions_mmd[j].size(0) < 2:
+                    continue
+                loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
+    else:
+        for i in range(len(conditions_mmd)):
+            if conditions_mmd[i].size(0) < 1:
+                continue
+            for j in range(i):
+                if conditions_mmd[j].size(0) < 1 or i == j:
+                    continue
+                loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
+
+    return beta * loss

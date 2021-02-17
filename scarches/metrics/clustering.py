@@ -8,6 +8,16 @@ from scarches.dataset.trvae.data_handling import remove_sparsity
 def opt_louvain(adata, label_key, cluster_key, function=None, resolutions=None,
                 inplace=True, plot=False, verbose=True, **kwargs):
     """
+       This Louvain Clustering method was taken from scIB:
+       Title: scIB
+       Authors: Malte Luecken,
+                Maren Buettner,
+                Daniel Strobl,
+                Michaela Mueller
+       Date: 4th October 2020
+       Code version: 0.2.0
+       Availability: https://github.com/theislab/scib/blob/master/scIB/clustering.py
+
     params:
         label_key: name of column in adata.obs containing biological labels to be
             optimised against

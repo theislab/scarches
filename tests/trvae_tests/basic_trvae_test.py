@@ -2,6 +2,7 @@ import scanpy as sc
 import os
 import scarches as sca
 from scarches.dataset.trvae.data_handling import remove_sparsity
+import torch
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -26,7 +27,6 @@ adata_conditions = adata.obs[batch_key].tolist()
 trvae = sca.models.TRVAE(
     adata=adata,
     condition_key=batch_key,
-    conditions=adata_conditions,
     hidden_layer_sizes=[128,128],
 )
 

@@ -1,8 +1,19 @@
 import numpy as np
 
 
+
+
 class EarlyStopping(object):
     """Class for EarlyStopping. This class contains the implementation of early stopping for TRVAE/CVAE training.
+
+       This early stopping class was inspired by:
+       Title: scvi-tools
+       Authors: Romain Lopez <romain_lopez@gmail.com>,
+                Adam Gayoso <adamgayoso@berkeley.edu>,
+                Galen Xing <gx2113@columbia.edu>
+       Date: 24th December 2020
+       Code version: 0.8.1
+       Availability: https://github.com/YosefLab/scvi-tools/blob/8f5a9cc362325abbb7be1e07f9523cfcf7e55ec0/scvi/core/trainers/trainer.py
 
            Parameters
            ----------

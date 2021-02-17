@@ -108,8 +108,18 @@ def __entropy_from_indices(indices, n_cat):
 
 def nmi_helper(adata, group1, group2, method="arithmetic"):
     """
-    Normalized mutual information NMI based on 2 different cluster assignments `group1` and `group2`
-    params:
+       This NMI function was taken from scIB:
+       Title: scIB
+       Authors: Malte Luecken,
+                Maren Buettner,
+                Daniel Strobl,
+                Michaela Mueller
+       Date: 4th October 2020
+       Code version: 0.2.0
+       Availability: https://github.com/theislab/scib/blob/master/scIB/metrics.py
+
+       Normalized mutual information NMI based on 2 different cluster assignments `group1` and `group2`
+       params:
         adata: Anndata object
         group1: column name of `adata.obs` or group assignment
         group2: column name of `adata.obs` or group assignment
@@ -118,10 +128,8 @@ def nmi_helper(adata, group1, group2, method="arithmetic"):
             'min': scikit method with `average_method='min'`
             'geometric': scikit method with `average_method='geometric'`
             'arithmetic': scikit method with `average_method='arithmetic'`
-            'Lancichinetti': implementation by A. Lancichinetti 2009 et al.
-            'ONMI': implementation by Aaron F. McDaid et al. (https://github.com/aaronmcdaid/Overlapping-NMI) Hurley 2011
-        nmi_dir: directory of compiled C code if 'Lancichinetti' or 'ONMI' are specified as `method`. Compilation should be done as specified in the corresponding README.
-    return:
+
+       return:
         normalized mutual information (NMI)
     """
     adata = remove_sparsity(adata)
@@ -149,7 +157,18 @@ def nmi_helper(adata, group1, group2, method="arithmetic"):
 
 def silhouette(adata, group_key, metric='euclidean', scale=True):
     """
-    wrapper for sklearn silhouette function values range from [-1, 1] with 1 being an ideal fit, 0 indicating overlapping clusters and -1 indicating misclassified cells
+       This ASW function was taken from scIB:
+       Title: scIB
+       Authors: Malte Luecken,
+                Maren Buettner,
+                Daniel Strobl,
+                Michaela Mueller
+       Date: 4th October 2020
+       Code version: 0.2.0
+       Availability: https://github.com/theislab/scib/blob/master/scIB/metrics.py
+
+       wrapper for sklearn silhouette function values range from [-1, 1] with 1 being an ideal fit, 0 indicating
+       overlapping clusters and -1 indicating misclassified cells
     """
     adata = remove_sparsity(adata)
     labels = adata.obs[group_key].values
@@ -162,13 +181,25 @@ def silhouette(adata, group_key, metric='euclidean', scale=True):
 
 def silhouette_batch(adata, batch_key, group_key, metric='euclidean', verbose=True, scale=True):
     """
-    Silhouette score of batch labels subsetted for each group.
-    params:
+       This ASW function was taken from scIB:
+       Title: scIB
+       Authors: Malte Luecken,
+                Maren Buettner,
+                Daniel Strobl,
+                Michaela Mueller
+       Date: 4th October 2020
+       Code version: 0.2.0
+       Availability: https://github.com/theislab/scib/blob/master/scIB/metrics.py
+
+       Silhouette score of batch labels subsetted for each group.
+
+       params:
         batch_key: batches to be compared against
         group_key: group labels to be subsetted by e.g. cell type
         metric: see sklearn silhouette score
         embed: name of column in adata.obsm
-    returns:
+
+       returns:
         all scores: absolute silhouette scores per group label
         group means: if `mean=True`
     """

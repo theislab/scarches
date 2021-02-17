@@ -212,10 +212,9 @@ class trVAE(nn.Module):
 
         mmd_loss = 0
         if self.use_mmd:
-            mmd_calculator = mmd(self.n_conditions, self.beta, self.mmd_boundary)
             if self.mmd_on == "z":
-                mmd_loss = mmd_calculator(z1, batch)
+                mmd_loss = mmd(z1, batch,self.n_conditions, self.beta, self.mmd_boundary)
             else:
-                mmd_loss = mmd_calculator(y1, batch)
+                mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
 
         return recon_loss, kl_div, mmd_loss
