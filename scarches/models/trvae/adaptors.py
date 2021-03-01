@@ -2,13 +2,26 @@ import os
 import numpy as np
 import torch
 import pickle
+from typing import Optional, Union
 from .trvae_model import TRVAE
 from ._utils import _validate_var_names
 
 class Adaptor:
+    """Adaptor class for trVAE.
+
+       Allows to save and load trainded conditional weights for trVAE models.
+
+       Parameters
+       ----------
+       trvae_model
+            A TRVAE class object with a trainded model or a path to saved Adaptor object.
+    """
     model_type = 'trVAE'
 
-    def __init__(self, trvae_model):
+    def __init__(
+        self,
+        trvae_model: Union[str, TRVAE]
+    ):
         if isinstance(trvae_model, str):
             cond_params_path = os.path.join(trvae_model, "cond_params.pt")
             cond_names_path = os.path.join(trvae_model, "cond_names.csv")
@@ -53,7 +66,26 @@ class Adaptor:
                 raise ValueError(f'Parameter {k} in the adaptor isn\'t equal to {k} of the model.')
 
 
-    def attach(self, trvae_model, only_new=False):
+    def attach(
+        self,
+        trvae_model: TRVAE,
+        only_new: Optional[bool] = False
+    ):
+        """Attach the conditional weights from the adaptor to a trVAE model.
+
+           Attaches the conditional weights saved in the adaptor to a model,
+           expanding it to all conditions present in the adaptor.
+
+           Parameters
+           ----------
+           trvae_model
+                A TRVAE class object. The object should have the same architecture
+                as the model which was used to save the conditional weights to the adaptor.
+           only_new
+                Attach only condtional weights for new conditions.
+                Do not overwrite conditional weights for the conditions
+                which are already in the model (in `trvae_model.conditions_`).
+        """
         attr_dict = trvae_model._get_public_attributes()
         init_params = TRVAE._get_init_params_from_dict(attr_dict)
 
@@ -84,7 +116,21 @@ class Adaptor:
 
         return new_model
 
-    def save(self, dir_path, overwrite=False):
+    def save(
+        self,
+        dir_path: str,
+        overwrite: Optional[bool] = False
+    ):
+        """Save the state of the adaptor.
+
+           Parameters
+           ----------
+           dir_path
+                Path to a directory.
+           overwrite
+                Overwrite existing data or not. If `False` and directory
+                already exists at `dir_path`, error will be raised.
+        """
         cond_params_path = os.path.join(dir_path, "cond_params.pt")
         cond_names_path = os.path.join(dir_path, "cond_names.csv")
         architec_params_path = os.path.join(dir_path, "architec_params.pkl")
