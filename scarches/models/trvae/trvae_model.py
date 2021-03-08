@@ -10,6 +10,7 @@ from typing import Optional, Union
 
 from .trvae import trVAE
 from scarches.trainers.trvae.unsupervised import trVAETrainer
+from scarches.trainers.trvae.regularized import VIATrainer
 from ._utils import _validate_var_names
 
 class BaseMixin:
@@ -222,6 +223,8 @@ class TRVAE(BaseMixin):
         beta: float = 1,
         use_bn: bool = False,
         use_ln: bool = True,
+        mask: Optional[Union[np.ndarray, list]] = None,
+        use_decoder_relu: bool = False
     ):
         self.adata = adata
 
@@ -248,6 +251,13 @@ class TRVAE(BaseMixin):
 
         self.input_dim_ = adata.n_vars
 
+        self.use_decoder_relu_ = use_decoder_relu
+        self.mask_ = None
+        if mask is not None:
+            self.mask_ = mask if isinstance(mask, list) else mask.tolist()
+            mask = torch.tensor(mask).float()
+            self.latent_dim_ = len(self.mask_)
+
         self.model = trVAE(
             self.input_dim_,
             self.conditions_,
@@ -261,6 +271,8 @@ class TRVAE(BaseMixin):
             self.beta_,
             self.use_bn_,
             self.use_ln_,
+            mask,
+            self.use_decoder_relu_
         )
 
         self.is_trained_ = False
@@ -272,6 +284,8 @@ class TRVAE(BaseMixin):
         n_epochs: int = 400,
         lr: float = 1e-3,
         eps: float = 0.01,
+        alpha: Optional[float] = None,
+        omega: Optional[torch.Tensor] = None,
         **kwargs
     ):
         """Train the model.
@@ -287,12 +301,23 @@ class TRVAE(BaseMixin):
            kwargs
                 kwargs for the TrVAE trainer.
         """
-        self.trainer = trVAETrainer(
-            self.model,
-            self.adata,
-            condition_key=self.condition_key_,
-            **kwargs)
-        self.trainer.train(n_epochs, lr, eps)
+        if self.mask_ is None:
+            self.trainer = trVAETrainer(
+                self.model,
+                self.adata,
+                condition_key=self.condition_key_,
+                **kwargs)
+            self.trainer.train(n_epochs, lr, eps)
+        else:
+            self.trainer = VIATrainer(
+                self.model,
+                self.adata,
+                alpha=alpha,
+                omega=omega,
+                condition_key=self.condition_key_,
+                **kwargs
+            )
+            self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
     def get_latent(
@@ -404,6 +429,8 @@ class TRVAE(BaseMixin):
             'beta': dct['beta_'],
             'use_bn': dct['use_bn_'],
             'use_ln': dct['use_ln_'],
+            'mask': dct['mask_'],
+            'use_decoder_relu': dct['use_decoder_relu_']
         }
 
         return init_params
