@@ -4,7 +4,6 @@ import torch
 import pickle
 from typing import Optional, Union
 from .trvae_model import TRVAE
-from ._utils import _validate_var_names
 
 class Adaptor:
     """Adaptor class for trVAE.
