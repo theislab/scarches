@@ -63,7 +63,7 @@ class vaeArithTrainer:
 
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
-        self.monitor = kwargs.pop("monitor", False)
+        self.monitor = kwargs.pop("monitor", True)
 
         # Optimization attributes
         self.optim = None
@@ -180,11 +180,8 @@ class vaeArithTrainer:
             if self.monitor:
                 print_progress(self.epoch, self.logs, self.n_epochs)
 
-            
-            print(f"Epoch: {self.epoch}. Train Loss: {train_loss_end_epoch * self.batch_size / (train_adata.shape[0])} Validation Loss: {valid_loss * self.batch_size / (valid_adata.shape[0])}")
-
             if not self.check_early_stop():
-                    break
+                break
 
         if self.best_state_dict is not None:
             print("Saving best state of network...")
@@ -212,10 +209,10 @@ class vaeArithTrainer:
 
         continue_training, update_lr = self.early_stopping.step(self.logs[early_stopping_metric][-1])
 
-        
+
         if update_lr:
             print(f'\nADJUSTED LR')
             for param_group in self.optim.param_groups:
                 param_group["lr"] *= self.early_stopping.lr_factor
-                
+
         return continue_training

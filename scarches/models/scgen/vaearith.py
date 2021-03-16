@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-import numpy
+import numpy as np
 from scipy import sparse
+import scanpy as sc
+import anndata
 
 from .modules import Encoder, Decoder
 from .util import balancer, extractor
@@ -22,7 +24,6 @@ class vaeArith(nn.Module):
        dr_rate: Float
             Dropout rate applied to all layers, if `dr_rate`==0 no dropout will be applied.
     """
-
     def __init__(self, x_dim: int, hidden_layer_sizes: list = [128,128], z_dimension: int = 10, dr_rate: float = 0.05, **kwargs):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -43,8 +44,7 @@ class vaeArith(nn.Module):
         self.encoder = Encoder(self.x_dim, encoder_layer_sizes, self.z_dim, self.dr_rate)
         self.decoder = Decoder(self.z_dim, decoder_layer_sizes, self.x_dim, self.dr_rate)
 
-
-        self.alpha = kwargs.get("alpha", 0.0000001)
+        self.alpha = kwargs.get("alpha", 0.000001)
 
 
     @staticmethod
@@ -57,9 +57,9 @@ class vaeArith(nn.Module):
         Parameters
         ----------
         mean:
-            Mean of the latent Gaussian
+        Mean of the latent Gaussian
         log_var:
-            Standard deviation of the latent Gaussian
+        Standard deviation of the latent Gaussian
         Returns
         -------
         Returns Torch Tensor containing latent space encoding of 'x'.
@@ -209,8 +209,8 @@ class vaeArith(nn.Module):
             ctrl_pred = adata_to_predict
 
         eq = min(ctrl_x.X.shape[0], stim_x.X.shape[0])
-        cd_ind = numpy.random.choice(range(ctrl_x.shape[0]), size=eq, replace=False)
-        stim_ind = numpy.random.choice(range(stim_x.shape[0]), size=eq, replace=False)
+        cd_ind = np.random.choice(range(ctrl_x.shape[0]), size=eq, replace=False)
+        stim_ind = np.random.choice(range(stim_x.shape[0]), size=eq, replace=False)
         if sparse.issparse(ctrl_x.X) and sparse.issparse(stim_x.X):
             latent_ctrl = self._avg_vector(torch.tensor(ctrl_x.X.A[cd_ind, :], device=device))
             latent_sim = self._avg_vector(torch.tensor(stim_x.X.A[stim_ind, :], device=device))
@@ -227,3 +227,91 @@ class vaeArith(nn.Module):
         stim_pred = delta + latent_cd
         predicted_cells = self.reconstruct(stim_pred, use_data=True)
         return predicted_cells, delta
+
+
+    def batch_removal(self, adata, batch_key, cell_label_key):
+        """
+        Removes batch effect of adata
+
+        Parameters
+        ----------
+        adata: `~anndata.AnnData`
+            Annotated data matrix. adata must have `batch_key` and `cell_label_key` which you pass to the function in its obs.
+        batch_key: `str`
+            batch label key in  adata.obs
+        cell_label_key: `str`
+            cell type label key in adata.obs
+        return_latent: `bool`
+            if `True` the returns corrected latent representation
+
+        Returns
+        -------
+        corrected: `~anndata.AnnData`
+            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["latent"].
+        """
+        device = next(self.parameters()).device # get device of model.parameters
+        if sparse.issparse(adata.X):
+            latent_all = (self.to_latent(torch.tensor(adata.X.A, device=device))).cpu().detach().numpy()
+        else:
+            latent_all = (self.to_latent(torch.tensor(adata.X, device=device))).cpu().detach().numpy()
+        adata_latent = anndata.AnnData(latent_all)
+        adata_latent.obs = adata.obs.copy(deep=True)
+        unique_cell_types = np.unique(adata_latent.obs[cell_label_key])
+        shared_ct = []
+        not_shared_ct = []
+        for cell_type in unique_cell_types:
+            temp_cell = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
+            if len(np.unique(temp_cell.obs[batch_key])) < 2:
+                cell_type_ann = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
+                not_shared_ct.append(cell_type_ann)
+                continue
+            temp_cell = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
+            batch_list = {}
+            batch_ind = {}
+            max_batch = 0
+            max_batch_ind = ""
+            batches = np.unique(temp_cell.obs[batch_key])
+            for i in batches:
+                temp = temp_cell[temp_cell.obs[batch_key] == i]
+                temp_ind = temp_cell.obs[batch_key] == i
+                if max_batch < len(temp):
+                    max_batch = len(temp)
+                    max_batch_ind = i
+                batch_list[i] = temp
+                batch_ind[i] = temp_ind
+            max_batch_ann = batch_list[max_batch_ind]
+            for study in batch_list:
+                delta = np.average(max_batch_ann.X, axis=0) - np.average(batch_list[study].X, axis=0)
+                batch_list[study].X = delta + batch_list[study].X
+                temp_cell[batch_ind[study]].X = batch_list[study].X
+            shared_ct.append(temp_cell)
+        all_shared_ann = anndata.AnnData.concatenate(*shared_ct, batch_key="concat_batch", index_unique=None)
+        if "concat_batch" in all_shared_ann.obs.columns:
+            del all_shared_ann.obs["concat_batch"]
+        if len(not_shared_ct) < 1:
+            obs = all_shared_ann.obs
+            corrected = sc.AnnData(self.reconstruct(torch.tensor(all_shared_ann.X, device=device), use_data=True).cpu().detach().numpy(), obs=obs)
+            corrected.var_names = adata.var_names.tolist()
+            corrected = corrected[adata.obs_names]
+            if adata.raw is not None:
+                adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
+                adata_raw.obs_names = adata.obs_names
+                corrected.raw = adata_raw
+            corrected.obsm["latent"] = all_shared_ann.X
+            return corrected
+        else:
+            all_not_shared_ann = anndata.AnnData.concatenate(*not_shared_ct, batch_key="concat_batch", index_unique=None)
+            all_corrected_data = anndata.AnnData.concatenate(all_shared_ann, all_not_shared_ann, batch_key="concat_batch", index_unique=None)
+            if "concat_batch" in all_shared_ann.obs.columns:
+                del all_corrected_data.obs["concat_batch"]
+            corrected = sc.AnnData(self.reconstruct(torch.tensor(all_corrected_data.X, device=device), use_data=True).cpu().detach().numpy(), all_corrected_data.obs)
+            corrected.var_names = adata.var_names.tolist()
+            corrected = corrected[adata.obs_names]
+            if adata.raw is not None:
+                adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
+                adata_raw.obs_names = adata.obs_names
+                corrected.raw = adata_raw
+            corrected.obsm["latent"] = all_corrected_data.X
+            return corrected
+
+

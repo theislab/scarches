@@ -278,92 +278,28 @@ class SCGEN(BaseMixin):
         return np.array(prediction), np.array(delta)
 
 
-    def batch_removal(self, adata, batch_key="batch", cell_label_key="cell_type"):
+    def batch_removal(self, adata, batch_key, cell_label_key):
         """
-    Removes batch effect of adata
+        Removes batch effect of adata
 
-    Parameters
-    ----------
-    network: `scgen VAE`
-        Variational Auto-encoder class object after training the network.
-    adata: `~anndata.AnnData`
-        Annotated data matrix. adata must have `batch_key` and `cell_label_key` which you pass to the function in its obs.
-    batch_key: `str`
-        batch label key in  adata.obs
-    cell_label_key: `str`
-        cell type label key in adata.obs
-    return_latent: `bool`
-        if `True` the returns corrected latent representation
+        Parameters
+        ----------
+        adata: `~anndata.AnnData`
+            Annotated data matrix. adata must have `batch_key` and `cell_label_key` which you pass to the function in its obs.
+        batch_key: `str`
+            batch label key in  adata.obs
+        cell_label_key: `str`
+            cell type label key in adata.obs
+        return_latent: `bool`
+            if `True` the returns corrected latent representation
 
-    Returns
-    -------
-    corrected: `~anndata.AnnData`
-        adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["latent"].
-     """
-        if sparse.issparse(adata.X):
-        latent_all = network.to_latent(adata.X.A)
-    else:
-        latent_all = network.to_latent(adata.X)
-    adata_latent = anndata.AnnData(latent_all)
-    adata_latent.obs = adata.obs.copy(deep=True)
-    unique_cell_types = np.unique(adata_latent.obs[cell_label_key])
-    shared_ct = []
-    not_shared_ct = []
-    for cell_type in unique_cell_types:
-        temp_cell = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
-        if len(np.unique(temp_cell.obs[batch_key])) < 2:
-            cell_type_ann = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
-            not_shared_ct.append(cell_type_ann)
-            continue
-        temp_cell = adata_latent[adata_latent.obs[cell_label_key] == cell_type]
-        batch_list = {}
-        batch_ind = {}
-        max_batch = 0
-        max_batch_ind = ""
-        batches = np.unique(temp_cell.obs[batch_key])
-        for i in batches:
-            temp = temp_cell[temp_cell.obs[batch_key] == i]
-            temp_ind = temp_cell.obs[batch_key] == i
-            if max_batch < len(temp):
-                max_batch = len(temp)
-                max_batch_ind = i
-            batch_list[i] = temp
-            batch_ind[i] = temp_ind
-        max_batch_ann = batch_list[max_batch_ind]
-        for study in batch_list:
-            delta = np.average(max_batch_ann.X, axis=0) - np.average(batch_list[study].X, axis=0)
-            batch_list[study].X = delta + batch_list[study].X
-            temp_cell[batch_ind[study]].X = batch_list[study].X
-        shared_ct.append(temp_cell)
-    all_shared_ann = anndata.AnnData.concatenate(*shared_ct, batch_key="concat_batch", index_unique=None)
-    if "concat_batch" in all_shared_ann.obs.columns:
-        del all_shared_ann.obs["concat_batch"]
-    if len(not_shared_ct) < 1:
-        corrected = sc.AnnData(network.reconstruct(all_shared_ann.X, use_data=True),obs=all_shared_ann.obs)
-        corrected.var_names = adata.var_names.tolist()
-        corrected = corrected[adata.obs_names]
-        if adata.raw is not None:
-            adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
-            adata_raw.obs_names = adata.obs_names
-            corrected.raw = adata_raw
-        corrected.obsm["latent"] = all_shared_ann.X
+        Returns
+        -------
+        corrected: `~anndata.AnnData`
+            adata of corrected gene expression in adata.X and corrected latent space in adata.obs["latent"].
+        """
+        corrected = self.model.batch_removal(adata, batch_key, cell_label_key)
         return corrected
-    else:
-        all_not_shared_ann = anndata.AnnData.concatenate(*not_shared_ct, batch_key="concat_batch", index_unique=None)
-        all_corrected_data = anndata.AnnData.concatenate(all_shared_ann, all_not_shared_ann, batch_key="concat_batch", index_unique=None)
-        if "concat_batch" in all_shared_ann.obs.columns:
-            del all_corrected_data.obs["concat_batch"]
-        corrected = sc.AnnData( network.reconstruct(all_corrected_data.X, use_data=True), all_corrected_data.obs)
-        corrected.var_names = adata.var_names.tolist()
-        corrected = corrected[adata.obs_names]
-        if adata.raw is not None:
-            adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
-            adata_raw.obs_names = adata.obs_names
-            corrected.raw = adata_raw
-        corrected.obsm["latent"] = all_corrected_data.X
-        return corrected
-
-
 
 
     @classmethod
@@ -428,3 +364,43 @@ class SCGEN(BaseMixin):
                     p.requires_grad = True
 
         return new_model
+
+
+    @classmethod
+    def map_query_data(cls, reference_model: Union[str, 'SCGEN'], corrected_reference: AnnData, query: AnnData):
+        """
+        Removes the batch effect between reference and query data.
+        Additional training on query data is not needed.
+
+        Parameters
+        ----------
+        corrected_reference: `~anndata.AnnData`
+           Already corrected reference anndata object
+        query: `~anndata.AnnData`
+            Query anndata object
+        batch_key: `str`
+            batch label key in  adata.obs
+        cell_label_key: `str`
+            cell type label key in adata.obs
+        return_latent: `bool`
+            if `True` the returns corrected latent representation
+
+        Returns
+        -------
+        integrated: `~anndata.AnnData`
+        Returns an integrated query.
+        """
+        if isinstance(reference_model, str):
+            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
+            _validate_var_names(adata, var_names)
+        else:
+            attr_dict = reference_model._get_public_attributes()
+            model_state_dict = reference_model.model.state_dict()
+        init_params = cls._get_init_params_from_dict(attr_dict)
+
+        reference_query_adata = AnnData.concatenate(*[corrected_reference, query], batch_key="concat_batch", index_unique=None)
+        new_model = cls(reference_query_adata, **init_params)
+        new_model._load_expand_params_from_dict(model_state_dict)
+
+        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concat_batch", cell_label_key = "cell_type")
+        return integrated_query
