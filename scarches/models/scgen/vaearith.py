@@ -28,7 +28,7 @@ class vaeArith(nn.Module):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
         assert isinstance(z_dimension, int)
-
+        print("\nINITIALIZING NEW NETWORK..............")
 
         self.x_dim = x_dim
         self.z_dim = z_dimension
@@ -44,24 +44,24 @@ class vaeArith(nn.Module):
         self.encoder = Encoder(self.x_dim, encoder_layer_sizes, self.z_dim, self.dr_rate)
         self.decoder = Decoder(self.z_dim, decoder_layer_sizes, self.x_dim, self.dr_rate)
 
-        self.alpha = kwargs.get("alpha", 0.000001)
+        self.alpha = kwargs.get("alpha", 0.0000001)
 
 
     @staticmethod
     def _sample_z(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
         """
-        Samples from standard Normal distribution with shape [size, z_dim] and
-        applies re-parametrization trick. It is actually sampling from latent
-        space distributions with N(mu, var) computed by the Encoder.
+            Samples from standard Normal distribution with shape [size, z_dim] and
+            applies re-parametrization trick. It is actually sampling from latent
+            space distributions with N(mu, var) computed by the Encoder.
 
         Parameters
-        ----------
+            ----------
         mean:
         Mean of the latent Gaussian
-        log_var:
+            log_var:
         Standard deviation of the latent Gaussian
-        Returns
-        -------
+            Returns
+            -------
         Returns Torch Tensor containing latent space encoding of 'x'.
         The computed Tensor of samples with shape [size, z_dim].
         """
@@ -313,5 +313,3 @@ class vaeArith(nn.Module):
                 corrected.raw = adata_raw
             corrected.obsm["latent"] = all_corrected_data.X
             return corrected
-
-

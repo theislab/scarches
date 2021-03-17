@@ -196,13 +196,13 @@ class SCGEN(BaseMixin):
         self.is_trained_ = False
         self.trainer = None
 
-    def train(self, n_epochs = 25, batch_size = 32):
-        self.trainer = vaeArithTrainer(self.model, self.adata, n_epochs, batch_size)
+    def train(self, n_epochs = 25, batch_size = 32, **kwargs):
+        self.trainer = vaeArithTrainer(self.model, self.adata, n_epochs, batch_size, **kwargs)
         self.trainer.train()
         self.is_trained_ = True
 
 
-    def to_latent(self, data):
+    def to_latent(self, data: Optional[np.ndarray] = None):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of VAE and compute the latent space coordinates
@@ -219,6 +219,9 @@ class SCGEN(BaseMixin):
                 Returns numpy array containing latent space encoding of 'data'
         """
         device = next(self.model.parameters()).device #get device of model.parameters
+        if data is None:
+            data = self.adata.X
+
         data = torch.tensor(data, device=device) # to tensor
         latent = self.model.to_latent(data)
         latent = latent.cpu().detach() # to cpu then detach from the comput.graph
@@ -392,15 +395,15 @@ class SCGEN(BaseMixin):
         """
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            _validate_var_names(adata, var_names)
+            _validate_var_names(query, var_names)
         else:
             attr_dict = reference_model._get_public_attributes()
             model_state_dict = reference_model.model.state_dict()
         init_params = cls._get_init_params_from_dict(attr_dict)
 
-        reference_query_adata = AnnData.concatenate(*[corrected_reference, query], batch_key="concat_batch", index_unique=None)
+        reference_query_adata = AnnData.concatenate(*[corrected_reference, query], batch_key="concatenated_batch", index_unique=None)
         new_model = cls(reference_query_adata, **init_params)
         new_model._load_expand_params_from_dict(model_state_dict)
 
-        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concat_batch", cell_label_key = "cell_type")
+        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type")
         return integrated_query
