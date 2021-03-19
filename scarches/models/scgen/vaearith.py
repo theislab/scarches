@@ -303,7 +303,7 @@ class vaeArith(nn.Module):
                 adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
                 adata_raw.obs_names = adata.obs_names
                 corrected.raw = adata_raw
-                #corrected.obs["original_data"] = adata_raw
+                corrected.obsm["original_data"] = adata.raw.X
             if return_latent:
                 corrected.obsm["latent_corrected"] = (self.get_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
             return corrected
@@ -322,7 +322,7 @@ class vaeArith(nn.Module):
                 adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
                 adata_raw.obs_names = adata.obs_names
                 corrected.raw = adata_raw
-                #corrected.obs["original_data"] = adata_raw.X
+                corrected.obsm["original_data"] = adata.raw.X
             if return_latent:
                 corrected.obsm["latent_corrected"] = (self.get_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
             return corrected
