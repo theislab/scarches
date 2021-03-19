@@ -297,7 +297,7 @@ class scgen(BaseMixin):
         Returns
         -------
         corrected: `~anndata.AnnData`
-            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["corrected"].
+            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["latent_corrected"].
         """
         corrected = self.model.batch_removal(adata, batch_key, cell_label_key, return_latent)
         return corrected

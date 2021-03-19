@@ -247,7 +247,7 @@ class vaeArith(nn.Module):
         Returns
         -------
         corrected: `~anndata.AnnData`
-            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["corrected"].
+            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["latent_corrected"].
         """
         device = next(self.parameters()).device # get device of model.parameters
         if sparse.issparse(adata.X):
