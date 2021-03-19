@@ -69,7 +69,7 @@ class vaeArith(nn.Module):
         eps = torch.randn_like(std)
         return mu + std * eps
 
-    def to_latent(self, data: torch.Tensor) -> torch.Tensor:
+    def get_latent(self, data: torch.Tensor) -> torch.Tensor:
         """
         Map `data` in to the latent space. This function will feed data
         in encoder part of VAE and compute the latent space coordinates
@@ -106,7 +106,7 @@ class vaeArith(nn.Module):
             The average of latent space mapping in Torch Tensor
 
         """
-        latent = self.to_latent(data)
+        latent = self.get_latent(data)
         latent_avg = torch.mean(latent, dim=0) # maybe keepdim = True, so that shape (,1)
         return latent_avg
 
@@ -134,7 +134,7 @@ class vaeArith(nn.Module):
         if use_data:
             latent = data
         else:
-            latent = self.to_latent(data)
+            latent = self.get_latent(data)
 
         rec_data = self.decoder(latent)
         return rec_data
@@ -220,9 +220,9 @@ class vaeArith(nn.Module):
 
         delta = latent_sim - latent_ctrl
         if sparse.issparse(ctrl_pred.X):
-            latent_cd = self.to_latent(torch.tensor(ctrl_pred.X.A, device=device))
+            latent_cd = self.get_latent(torch.tensor(ctrl_pred.X.A, device=device))
         else:
-            latent_cd = self.to_latent(torch.tensor(ctrl_pred.X, device=device))
+            latent_cd = self.get_latent(torch.tensor(ctrl_pred.X, device=device))
 
         stim_pred = delta + latent_cd
         predicted_cells = self.reconstruct(stim_pred, use_data=True)
@@ -251,9 +251,9 @@ class vaeArith(nn.Module):
         """
         device = next(self.parameters()).device # get device of model.parameters
         if sparse.issparse(adata.X):
-            latent_all = (self.to_latent(torch.tensor(adata.X.A, device=device))).cpu().detach().numpy()
+            latent_all = (self.get_latent(torch.tensor(adata.X.A, device=device))).cpu().detach().numpy()
         else:
-            latent_all = (self.to_latent(torch.tensor(adata.X, device=device))).cpu().detach().numpy()
+            latent_all = (self.get_latent(torch.tensor(adata.X, device=device))).cpu().detach().numpy()
 
         adata_latent = anndata.AnnData(latent_all)
         adata_latent.obs = adata.obs.copy(deep=True)
@@ -303,8 +303,9 @@ class vaeArith(nn.Module):
                 adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
                 adata_raw.obs_names = adata.obs_names
                 corrected.raw = adata_raw
+                #corrected.obs["original_data"] = adata_raw
             if return_latent:
-                corrected.obsm["corrected"] = (self.to_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
+                corrected.obsm["latent_corrected"] = (self.get_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
             return corrected
         else:
             all_not_shared_ann = anndata.AnnData.concatenate(*not_shared_ct, batch_key="concat_batch", index_unique=None)
@@ -321,6 +322,7 @@ class vaeArith(nn.Module):
                 adata_raw = anndata.AnnData(X=adata.raw.X, var=adata.raw.var)
                 adata_raw.obs_names = adata.obs_names
                 corrected.raw = adata_raw
+                #corrected.obs["original_data"] = adata_raw.X
             if return_latent:
-                corrected.obsm["corrected"] = (self.to_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
+                corrected.obsm["latent_corrected"] = (self.get_latent(torch.tensor(corrected.X, device=device))).cpu().detach().numpy()
             return corrected

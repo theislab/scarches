@@ -84,8 +84,6 @@ class BaseMixin:
         np.savetxt(varnames_save_path, var_names, fmt="%s")
 
         torch.save(self.model.state_dict(), model_save_path)
-        with open(attr_save_path, "wb") as f:
-            pickle.dump(public_attributes, f)
 
     def _load_expand_params_from_dict(self, state_dict):
         load_state_dict = state_dict.copy()
@@ -196,34 +194,34 @@ class scgen(BaseMixin):
         self.is_trained_ = False
         self.trainer = None
 
-    def train(self, n_epochs = 25, batch_size = 32, **kwargs):
-        self.trainer = vaeArithTrainer(self.model, self.adata, n_epochs, batch_size, **kwargs)
-        self.trainer.train()
+    def train(self, n_epochs: int = 100, lr: float = 0.001, eps: float = 1e-8, batch_size = 32, **kwargs):
+        self.trainer = vaeArithTrainer(self.model, self.adata, batch_size, **kwargs)
+        self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
 
-    def to_latent(self, data: Optional[np.ndarray] = None):
+    def get_latent(self, data: Optional[np.ndarray] = None):
         """
-            Map `data` in to the latent space. This function will feed data
-            in encoder part of VAE and compute the latent space coordinates
-            for each sample in data.
+        Map `data` in to the latent space. This function will feed data
+        in encoder part of VAE and compute the latent space coordinates
+        for each sample in data.
 
-            Parameters
-            ----------
-            data:  numpy nd-array
-                Numpy nd-array to be mapped to latent space. `data.X` has to be in shape [n_obs, x_dim].
+        Parameters
+        ----------
+        data:  numpy nd-array
+            Numpy nd-array to be mapped to latent space. `data.X` has to be in shape [n_obs, x_dim].
 
-            Returns
-            -------
-            latent: numpy nd-array
-                Returns numpy array containing latent space encoding of 'data'
+        Returns
+        -------
+        latent: numpy nd-array
+            Returns numpy array containing latent space encoding of 'data'
         """
         device = next(self.model.parameters()).device #get device of model.parameters
         if data is None:
             data = self.adata.X
 
         data = torch.tensor(data, device=device) # to tensor
-        latent = self.model.to_latent(data)
+        latent = self.model.get_latent(data)
         latent = latent.cpu().detach() # to cpu then detach from the comput.graph
         return np.array(latent)
 
@@ -320,57 +318,9 @@ class scgen(BaseMixin):
 
         return init_params
 
-    @classmethod
-    def load_query_data(cls,
-                      adata: AnnData,
-                      reference_model: Union[str, 'scgen'],
-                      freeze: bool = True,
-                      freeze_expression: bool = True,
-                      remove_dropout: bool = True):
-        """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
-           Parameters
-           ----------
-           adata
-                Query anndata object.
-           reference_model
-                scgen model to expand or a path to scgen model folder.
-           freeze: Boolean
-                If 'True' freezes every part of the network except the first layers of encoder/decoder.
-           freeze_expression: Boolean
-                If 'True' freeze every weight in first layers except the condition weights.
-           remove_dropout: Boolean
-                If 'True' remove Dropout for Transfer Learning.
-           Returns
-           -------
-           new_model: scgen
-                New scgen model to train on query data.
-        """
-        if isinstance(reference_model, str):
-            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            _validate_var_names(adata, var_names)
-        else:
-            attr_dict = reference_model._get_public_attributes()
-            model_state_dict = reference_model.model.state_dict()
-        init_params = cls._get_init_params_from_dict(attr_dict)
-
-
-        new_model = cls(adata, **init_params)
-        new_model._load_expand_params_from_dict(model_state_dict)
-
-        if freeze:
-            new_model.model.freeze = True
-            for name, p in new_model.model.named_parameters():
-                p.requires_grad = False
-                if 'theta' in name:
-                    p.requires_grad = True
-                if "L0" in name or "N0" in name:
-                    p.requires_grad = True
-
-        return new_model
-
 
     @classmethod
-    def map_query_data(cls, reference_model: Union[str, 'scgen'], corrected_reference: AnnData, query: AnnData, return_latent = True):
+    def map_query_data(cls, corrected_reference: AnnData, query: AnnData, reference_model: Union[str, 'scgen'], return_latent = True):
         """
         Removes the batch effect between reference and query data.
         Additional training on query data is not needed.

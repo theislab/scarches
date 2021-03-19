@@ -25,7 +25,7 @@ class vaeArithTrainer:
         Defines the fraction of data that is used for training and data that is used for validation.
     batch_size: integer
         size of each batch of training dataset to be fed to network while training.
-    early_stop_limit: int
+    patience: int
         Number of consecutive epochs in which network loss is not going lower.
         After this limit, the network will stop training.
     threshold: float
@@ -37,7 +37,7 @@ class vaeArithTrainer:
     early_stopping_kwargs: Dict
         Passes custom Earlystopping parameters
     """
-    def __init__(self, model, adata, n_epochs, train_frac: float = 0.9, batch_size = 32, early_stop_limit = 20, shuffle=True, early_stopping_kwargs: dict = {
+    def __init__(self, model, adata, train_frac: float = 0.9, batch_size = 32, shuffle=True, early_stopping_kwargs: dict = {
             "early_stopping_metric": "val_loss",
             "threshold": 0,
             "patience": 20,
@@ -59,7 +59,6 @@ class vaeArithTrainer:
         self.train_frac = train_frac
         self.shuffle = shuffle
         self.batch_size = batch_size
-        self.early_stop_limit = early_stop_limit
 
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
@@ -68,7 +67,6 @@ class vaeArithTrainer:
         # Optimization attributes
         self.optim = None
         # self.weight_decay = weight_decay
-        self.n_epochs = n_epochs
         self.epoch = -1  # epoch = self.epoch + 1 in compute metrics
         # self.training_time = 0
         # self.n_iter = 0
@@ -95,11 +93,12 @@ class vaeArithTrainer:
         return train_adata, valid_adata
 
 
-    def train(self, lr=0.001, eps=0.01, **extras_kwargs):
+    def train(self, n_epochs = 100, lr = 0.001, eps = 1e-8, **extras_kwargs):
+        self.n_epochs = n_epochs
         params = filter(lambda p: p.requires_grad, self.model.parameters())
 
         self.optim = torch.optim.Adam(
-            params, lr=lr) # consider changing the param. like weight_decay, eps, etc.
+            params, lr=lr, eps=eps) # consider changing the param. like weight_decay, eps, etc.
 
         train_data, valid_data = self.train_valid_split(self.adata) # possible bad of using static method this way. Think about adding static methods to util.py
 
@@ -107,9 +106,6 @@ class vaeArithTrainer:
             train_adata = shuffle_adata(train_data)
             valid_adata = shuffle_adata(valid_data)
             loss_hist = []
-            #patience = self.early_stop_limit
-            #min_delta = self.threshold
-            #patience_cnt = 0
         for self.epoch in range(self.n_epochs):
             self.model.train()
             self.iter_logs = defaultdict(list)
