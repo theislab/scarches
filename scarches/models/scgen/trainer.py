@@ -77,7 +77,6 @@ class vaeArithTrainer:
 
         self.logs = defaultdict(list)
 
-        #self.model_to_use = kwargs.get("model_path", "example_model_save_2.pth")
 
     @staticmethod
     def _anndataToTensor(adata: AnnData) -> torch.Tensor:

@@ -167,7 +167,7 @@ class BaseMixin:
         return model
 
 
-class SCGEN(BaseMixin):
+class scgen(BaseMixin):
     """Model for scArches class. This class contains the implementation of Variational Auto-encoder network with Vector Arithmetics.
 
        Parameters
@@ -281,7 +281,7 @@ class SCGEN(BaseMixin):
         return np.array(prediction), np.array(delta)
 
 
-    def batch_removal(self, adata, batch_key, cell_label_key):
+    def batch_removal(self, adata, batch_key, cell_label_key, return_latent = True):
         """
         Removes batch effect of adata
 
@@ -294,14 +294,14 @@ class SCGEN(BaseMixin):
         cell_label_key: `str`
             cell type label key in adata.obs
         return_latent: `bool`
-            if `True` the returns corrected latent representation
+            if `True` returns corrected latent representation
 
         Returns
         -------
         corrected: `~anndata.AnnData`
-            adata of corrected gene expression in adata.X and corrected latent space in adata.obs["latent"].
+            adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["corrected"].
         """
-        corrected = self.model.batch_removal(adata, batch_key, cell_label_key)
+        corrected = self.model.batch_removal(adata, batch_key, cell_label_key, return_latent)
         return corrected
 
 
@@ -323,7 +323,7 @@ class SCGEN(BaseMixin):
     @classmethod
     def load_query_data(cls,
                       adata: AnnData,
-                      reference_model: Union[str, 'SCGEN'],
+                      reference_model: Union[str, 'scgen'],
                       freeze: bool = True,
                       freeze_expression: bool = True,
                       remove_dropout: bool = True):
@@ -333,7 +333,7 @@ class SCGEN(BaseMixin):
            adata
                 Query anndata object.
            reference_model
-                SCGEN model to expand or a path to SCGEN model folder.
+                scgen model to expand or a path to scgen model folder.
            freeze: Boolean
                 If 'True' freezes every part of the network except the first layers of encoder/decoder.
            freeze_expression: Boolean
@@ -343,7 +343,7 @@ class SCGEN(BaseMixin):
            Returns
            -------
            new_model: scgen
-                New SCGEN model to train on query data.
+                New scgen model to train on query data.
         """
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
@@ -370,7 +370,7 @@ class SCGEN(BaseMixin):
 
 
     @classmethod
-    def map_query_data(cls, reference_model: Union[str, 'SCGEN'], corrected_reference: AnnData, query: AnnData):
+    def map_query_data(cls, reference_model: Union[str, 'scgen'], corrected_reference: AnnData, query: AnnData, return_latent = True):
         """
         Removes the batch effect between reference and query data.
         Additional training on query data is not needed.
@@ -386,7 +386,7 @@ class SCGEN(BaseMixin):
         cell_label_key: `str`
             cell type label key in adata.obs
         return_latent: `bool`
-            if `True` the returns corrected latent representation
+            if `True` returns corrected latent representation
 
         Returns
         -------
@@ -405,5 +405,5 @@ class SCGEN(BaseMixin):
         new_model = cls(reference_query_adata, **init_params)
         new_model._load_expand_params_from_dict(model_state_dict)
 
-        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type")
+        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
         return integrated_query
