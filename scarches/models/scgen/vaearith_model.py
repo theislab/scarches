@@ -87,29 +87,13 @@ class BaseMixin:
 
     def _load_expand_params_from_dict(self, state_dict):
         load_state_dict = state_dict.copy()
-
-        #device = next(self.model.parameters()).device
-
-        """
-        new_state_dict = self.model.state_dict()
-        for key, load_ten in load_state_dict.items():
-            new_ten = new_state_dict[key]
-            if new_ten.size() == load_ten.size():
-                continue
-            # new categoricals changed size
-            else:
-                load_ten = load_ten.to(device)
-                dim_diff = new_ten.size()[-1] - load_ten.size()[-1]
-                fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
-                load_state_dict[key] = fixed_ten
-        """
         self.model.load_state_dict(load_state_dict)
 
     @classmethod
     def _load_params(
-        cls,
-        dir_path: str,
-        map_location: Optional[str] = None
+            cls,
+            dir_path: str,
+            map_location: Optional[str] = None
     ):
         setup_dict_path = os.path.join(dir_path, "attr.pkl")
         model_path = os.path.join(dir_path, "model_params.pt")
