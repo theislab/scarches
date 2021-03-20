@@ -8,7 +8,7 @@ import scanpy as sc
 import anndata
 
 from .modules import Encoder, Decoder
-from .util import balancer, extractor
+from ._utils import balancer, extractor
 
 class vaeArith(nn.Module):
     """ScArches model class. This class contains the implementation of Variational Auto-encoder network with Vector Arithmetics.

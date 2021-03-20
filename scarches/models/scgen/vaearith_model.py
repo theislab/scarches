@@ -8,7 +8,7 @@ from anndata import AnnData, read
 from typing import Optional, Union
 
 from .vaearith import vaeArith
-from .trainer import vaeArithTrainer
+from scarches.trainers.scgen.trainer import vaeArithTrainer
 from scarches.models.trvae._utils import _validate_var_names
 
 class BaseMixin:
@@ -88,8 +88,9 @@ class BaseMixin:
     def _load_expand_params_from_dict(self, state_dict):
         load_state_dict = state_dict.copy()
 
-        device = next(self.model.parameters()).device
+        #device = next(self.model.parameters()).device
 
+        """
         new_state_dict = self.model.state_dict()
         for key, load_ten in load_state_dict.items():
             new_ten = new_state_dict[key]
@@ -101,7 +102,7 @@ class BaseMixin:
                 dim_diff = new_ten.size()[-1] - load_ten.size()[-1]
                 fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
                 load_state_dict[key] = fixed_ten
-
+        """
         self.model.load_state_dict(load_state_dict)
 
     @classmethod

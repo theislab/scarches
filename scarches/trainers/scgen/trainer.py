@@ -3,10 +3,9 @@ from scipy import sparse
 from anndata import AnnData
 from collections import defaultdict
 
-from .util import shuffle_adata, balancer, extractor
+from ._utils import shuffle_adata
 
 from scarches.trainers.trvae._utils import print_progress
-
 from scarches.utils.monitor import EarlyStopping
 
 
@@ -197,7 +196,6 @@ class vaeArithTrainer:
     def check_early_stop(self):
         # Calculate Early Stopping and best state
         early_stopping_metric = self.early_stopping.early_stopping_metric
-        #print(self.logs[early_stopping_metric])
         if self.early_stopping.update_state(self.logs[early_stopping_metric][-1]):
             self.best_state_dict = self.model.state_dict()
             self.best_epoch = self.epoch
