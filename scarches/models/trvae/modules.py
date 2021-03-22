@@ -235,13 +235,15 @@ class Decoder(nn.Module):
 
 class MaskedLinearDecoder(nn.Module):
 
-    def __init__(self, in_dim, out_dim, n_cond, mask, use_relu=False):
+    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, use_relu=False):
         super().__init__()
 
         print("Decoder Architecture:")
         print("\tMasked linear layer in, out and cond: ", in_dim, out_dim, n_cond)
 
-        self.use_relu = use_relu
+        self.use_relu = use_relu and recon_loss == 'mse'
+
+        self.recon_loss = recon_loss
 
         self.n_cond = 0
         if n_cond is not None:
@@ -251,6 +253,9 @@ class MaskedLinearDecoder(nn.Module):
         if use_relu:
             self.A0 = nn.ReLU()
             print("\tUsing ReLU after the masked linear layer.")
+
+        if self.recon_loss == 'nb':
+            self.mean_decoder = nn.Softmax(dim=-1)
 
     def forward(self, z, batch=None):
         if batch is not None:
@@ -264,6 +269,9 @@ class MaskedLinearDecoder(nn.Module):
             recon_x = self.A0(dec_latent)
         else:
             recon_x = dec_latent
+
+        if self.recon_loss == 'nb':
+            recon_x = self.mean_decoder(recon_x)
 
         return recon_x, dec_latent
 

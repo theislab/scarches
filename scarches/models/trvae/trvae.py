@@ -119,11 +119,11 @@ class trVAE(nn.Module):
                                    self.dr_rate,
                                    self.n_conditions)
         else:
-            self.recon_loss = "mse"
             self.decoder = MaskedLinearDecoder(self.latent_dim,
                                                self.input_dim,
                                                self.n_conditions,
                                                mask,
+                                               self.recon_loss,
                                                use_decoder_relu)
 
     def sampling(self, mu, log_var):
