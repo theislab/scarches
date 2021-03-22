@@ -85,9 +85,6 @@ class BaseMixin:
 
         torch.save(self.model.state_dict(), model_save_path)
 
-    def _load_expand_params_from_dict(self, state_dict):
-        load_state_dict = state_dict.copy()
-        self.model.load_state_dict(load_state_dict)
 
     @classmethod
     def _load_params(
@@ -328,17 +325,39 @@ class scgen(BaseMixin):
         integrated: `~anndata.AnnData`
         Returns an integrated query.
         """
-        if isinstance(reference_model, str):
-            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            _validate_var_names(query, var_names)
-        else:
-            attr_dict = reference_model._get_public_attributes()
-            model_state_dict = reference_model.model.state_dict()
-        init_params = cls._get_init_params_from_dict(attr_dict)
-
         reference_query_adata = AnnData.concatenate(*[corrected_reference, query], batch_key="concatenated_batch", index_unique=None)
-        new_model = cls(reference_query_adata, **init_params)
-        new_model._load_expand_params_from_dict(model_state_dict)
+        # passed model as file 
+        if isinstance(reference_model, str):
+            reference_model_from_file = cls.load(dir_path = reference_model)
+            # when corrected_reference is already in the passed model
+            if np.all(reference_model_from_file._get_user_attributes()[0][1].X == corrected_reference.X):
+                integrated_query = reference_model_from_file.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+            else:
+                attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
+                _validate_var_names(query, var_names)
+                init_params = cls._get_init_params_from_dict(attr_dict)
 
-        integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
-        return integrated_query
+                new_model = cls(reference_query_adata, **init_params)
+                new_model.model.load_state_dict(model_state_dict)
+
+                integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+
+            return integrated_query
+
+        #passed model as model object 
+        else:
+            # when corrected_reference is already in the passed model
+            if np.all(reference_model._get_user_attributes()[0][1].X == corrected_reference.X):
+                integrated_query = reference_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+            else:
+                attr_dict = reference_model._get_public_attributes()
+                model_state_dict = reference_model.model.state_dict()
+                init_params = cls._get_init_params_from_dict(attr_dict)
+
+                new_model = cls(reference_query_adata, **init_params)
+                new_model.model.load_state_dict(model_state_dict)
+
+                integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+
+            return integrated_query
+
