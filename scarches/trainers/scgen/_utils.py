@@ -6,6 +6,8 @@ import numpy as np
 from scipy import sparse
 from sklearn import preprocessing
 
+from scarches.models.scgen._utils import extractor
+
 
 def data_remover(adata, remain_list, remove_list, cell_type_key, condition_key):
     """
@@ -37,29 +39,6 @@ def data_remover(adata, remain_list, remove_list, cell_type_key, condition_key):
     merged_data.var_names = adata.var_names
     return merged_data
 
-
-def extractor(data, cell_type, conditions, cell_type_key="cell_type", condition_key="condition"):
-    """
-    Returns a list of `data` files while filtering for a specific `cell_type`.
-
-    Parameters
-    ----------
-    data: `~anndata.AnnData`
-        Annotated data matrix
-    cell_type: basestring
-        specific cell type to be extracted from `data`.
-    conditions: dict
-        dictionary of stimulated/control of `data`.
-
-    Returns
-    -------
-    list of `data` files while filtering for a specific `cell_type`.
-    """
-    cell_with_both_condition = data[data.obs[cell_type_key] == cell_type]
-    condtion_1 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["ctrl"])]
-    condtion_2 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["stim"])]
-    training = data[~((data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["stim"]))]
-    return [training, condtion_1, condtion_2, cell_with_both_condition]
 
 
 def training_data_provider(train_s, train_t):
