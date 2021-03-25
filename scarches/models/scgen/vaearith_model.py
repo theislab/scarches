@@ -84,14 +84,11 @@ class BaseMixin:
         np.savetxt(varnames_save_path, var_names, fmt="%s")
 
         torch.save(self.model.state_dict(), model_save_path)
-
+        with open(attr_save_path, "wb") as f:
+            pickle.dump(public_attributes, f)
 
     @classmethod
-    def _load_params(
-            cls,
-            dir_path: str,
-            map_location: Optional[str] = None
-    ):
+    def _load_params(cls, dir_path: str, map_location: Optional[str] = None):
         setup_dict_path = os.path.join(dir_path, "attr.pkl")
         model_path = os.path.join(dir_path, "model_params.pt")
         varnames_path = os.path.join(dir_path, "var_names.csv")
@@ -302,7 +299,7 @@ class scgen(BaseMixin):
 
 
     @classmethod
-    def map_query_data(cls, corrected_reference: AnnData, query: AnnData, reference_model: Union[str, 'scgen'], batch_key: str, return_latent = True):
+    def map_query_data(cls, corrected_reference: AnnData, query: AnnData, reference_model: Union[str, 'scgen'], batch_key: str = 'study', return_latent = True):
         """
         Removes the batch effect between reference and query data.
         Additional training on query data is not needed.
