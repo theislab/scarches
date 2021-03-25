@@ -84,14 +84,11 @@ class BaseMixin:
         np.savetxt(varnames_save_path, var_names, fmt="%s")
 
         torch.save(self.model.state_dict(), model_save_path)
-
+        with open(attr_save_path, "wb") as f:
+            pickle.dump(public_attributes, f)
 
     @classmethod
-    def _load_params(
-            cls,
-            dir_path: str,
-            map_location: Optional[str] = None
-    ):
+    def _load_params(cls, dir_path: str, map_location: Optional[str] = None):
         setup_dict_path = os.path.join(dir_path, "attr.pkl")
         model_path = os.path.join(dir_path, "model_params.pt")
         varnames_path = os.path.join(dir_path, "var_names.csv")
@@ -302,7 +299,7 @@ class scgen(BaseMixin):
 
 
     @classmethod
-    def map_query_data(cls, corrected_reference: AnnData, query: AnnData, reference_model: Union[str, 'scgen'], return_latent = True):
+    def map_query_data(cls, corrected_reference: AnnData, query: AnnData, reference_model: Union[str, 'scgen'], batch_key: str = 'study', return_latent = True):
         """
         Removes the batch effect between reference and query data.
         Additional training on query data is not needed.
@@ -314,9 +311,7 @@ class scgen(BaseMixin):
         query: `~anndata.AnnData`
             Query anndata object
         batch_key: `str`
-            batch label key in  adata.obs
-        cell_label_key: `str`
-            cell type label key in adata.obs
+            batch label key in query.obs
         return_latent: `bool`
             if `True` returns corrected latent representation
 
@@ -325,7 +320,15 @@ class scgen(BaseMixin):
         integrated: `~anndata.AnnData`
         Returns an integrated query.
         """
-        reference_query_adata = AnnData.concatenate(*[corrected_reference, query], batch_key="concatenated_batch", index_unique=None)
+        query_batches_labels = query.obs[batch_key].unique().tolist()
+        query_adata_by_batches = [query[query.obs[batch_key].isin([batch])].copy() for batch in query_batches_labels]
+
+        reference_query_adata = AnnData.concatenate(*[corrected_reference, query_adata_by_batches],
+                                                    batch_key="reference_map", 
+                                                    batch_categories= ['reference'] + query_batches_labels,
+                                                    index_unique=None)
+        reference_query_adata.obs['original_batch'] = reference_query_adata.obs[batch_key].tolist() 
+
         # passed model as file 
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
@@ -335,7 +338,7 @@ class scgen(BaseMixin):
             new_model = cls(reference_query_adata, **init_params)
             new_model.model.load_state_dict(model_state_dict)
 
-            integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+            integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "reference_map", cell_label_key = "cell_type", return_latent = True)
 
             return integrated_query
 
@@ -343,7 +346,7 @@ class scgen(BaseMixin):
         else:
             # when corrected_reference is already in the passed model
             if np.all(reference_model._get_user_attributes()[0][1].X == corrected_reference.X):
-                integrated_query = reference_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+                integrated_query = reference_model.batch_removal(reference_query_adata, batch_key = "reference_map", cell_label_key = "cell_type", return_latent = True)
             else:
                 attr_dict = reference_model._get_public_attributes()
                 model_state_dict = reference_model.model.state_dict()
@@ -352,7 +355,7 @@ class scgen(BaseMixin):
                 new_model = cls(reference_query_adata, **init_params)
                 new_model.model.load_state_dict(model_state_dict)
 
-                integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "concatenated_batch", cell_label_key = "cell_type", return_latent = True)
+                integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "reference_map", cell_label_key = "cell_type", return_latent = True)
 
             return integrated_query
 
