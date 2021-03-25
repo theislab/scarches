@@ -360,5 +360,5 @@ class scgen(BaseMixin):
 
                 integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "reference_map", cell_label_key = "cell_type", return_latent = True)
 
-                return integrated_query
+            return integrated_query
 
