@@ -224,7 +224,8 @@ class TRVAE(BaseMixin):
         use_bn: bool = False,
         use_ln: bool = True,
         mask: Optional[Union[np.ndarray, list]] = None,
-        use_decoder_relu: bool = False
+        use_decoder_relu: bool = False,
+        mmd_instead_kl: bool = False
     ):
         self.adata = adata
 
@@ -252,6 +253,7 @@ class TRVAE(BaseMixin):
         self.input_dim_ = adata.n_vars
 
         self.use_decoder_relu_ = use_decoder_relu
+        self.mmd_instead_kl_ = mmd_instead_kl
         self.mask_ = None
         if mask is not None:
             self.mask_ = mask if isinstance(mask, list) else mask.tolist()
@@ -272,7 +274,8 @@ class TRVAE(BaseMixin):
             self.use_bn_,
             self.use_ln_,
             mask,
-            self.use_decoder_relu_
+            self.use_decoder_relu_,
+            self.mmd_instead_kl_
         )
 
         self.is_trained_ = False

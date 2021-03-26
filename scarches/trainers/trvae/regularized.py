@@ -86,6 +86,7 @@ class VIATrainer(trVAETrainer):
             adata,
             alpha,
             omega=None,
+            beta=1.,
             **kwargs
     ):
         super().__init__(model, adata, **kwargs)
@@ -98,6 +99,11 @@ class VIATrainer(trVAETrainer):
 
         if self.omega is not None:
             self.omega = self.omega.to(self.device)
+
+        if self.model.mmd_instead_kl:
+            self.beta = beta
+        else:
+            self.beta = None
 
     def on_iteration(self, batch_data):
         if self.prox_operator is None and self.alpha is not None:
@@ -121,7 +127,7 @@ class VIATrainer(trVAETrainer):
         return continue_training
 
     def on_epoch_end(self):
-        if self.alpha is not None:    
+        if self.alpha is not None:
             n_deact_terms = self.model.decoder.n_inactive_terms()
             msg = f'Number of deactivated terms: {n_deact_terms}'
             if self.epoch > 0:
@@ -129,3 +135,17 @@ class VIATrainer(trVAETrainer):
             print(msg)
 
         super().on_epoch_end()
+
+    def loss(self, total_batch=None):
+        if self.beta is None:
+            return super().loss(total_batch)
+        else:
+            recon_loss, mmd_z_loss, mmd_loss = self.model(**total_batch)
+            loss = recon_loss + self.beta*mmd_z_loss + mmd_loss
+            self.iter_logs["loss"].append(loss)
+            self.iter_logs["unweighted_loss"].append(recon_loss + mmd_z_loss + mmd_loss)
+            self.iter_logs["recon_loss"].append(recon_loss)
+            self.iter_logs["mmd_z_loss"].append(mmd_z_loss)
+            if self.model.use_mmd:
+                self.iter_logs["mmd_loss"].append(mmd_loss)
+            return loss

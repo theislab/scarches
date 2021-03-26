@@ -6,7 +6,7 @@ from torch.distributions import Normal, kl_divergence
 import torch.nn.functional as F
 
 from .modules import Encoder, Decoder, MaskedLinearDecoder
-from .losses import mse, mmd, zinb, nb
+from .losses import mse, mmd, zinb, nb, mmd_loss_calc
 from ._utils import one_hot_encoder
 
 
@@ -62,7 +62,8 @@ class trVAE(nn.Module):
                  use_bn: bool = False,
                  use_ln: bool = True,
                  mask: Optional[torch.Tensor] = None,
-                 use_decoder_relu: bool = False
+                 use_decoder_relu: bool = False,
+                 mmd_instead_kl: bool = False
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -84,6 +85,8 @@ class trVAE(nn.Module):
         self.use_bn = use_bn
         self.use_ln = use_ln
         self.mmd_on = mmd_on
+
+        self.mmd_instead_kl = mmd_instead_kl
 
         self.dr_rate = dr_rate
         if self.dr_rate > 0:
@@ -219,11 +222,15 @@ class trVAE(nn.Module):
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
 
-        z1_var = torch.exp(z1_log_var) + 1e-4
-        kl_div = kl_divergence(
-            Normal(z1_mean, torch.sqrt(z1_var)),
-            Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
-        ).sum(dim=1).mean()
+        if self.mmd_instead_kl:
+            z_prior = Normal(torch.zeros_like(z1), torch.ones_like(z1)).sample()
+            mmd_z_loss = mmd_loss_calc(z1, z_prior)
+        else:
+            z1_var = torch.exp(z1_log_var) + 1e-4
+            kl_div = kl_divergence(
+                Normal(z1_mean, torch.sqrt(z1_var)),
+                Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
+            ).sum(dim=1).mean()
 
         mmd_loss = 0
         if self.use_mmd:
@@ -232,4 +239,4 @@ class trVAE(nn.Module):
             else:
                 mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
 
-        return recon_loss, kl_div, mmd_loss
+        return (recon_loss, kl_div, mmd_loss) if not self.mmd_instead_kl else (recon_loss, mmd_z_loss, mmd_loss)
