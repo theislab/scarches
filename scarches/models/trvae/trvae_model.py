@@ -433,7 +433,8 @@ class TRVAE(BaseMixin):
             'use_bn': dct['use_bn_'],
             'use_ln': dct['use_ln_'],
             'mask': dct['mask_'],
-            'use_decoder_relu': dct['use_decoder_relu_']
+            'use_decoder_relu': dct['use_decoder_relu_'],
+            'mmd_instead_kl': dct['mmd_instead_kl_']
         }
 
         return init_params
