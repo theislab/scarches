@@ -38,6 +38,8 @@ Supervised and Semi-supervised
  these methods.
 
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
+ 
+ - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
 
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.

@@ -41,6 +41,7 @@ notebooks = [
     'trVAE_zenodo_pipeline.ipynb',
     'reference_building_from_scratch.ipynb',
     'pbmc_pipeline_trvae_scvi_scanvi.ipynb',
+     'scgen_map_query.ipynb'
 ]
 
 for nb in notebooks:

@@ -38,6 +38,8 @@ Supervised and Semi-supervised
  these methods.
 
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
+  
+ - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
 
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
@@ -49,13 +51,14 @@ Multi-modal
 Which model to choose?
 ---------------
 
-- If your reference data is labeled (cell-type labels) and you have unlabeled or labeled query then use **scArches scANVI**
+- If your reference data is labeled (cell-type labels) and you have unlabeled or labeled query then use **scArches scANVI**.  
+
+- If your reference data is labeled (cell-type labels) and you have labeled query then use **scGen**.
+
+- If your reference and query are both unlabeled our preferred model is **scArches scVI** and if it did not work for you try **scArches trVAE**.
 
 
-- If your reference and query are both unlabeled our preferred model is **scArches scVI** and if it did not work for you try **scArches trVAE**
-
-
-- If you have CITE-seq data and you want to integrate RNA-seq as query and denoise the proteins in the RNA-seq then use **scArches totalVI**
+- If you have CITE-seq data and you want to integrate RNA-seq as query and denoise the proteins in the RNA-seq then use **scArches totalVI**.
 
 
 Where to start?
@@ -104,3 +107,4 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    trVAE_zenodo_pipeline
    reference_building_from_scratch
    pbmc_pipeline_trvae_scvi_scanvi
+   scgen_map_query
