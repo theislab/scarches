@@ -46,16 +46,6 @@ Multi-modal
    Query datasets can be either from sc-RNAseq or CITE-seq. In addition to integrating query with reference, one can use this model to impute the Proteins
    in the query datasets.
 
-How to choose the right model
----------------
-
-- If your reference data is labeled (cell-type labels) and you have unlabeled or labeled query then use **scArches scANVI**
-
-
-- If your reference and query are both unlabeled our preferred model is **scArches scVI** and if it did not work for you try **scArches trVAE**
-
-
-- If you have CITE-seq data and you want to integrate RNA-seq as query and denoise the proteins in the RNA-seq then use **scArches totalVI**
 
 Usage and installation
 -------------------------------
