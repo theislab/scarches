@@ -70,6 +70,7 @@ class Trainer:
                  weight_decay: float = 0.04,
                  alpha_iter_anneal: int = None,
                  alpha_epoch_anneal: int = None,
+                 alpha_kl: float = 1.,
                  early_stopping_kwargs: dict = None,
                  **kwargs):
 
@@ -85,6 +86,8 @@ class Trainer:
         self.weight_decay = weight_decay
         self.alpha_iter_anneal = alpha_iter_anneal
         self.alpha_epoch_anneal = alpha_epoch_anneal
+
+        self.alpha_kl = alpha_kl
 
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
 
@@ -135,11 +138,11 @@ class Trainer:
            Current annealed alpha value
         """
         if self.alpha_epoch_anneal is not None:
-            alpha_coeff = min(self.epoch / self.alpha_epoch_anneal, 1)
+            alpha_coeff = min(self.alpha_kl * self.epoch / self.alpha_epoch_anneal, self.alpha_kl)
         elif self.alpha_iter_anneal is not None:
-            alpha_coeff = min(((self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), 1)
+            alpha_coeff = min((self.alpha_kl * (self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), self.alpha_kl)
         else:
-            alpha_coeff = 1
+            alpha_coeff = self.alpha_kl
         return alpha_coeff
 
     def train(self,
