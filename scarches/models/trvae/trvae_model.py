@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 
 from anndata import AnnData, read
+from copy import deepcopy
 from typing import Optional, Union
 
 from .trvae import trVAE
@@ -451,7 +452,7 @@ class TRVAE(BaseMixin):
         else:
             attr_dict = reference_model._get_public_attributes()
             model_state_dict = reference_model.model.state_dict()
-        init_params = cls._get_init_params_from_dict(attr_dict)
+        init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
 
         conditions = init_params['conditions']
         condition_key = init_params['condition_key']
