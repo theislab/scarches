@@ -12,6 +12,7 @@ from .trvae import trVAE
 from scarches.trainers.trvae.unsupervised import trVAETrainer
 from ._utils import _validate_var_names
 
+
 class BaseMixin:
     """ Adapted from
         Title: scvi-tools

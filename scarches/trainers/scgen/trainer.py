@@ -3,9 +3,7 @@ from scipy import sparse
 from anndata import AnnData
 from collections import defaultdict
 
-from ._utils import shuffle_adata
-
-from scarches.trainers.trvae._utils import print_progress
+from ._utils import shuffle_adata, print_progress
 from scarches.utils.monitor import EarlyStopping
 
 

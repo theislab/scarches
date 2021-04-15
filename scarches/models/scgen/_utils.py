@@ -1,8 +1,19 @@
-import os
-
 import anndata
 import numpy as np
 from scipy import sparse
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_var_names(adata, source_var_names):
+    user_var_names = adata.var_names.astype(str)
+    if not np.array_equal(source_var_names, user_var_names):
+        logger.warning(
+            "var_names for adata passed in does not match var_names of "
+            "adata used to train the model. For valid results, the vars "
+            "need to be the same and in the same order as the adata used to train the model."
+        )
 
 
 def extractor(data, cell_type, conditions, cell_type_key="cell_type", condition_key="condition"):
@@ -23,10 +34,10 @@ def extractor(data, cell_type, conditions, cell_type_key="cell_type", condition_
     list of `data` files while filtering for a specific `cell_type`.
     """
     cell_with_both_condition = data[data.obs[cell_type_key] == cell_type]
-    condtion_1 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["ctrl"])]
-    condtion_2 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["stim"])]
+    condition_1 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["ctrl"])]
+    condition_2 = data[(data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["stim"])]
     training = data[~((data.obs[cell_type_key] == cell_type) & (data.obs[condition_key] == conditions["stim"]))]
-    return [training, condtion_1, condtion_2, cell_with_both_condition]
+    return [training, condition_1, condition_2, cell_with_both_condition]
 
 
 def balancer(adata, cell_type_key="cell_type", condition_key="condition"):
