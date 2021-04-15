@@ -5,7 +5,7 @@ from sklearn.metrics import silhouette_score, normalized_mutual_info_score, silh
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
 
-from scarches.dataset.trvae.data_handling import remove_sparsity
+from scarches.dataset import remove_sparsity
 from .clustering import opt_louvain
 
 

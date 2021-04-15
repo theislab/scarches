@@ -5,7 +5,7 @@ import torch
 from torch._six import container_abcs
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
-from scarches.dataset.trvae import AnnotatedDataset
+from scarches.dataset import trVAEDataset
 
 
 def print_progress(epoch, logs, n_epochs=10000):
@@ -129,7 +129,7 @@ def make_dataset(adata,
     else:
         train_adata, validation_adata = train_test_split(adata, train_frac)
 
-    data_set_train = AnnotatedDataset(train_adata,
+    data_set_train = trVAEDataset(train_adata,
                                       condition_key=condition_key,
                                       cell_type_key=cell_type_key,
                                       condition_encoder=condition_encoder,
@@ -138,7 +138,7 @@ def make_dataset(adata,
     if train_frac == 1:
         return data_set_train, None
     else:
-        data_set_valid = AnnotatedDataset(validation_adata,
+        data_set_valid = trVAEDataset(validation_adata,
                                           condition_key=condition_key,
                                           cell_type_key=cell_type_key,
                                           condition_encoder=condition_encoder,

@@ -1,2 +1,2 @@
-from .trvae import trVAETrainer
-from .scgen import vaeArithTrainer
+from .trvae.unsupervised import trVAETrainer
+from .scgen.trainer import vaeArithTrainer

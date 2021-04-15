@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from scipy import sparse
-import scanpy as sc
 
 from .data_handling import remove_sparsity
 from ._utils import label_encoder

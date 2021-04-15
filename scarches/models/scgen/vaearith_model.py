@@ -8,8 +8,9 @@ from anndata import AnnData, read
 from typing import Optional, Union
 
 from .vaearith import vaeArith
-from scarches.trainers.scgen.trainer import vaeArithTrainer
+from scarches.trainers import vaeArithTrainer
 from scarches.models.trvae._utils import _validate_var_names
+
 
 class BaseMixin:
     """ Adapted from

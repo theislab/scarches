@@ -2,7 +2,7 @@ import scanpy as sc
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scarches.dataset.trvae.data_handling import remove_sparsity
+from scarches.dataset import remove_sparsity
 
 
 def opt_louvain(adata, label_key, cluster_key, function=None, resolutions=None,

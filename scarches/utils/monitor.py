@@ -1,8 +1,6 @@
 import numpy as np
 
 
-
-
 class EarlyStopping(object):
     """Class for EarlyStopping. This class contains the implementation of early stopping for TRVAE/CVAE training.
 
