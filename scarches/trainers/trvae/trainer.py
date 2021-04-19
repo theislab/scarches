@@ -24,22 +24,13 @@ class Trainer:
             column name of conditions in `adata.obs` data frame.
        cell_type_key: String
             column name of celltypes in `adata.obs` data frame.
-       train_frac: Float
-            Defines the fraction of data that is used for training and data that is used for validation.
        batch_size: Integer
             Defines the batch size that is used during each Iteration
-       n_samples: Integer or None
-            Defines how many samples are being used during each epoch. This should only be used if hardware resources
-            are limited.
-       clip_value: Float
-            If the value is greater than 0, all gradients with an higher value will be clipped during training.
-       weight decay: Float
-            Defines the scaling factor for weight decay in the Adam optimizer.
-       alpha_iter_anneal: Integer or None
-            If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every iteration until the input
-            integer is reached.
        alpha_epoch_anneal: Integer or None
             If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every epoch until the input
+            integer is reached.
+       alpha_iter_anneal: Integer or None
+            If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every iteration until the input
             integer is reached.
        use_early_stopping: Boolean
             If 'True' the EarlyStopping class is being used for training to prevent overfitting.
@@ -48,6 +39,11 @@ class Trainer:
             at the end of training.
        early_stopping_kwargs: Dict
             Passes custom Earlystopping parameters.
+       train_frac: Float
+            Defines the fraction of data that is used for training and data that is used for validation.
+       n_samples: Integer or None
+            Defines how many samples are being used during each epoch. This should only be used if hardware resources
+            are limited.
        use_stratified_sampling: Boolean
             If 'True', the sampler tries to load equally distributed batches concerning the conditions in every
             iteration.
@@ -56,6 +52,10 @@ class Trainer:
             of conditions in the data.
        monitor: Boolean
             If `True', the progress of the training will be printed after each epoch.
+       clip_value: Float
+            If the value is greater than 0, all gradients with an higher value will be clipped during training.
+       weight decay: Float
+            Defines the scaling factor for weight decay in the Adam optimizer.
        n_workers: Integer
             Passes the 'n_workers' parameter for the torch.utils.data.DataLoader class.
        seed: Integer
@@ -66,13 +66,10 @@ class Trainer:
                  adata,
                  condition_key: str = None,
                  cell_type_key: str = None,
-                 train_frac: float = 0.9,
                  batch_size: int = 128,
-                 n_samples: int = None,
-                 clip_value: float = 0.0,
-                 weight_decay: float = 0.04,
-                 alpha_iter_anneal: int = None,
                  alpha_epoch_anneal: int = None,
+                 use_early_stopping: bool = True,
+                 reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
                  **kwargs):
 
@@ -80,26 +77,28 @@ class Trainer:
         self.model = model
         self.condition_key = condition_key
         self.cell_type_key = cell_type_key
-        self.train_frac = train_frac
 
         self.batch_size = batch_size
-        self.n_samples = n_samples
-        self.clip_value = clip_value
-        self.weight_decay = weight_decay
-        self.alpha_iter_anneal = alpha_iter_anneal
         self.alpha_epoch_anneal = alpha_epoch_anneal
-
+        self.alpha_iter_anneal = kwargs.pop("alpha_iter_anneal", None)
+        self.use_early_stopping = use_early_stopping
+        self.reload_best = reload_best
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
 
-        self.use_early_stopping = kwargs.pop("use_early_stopping", True)
-        self.reload_best = kwargs.pop("reload_best", True)
+        self.n_samples = kwargs.pop("n_samples", None)
+        self.train_frac = kwargs.pop("train_frac", 0.9)
         self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
         self.use_stratified_split = kwargs.pop("use_stratified_split", False)
-        self.monitor = kwargs.pop("monitor", True)
+
+        self.weight_decay = kwargs.pop("weight_decay", 0.04)
+        self.clip_value = kwargs.pop("clip_value", 0.0)
+
         self.n_workers = kwargs.pop("n_workers", 0)
         self.seed = kwargs.pop("seed", 2020)
+        self.monitor = kwargs.pop("monitor", True)
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
+
         torch.manual_seed(self.seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed(self.seed)

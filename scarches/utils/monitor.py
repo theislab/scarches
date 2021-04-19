@@ -34,7 +34,7 @@ class EarlyStopping(object):
                  threshold: float = 0,
                  patience: int = 20,
                  reduce_lr: bool = True,
-                 lr_patience: int = 7,
+                 lr_patience: int = 13,
                  lr_factor: float = 0.1):
 
         self.early_stopping_metric = early_stopping_metric
