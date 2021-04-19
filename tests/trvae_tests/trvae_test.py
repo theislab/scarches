@@ -21,7 +21,7 @@ early_stopping_kwargs = {
     "lr_patience": 13,
     "lr_factor": 0.1,
 }
-dir_path = os.path.expanduser(f'~/Documents/benchmarking_results/figure_1/trvae_mse/')
+dir_path = os.path.expanduser(f'~/Documents/trvae_surg/')
 
 if not os.path.exists(dir_path):
     os.makedirs(dir_path)
@@ -44,7 +44,7 @@ trvae = sca.models.TRVAE(
     adata=adata_ref,
     condition_key=batch_key,
     hidden_layer_sizes=[128,128],
-    recon_loss='nb',
+    use_mmd=False
 )
 ref_time = time.time()
 trvae.train(
