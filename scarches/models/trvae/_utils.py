@@ -34,10 +34,19 @@ def _validate_var_names(adata, source_var_names):
         )
 
 
-def pairwise_distance(x, y):
-    x = x.view(x.shape[0], x.shape[1], 1)
-    y = torch.transpose(y, 0, 1)
-    output = torch.sum((x - y) ** 2, 1)
-    output = torch.transpose(output, 0, 1)
+def euclidean_dist(x, y):
+    """
+    Compute euclidean distance between two tensors
+    """
+    # x: N x D
+    # y: M x D
+    n = x.size(0)
+    m = y.size(0)
+    d = x.size(1)
+    if d != y.size(1):
+        raise Exception
 
-    return output
+    x = x.unsqueeze(1).expand(n, m, d)
+    y = y.unsqueeze(0).expand(n, m, d)
+
+    return torch.pow(x - y, 2).sum(2)

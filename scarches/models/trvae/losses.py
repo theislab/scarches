@@ -2,7 +2,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from ._utils import partition, pairwise_distance
+from ._utils import partition
 
 
 def mse(recon_x, x):
@@ -120,6 +120,15 @@ def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tenso
 
     res = mul_case_zero + mul_case_non_zero
     return res
+
+
+def pairwise_distance(x, y):
+    x = x.view(x.shape[0], x.shape[1], 1)
+    y = torch.transpose(y, 0, 1)
+    output = torch.sum((x - y) ** 2, 1)
+    output = torch.transpose(output, 0, 1)
+
+    return output
 
 
 def gaussian_kernel_matrix(x, y, alphas):
