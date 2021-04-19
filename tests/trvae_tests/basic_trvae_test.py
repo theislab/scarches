@@ -5,14 +5,6 @@ from scarches.dataset.trvae.data_handling import remove_sparsity
 import matplotlib.pyplot as plt
 
 n_epochs_vae = 500
-early_stopping_kwargs = {
-    "early_stopping_metric": "val_unweighted_loss",
-    "threshold": 0,
-    "patience": 20,
-    "reduce_lr": True,
-    "lr_patience": 13,
-    "lr_factor": 0.1,
-}
 batch_key = "study"
 cell_type_key = "cell_type"
 
@@ -31,7 +23,6 @@ trvae = sca.models.TRVAE(
 trvae.train(
     n_epochs=n_epochs_vae,
     alpha_epoch_anneal=200,
-    early_stopping_kwargs=early_stopping_kwargs
 )
 
 adata_latent = sc.AnnData(trvae.get_latent())
