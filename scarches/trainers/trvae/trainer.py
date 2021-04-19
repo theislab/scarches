@@ -43,6 +43,9 @@ class Trainer:
             integer is reached.
        use_early_stopping: Boolean
             If 'True' the EarlyStopping class is being used for training to prevent overfitting.
+       reload_best: Boolean
+            If 'True' the best state of the model during training concerning the early stopping criterion is reloaded
+            at the end of training.
        early_stopping_kwargs: Dict
             Passes custom Earlystopping parameters.
        use_stratified_sampling: Boolean
@@ -89,6 +92,7 @@ class Trainer:
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
 
         self.use_early_stopping = kwargs.pop("use_early_stopping", True)
+        self.reload_best = kwargs.pop("reload_best", True)
         self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
         self.use_stratified_split = kwargs.pop("use_stratified_split", False)
         self.monitor = kwargs.pop("monitor", True)
@@ -124,70 +128,6 @@ class Trainer:
 
         self.logs = defaultdict(list)
 
-    def calc_alpha_coeff(self):
-        """Calculates current alpha coefficient for alpha annealing.
-
-           Parameters
-           ----------
-
-           Returns
-           -------
-           Current annealed alpha value
-        """
-        if self.alpha_epoch_anneal is not None:
-            alpha_coeff = min(self.epoch / self.alpha_epoch_anneal, 1)
-        elif self.alpha_iter_anneal is not None:
-            alpha_coeff = min(((self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), 1)
-        else:
-            alpha_coeff = 1
-        return alpha_coeff
-
-    def train(self,
-              n_epochs=400,
-              lr=1e-3,
-              eps=0.01):
-        begin = time.time()
-        self.model.train()
-        self.n_epochs = n_epochs
-
-        params = filter(lambda p: p.requires_grad, self.model.parameters())
-
-        self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps, weight_decay=self.weight_decay)
-        # Initialize Train/Val Data, Sampler, Dataloader
-        self.initialize_loaders()
-
-        for self.epoch in range(n_epochs):
-            self.iter_logs = defaultdict(list)
-            for self.iter, batch_data in enumerate(self.dataloader_train):
-                # Safe data to right device
-                for key1 in batch_data:
-                    for key2, batch in batch_data[key1].items():
-                        batch_data[key1][key2] = batch.to(self.device)
-
-                # Loss Calculation
-                self.on_iteration(batch_data)
-
-            # Validation of Model, Monitoring, Early Stopping
-            self.on_epoch_end()
-            if self.use_early_stopping:
-                if not self.check_early_stop():
-                    break
-
-        if self.best_state_dict is not None:
-            print("Saving best state of network...")
-            print("Best State was in Epoch", self.best_epoch)
-            self.model.load_state_dict(self.best_state_dict)
-
-        self.model.eval()
-
-        self.training_time += (time.time() - begin)
-
-    def initialize_loaders(self):
-        """
-        Initializes Train-/Test Data and Dataloaders with custom_collate and WeightedRandomSampler for Trainloader.
-        Returns:
-
-        """
         # Create Train/Valid AnnotatetDataset objects
         self.train_data, self.valid_data = make_dataset(
             self.adata,
@@ -196,9 +136,15 @@ class Trainer:
             condition_key=self.condition_key,
             cell_type_key=self.cell_type_key,
             condition_encoder=self.model.condition_encoder,
-            cell_type_encoder=None,
+            cell_type_encoder=self.model.cell_type_encoder,
         )
 
+    def initialize_loaders(self):
+        """
+        Initializes Train-/Test Data and Dataloaders with custom_collate and WeightedRandomSampler for Trainloader.
+        Returns:
+
+        """
         if self.n_samples is None or self.n_samples > len(self.train_data):
             self.n_samples = len(self.train_data)
         self.iters_per_epoch = int(np.ceil(self.n_samples / self.batch_size))
@@ -232,6 +178,71 @@ class Trainer:
                                                                 collate_fn=custom_collate,
                                                                 num_workers=self.n_workers)
 
+    def calc_alpha_coeff(self):
+        """Calculates current alpha coefficient for alpha annealing.
+
+           Parameters
+           ----------
+
+           Returns
+           -------
+           Current annealed alpha value
+        """
+        if self.alpha_epoch_anneal is not None:
+            alpha_coeff = min(self.epoch / self.alpha_epoch_anneal, 1)
+        elif self.alpha_iter_anneal is not None:
+            alpha_coeff = min(((self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), 1)
+        else:
+            alpha_coeff = 1
+        return alpha_coeff
+
+    def train(self,
+              n_epochs=400,
+              lr=1e-3,
+              eps=0.01):
+
+        self.initialize_loaders()
+        begin = time.time()
+        self.model.train()
+        self.n_epochs = n_epochs
+
+        params = filter(lambda p: p.requires_grad, self.model.parameters())
+
+        self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps, weight_decay=self.weight_decay)
+
+        self.before_loop(lr, eps)
+
+        for self.epoch in range(n_epochs):
+            self.iter_logs = defaultdict(list)
+            for self.iter, batch_data in enumerate(self.dataloader_train):
+                for key, batch in batch_data.items():
+                    batch_data[key] = batch.to(self.device)
+
+                # Loss Calculation
+                self.on_iteration(batch_data)
+
+            # Validation of Model, Monitoring, Early Stopping
+            self.on_epoch_end()
+            if self.use_early_stopping:
+                if not self.check_early_stop():
+                    break
+
+        if self.best_state_dict is not None and self.reload_best:
+            print("Saving best state of network...")
+            print("Best State was in Epoch", self.best_epoch)
+            self.model.load_state_dict(self.best_state_dict)
+
+        self.model.eval()
+        self.after_loop()
+
+        self.training_time += (time.time() - begin)
+
+    def before_loop(self, lr, eps):
+        pass
+
+    def after_loop(self):
+        pass
+
     def on_iteration(self, batch_data):
         # Dont update any weight on first layers except condition weights
         if self.model.freeze:
@@ -242,7 +253,7 @@ class Trainer:
                         module.track_running_stats = False
 
         # Calculate Loss depending on Trainer/Model
-        self.current_loss = loss = self.loss(**batch_data)
+        self.current_loss = loss = self.loss(batch_data)
         self.optimizer.zero_grad()
         loss.backward()
 
@@ -273,11 +284,10 @@ class Trainer:
         self.iter_logs = defaultdict(list)
         # Calculate Validation Losses
         for val_iter, batch_data in enumerate(self.dataloader_valid):
-            for key1 in batch_data:
-                for key2, batch in batch_data[key1].items():
-                    batch_data[key1][key2] = batch.to(self.device)
+            for key, batch in batch_data.items():
+                batch_data[key] = batch.to(self.device)
 
-            val_loss = self.loss(**batch_data)
+            val_loss = self.loss(batch_data)
 
         # Get Validation Logs
         for key in self.iter_logs:

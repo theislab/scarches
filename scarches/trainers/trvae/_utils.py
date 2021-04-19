@@ -114,6 +114,7 @@ def make_dataset(adata,
                  cell_type_key=None,
                  condition_encoder=None,
                  cell_type_encoder=None,
+                 labeled_indices=None,
                  ):
     """Splits 'adata' into train and validation data and converts them into 'CustomDatasetFromAdata' objects.
 
@@ -124,6 +125,17 @@ def make_dataset(adata,
        -------
        Training 'CustomDatasetFromAdata' object, Validation 'CustomDatasetFromAdata' object
     """
+    size_factors = adata.X.sum(1)
+    if len(size_factors.shape) < 2:
+        size_factors = np.expand_dims(size_factors, axis=1)
+    adata.obs['trvae_size_factors'] = size_factors
+
+    # Preprare data for semisupervised learning
+    labeled_array = np.zeros((len(adata), 1))
+    if labeled_indices is not None:
+        labeled_array[labeled_indices] = 1
+    adata.obs['trvae_labeled'] = labeled_array
+
     if use_stratified_split:
         train_adata, validation_adata = train_test_split(adata, train_frac, condition_key=condition_key)
     else:
@@ -178,18 +190,23 @@ def custom_collate(batch):
             return torch.as_tensor(batch)
 
     elif isinstance(elem, container_abcs.Mapping):
-        if "celltype" in elem:
-            output = dict(total_batch=dict(),
-                          labelled_batch=dict())
-            for key in elem:
-                total_data = [d[key] for d in batch]
-                labelled_data = list()
-                for d in batch:
-                    if d["celltype"] != -1:
-                        labelled_data.append(d[key])
-                output["total_batch"][key] = custom_collate(total_data)
-                output["labelled_batch"][key] = custom_collate(labelled_data)
-        else:
-            output = dict(total_batch=dict())
-            output["total_batch"] = {key: custom_collate([d[key] for d in batch]) for key in elem}
+        output = {key: custom_collate([d[key] for d in batch]) for key in elem}
         return output
+
+
+def euclidean_dist(x, y):
+    """
+    Compute euclidean distance between two tensors
+    """
+    # x: N x D
+    # y: M x D
+    n = x.size(0)
+    m = y.size(0)
+    d = x.size(1)
+    if d != y.size(1):
+        raise Exception
+
+    x = x.unsqueeze(1).expand(n, m, d)
+    y = y.unsqueeze(0).expand(n, m, d)
+
+    return torch.pow(x - y, 2).sum(2)

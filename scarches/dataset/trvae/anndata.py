@@ -21,8 +21,6 @@ class AnnotatedDataset(Dataset):
             column name of celltypes in `adata.obs` data frame.
        cell_type_encoder: Dict or None
             dictionary of encoded celltypes. if `None`, will create one.
-       unique_conditions: List or None
-            List of all conditions in the data.
     """
     def __init__(self,
                  adata,
@@ -30,63 +28,53 @@ class AnnotatedDataset(Dataset):
                  condition_encoder=None,
                  cell_type_key=None,
                  cell_type_encoder=None,
-                 unique_conditions=None,
                  ):
-
-        # Desparse Adata
-        self.adata = adata
-        if sparse.issparse(self.adata.X):
-            self.adata = remove_sparsity(self.adata)
 
         self.X_norm = None
 
         self.condition_key = condition_key
         self.condition_encoder = condition_encoder
-        self.unique_conditions = unique_conditions
-
         self.cell_type_key = cell_type_key
         self.cell_type_encoder = cell_type_encoder
-        self.unique_cell_types = None
 
-        size_factors = np.log(adata.X.sum(1))
-        if len(size_factors.shape) < 2:
-            size_factors = np.expand_dims(size_factors, axis=1)
-        adata.obs['size_factors'] = size_factors
+        if sparse.issparse(adata.X):
+            adata = remove_sparsity(adata)
+        self.data = torch.tensor(adata.X)
+
+        self.size_factors = torch.tensor(adata.obs['trvae_size_factors'])
+        self.labeled_vector = torch.tensor(adata.obs['trvae_labeled'])
 
         # Create Condition Encoder
         if self.condition_key is not None:
-            if self.unique_conditions is None:
-                self.unique_conditions = adata.obs[condition_key].unique().tolist()
-            self.conditions, self.condition_encoder = label_encoder(self.adata,
+            self.conditions, self.condition_encoder = label_encoder(adata,
                                                                     encoder=self.condition_encoder,
                                                                     condition_key=condition_key)
-            self.conditions = np.array(self.conditions).reshape(-1, )
+            self.conditions = torch.tensor(np.array(self.conditions).reshape(-1, ), dtype=torch.long)
 
-        # Create Label Encoder
+        # Create Cell Type Encoder
         if self.cell_type_key is not None:
-            if self.unique_cell_types is None:
-                self.unique_cell_types = adata.obs[cell_type_key].unique().tolist()
-            self.cell_types, self.cell_type_encoder = label_encoder(self.adata,
+            self.cell_types, self.cell_type_encoder = label_encoder(adata,
                                                                     encoder=self.cell_type_encoder,
                                                                     condition_key=cell_type_key)
-            self.cell_types = np.array(self.cell_types).reshape(-1, )
+            self.cell_types = torch.tensor(np.array(self.cell_types).reshape(-1, ), dtype=torch.long)
 
     def __getitem__(self, index):
         outputs = dict()
 
-        outputs["x"] = torch.tensor(self.adata.X[index, :])
-        outputs["sizefactor"] = torch.tensor(self.adata.obs['size_factors'][index])
+        outputs["x"] = self.data[index, :]
+        outputs["labeled"] = self.labeled_vector[index]
+        outputs["sizefactor"] = self.size_factors[index]
 
         if self.condition_key:
-            outputs["batch"] = torch.tensor(self.conditions[index])
+            outputs["batch"] = self.conditions[index]
 
         if self.cell_type_key:
-            outputs["celltype"] = torch.tensor(self.cell_types[index])
+            outputs["celltype"] = self.cell_types[index]
 
         return outputs
 
     def __len__(self):
-        return len(self.adata)
+        return self.data.size(0)
 
     @property
     def condition_label_encoder(self) -> dict:
@@ -108,16 +96,17 @@ class AnnotatedDataset(Dataset):
 
     @property
     def stratifier_weights(self):
-        condition_coeff = 1 / len(self.conditions)
+        conditions = self.conditions.detach().cpu().numpy()
+        condition_coeff = 1 / len(conditions)
         weights_per_condition = list()
         for i in range(len(self.conditions)):
-            samples_per_condition = np.count_nonzero(self.conditions == i)
+            samples_per_condition = np.count_nonzero(conditions == i)
             if samples_per_condition == 0:
                 weights_per_condition.append(0)
             else:
                 weights_per_condition.append((1 / samples_per_condition) * condition_coeff)
-        strat_weights = np.copy(self.conditions)
-        for i in range(len(self.conditions)):
+        strat_weights = np.copy(conditions)
+        for i in range(len(conditions)):
             strat_weights = np.where(strat_weights == i, weights_per_condition[i], strat_weights)
 
         return strat_weights.astype(float)

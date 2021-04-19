@@ -69,6 +69,7 @@ class trVAE(nn.Module):
         self.n_conditions = len(conditions)
         self.conditions = conditions
         self.condition_encoder = {k: v for k, v in zip(conditions, range(len(conditions)))}
+        self.cell_type_encoder = None
         self.recon_loss = recon_loss
         self.mmd_boundary = mmd_boundary
         self.use_mmd = use_mmd
@@ -177,7 +178,7 @@ class trVAE(nn.Module):
         output = self.decoder(latent, c)
         return output[-1]
 
-    def forward(self, x=None, batch=None, sizefactor=None):
+    def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
         x_log = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_log = x
