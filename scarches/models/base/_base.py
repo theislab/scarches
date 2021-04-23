@@ -149,7 +149,9 @@ class BaseMixin:
 
         attr_dict, model_state_dict, var_names = cls._load_params(dir_path)
 
-        _validate_var_names(adata, var_names)
+        # Overwrite adata with new genes
+        adata = _validate_var_names(adata, var_names)
+
         cls._validate_adata(adata, attr_dict)
         init_params = cls._get_init_params_from_dict(attr_dict)
 
