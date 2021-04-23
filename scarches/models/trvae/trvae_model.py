@@ -290,7 +290,7 @@ class TRVAE(BaseMixin):
         """
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            _validate_var_names(adata, var_names)
+            adata = _validate_var_names(adata, var_names)
         else:
             attr_dict = reference_model._get_public_attributes()
             model_state_dict = reference_model.model.state_dict()
