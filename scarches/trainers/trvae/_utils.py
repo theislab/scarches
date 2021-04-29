@@ -25,7 +25,7 @@ def print_progress(epoch, logs, n_epochs=10000):
     """
     message = ""
     for key in logs:
-        if "loss" in key and ("epoch_" in key or "val_" in key) and "unweighted" not in key:
+        if "val_" in key and "unweighted" not in key:
             message += f" - {key:s}: {logs[key][-1]:7.10f}"
 
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)

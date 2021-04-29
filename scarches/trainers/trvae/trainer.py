@@ -265,9 +265,7 @@ class Trainer:
     def on_epoch_end(self):
         # Get Train Epoch Logs
         for key in self.iter_logs:
-            if "loss" in key:
-                self.logs["epoch_" + key].append(
-                    sum(self.iter_logs[key][:]).cpu().detach().numpy() / len(self.iter_logs[key][:]))
+            self.logs["epoch_" + key].append(np.array(self.iter_logs[key]).mean())
 
         # Validate Model
         if self.valid_data is not None:
@@ -290,9 +288,7 @@ class Trainer:
 
         # Get Validation Logs
         for key in self.iter_logs:
-            if "loss" in key:
-                self.logs["val_" + key].append(
-                    sum(self.iter_logs[key][:]).cpu().detach().numpy() / len(self.iter_logs[key][:]))
+            self.logs["val_" + key].append(np.array(self.iter_logs[key]).mean())
 
         self.model.train()
 
