@@ -211,7 +211,8 @@ class trVAE(nn.Module):
             Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
         ).sum(dim=1).mean()
 
-        mmd_loss = 0
+        mmd_loss = torch.tensor(0.0, device=z1.device)
+
         if self.use_mmd:
             if self.mmd_on == "z":
                 mmd_loss = mmd(z1, batch,self.n_conditions, self.beta, self.mmd_boundary)

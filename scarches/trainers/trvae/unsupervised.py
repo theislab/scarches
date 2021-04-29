@@ -62,10 +62,10 @@ class trVAETrainer(Trainer):
     def loss(self, total_batch=None):
         recon_loss, kl_loss, mmd_loss = self.model(**total_batch)
         loss = recon_loss + self.calc_alpha_coeff()*kl_loss + mmd_loss
-        self.iter_logs["loss"].append(loss)
-        self.iter_logs["unweighted_loss"].append(recon_loss + kl_loss + mmd_loss)
-        self.iter_logs["recon_loss"].append(recon_loss)
-        self.iter_logs["kl_loss"].append(kl_loss)
+        self.iter_logs["loss"].append(loss.item())
+        self.iter_logs["unweighted_loss"].append(recon_loss.item() + kl_loss.item() + mmd_loss.item())
+        self.iter_logs["recon_loss"].append(recon_loss.item())
+        self.iter_logs["kl_loss"].append(kl_loss.item())
         if self.model.use_mmd:
-            self.iter_logs["mmd_loss"].append(mmd_loss)
+            self.iter_logs["mmd_loss"].append(mmd_loss.item())
         return loss
