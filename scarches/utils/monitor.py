@@ -50,8 +50,12 @@ class EarlyStopping(object):
         self.wait = 0
         self.wait_lr = 0
         self.current_performance = np.inf
-        self.best_performance = np.inf
-        self.best_performance_state = np.inf
+        if self.mode == "min":
+            self.best_performance = np.inf
+            self.best_performance_state = np.inf
+        else:
+            self.best_performance = -np.inf
+            self.best_performance_state = -np.inf
 
         if patience == 0:
             self.is_better = lambda a, b: True
