@@ -30,7 +30,8 @@ class EarlyStopping(object):
                 Scaling factor for adjusting the learning rate.
         """
     def __init__(self,
-                 early_stopping_metric: str = 'val_unweighted_loss',
+                 early_stopping_metric: str = "val_unweighted_loss",
+                 mode: str = "min",
                  threshold: float = 0,
                  patience: int = 20,
                  reduce_lr: bool = True,
@@ -38,6 +39,7 @@ class EarlyStopping(object):
                  lr_factor: float = 0.1):
 
         self.early_stopping_metric = early_stopping_metric
+        self.mode = mode
         self.threshold = threshold
         self.patience = patience
         self.reduce_lr = reduce_lr
@@ -73,8 +75,10 @@ class EarlyStopping(object):
                 lr_update = False
             # Shift
             self.current_performance = scalar
-
-            improvement = self.best_performance - self.current_performance
+            if self.mode == "min":
+                improvement = self.best_performance - self.current_performance
+            else:
+                improvement = self.current_performance - self.best_performance
 
             # updating best performance
             if improvement > 0:
@@ -97,7 +101,11 @@ class EarlyStopping(object):
         return continue_training, lr_update
 
     def update_state(self, scalar):
-        improved = (self.best_performance_state - scalar) > 0
+        if self.mode == "min":
+            improved = (self.best_performance_state - scalar) > 0
+        else:
+            improved = (scalar - self.best_performance_state) > 0
+
         if improved:
             self.best_performance_state = scalar
         return improved
