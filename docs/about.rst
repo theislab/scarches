@@ -10,7 +10,7 @@ scArches is a package to integrate newly produced single-cell datasets into inte
 
 .. note::
 
-   From version `0.3.0` we moved to PyTorch, however, you can still install the latest Tensoflow version by installing `0.2.4`.
+   From version `0.3.0` we moved to PyTorch, however, you can still install the latest Tensorflow version by installing `0.2.4`.
 
 What can you do with scArches?
 -------------------------------
