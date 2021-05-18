@@ -209,9 +209,10 @@ class Trainer:
 
         self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps, weight_decay=self.weight_decay)
 
-        self.before_loop(lr, eps)
+        self.before_loop()
 
         for self.epoch in range(n_epochs):
+            self.on_epoch_begin(lr, eps)
             self.iter_logs = defaultdict(list)
             for self.iter, batch_data in enumerate(self.dataloader_train):
                 for key, batch in batch_data.items():
@@ -236,7 +237,10 @@ class Trainer:
 
         self.training_time += (time.time() - begin)
 
-    def before_loop(self, lr, eps):
+    def before_loop(self):
+        pass
+
+    def on_epoch_begin(self, lr, eps):
         pass
 
     def after_loop(self):
