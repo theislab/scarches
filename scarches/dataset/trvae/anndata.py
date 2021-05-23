@@ -52,7 +52,7 @@ class AnnotatedDataset(Dataset):
         size_factors = np.log(adata.X.sum(1))
         if len(size_factors.shape) < 2:
             size_factors = np.expand_dims(size_factors, axis=1)
-        adata.obs['size_factors'] = size_factors
+        self.adata.obs['size_factors'] = size_factors
 
         # Create Condition Encoder
         if self.condition_key is not None:
