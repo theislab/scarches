@@ -17,7 +17,7 @@ What can you do with scArches?
 
 What are the different models?
 ---------------
-scArches is itself an algorithm to map to project query on the top of reference datasets and applies
+scArches is an algorithm to map to project query on the top of reference datasets and applies
 to different models. Here we provide a short explanation and hints on when to use which model. Our models are divided into
 three categories:
 
