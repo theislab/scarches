@@ -52,6 +52,8 @@ class Trainer:
             of conditions in the data.
        monitor: Boolean
             If `True', the progress of the training will be printed after each epoch.
+       monitor_only_val: Boolean
+            If `True', only the progress of the validation datset is displayed.
        clip_value: Float
             If the value is greater than 0, all gradients with an higher value will be clipped during training.
        weight decay: Float
@@ -96,6 +98,7 @@ class Trainer:
         self.n_workers = kwargs.pop("n_workers", 0)
         self.seed = kwargs.pop("seed", 2020)
         self.monitor = kwargs.pop("monitor", True)
+        self.monitor_only_val = kwargs.pop("monitor_only_val", True)
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
 
@@ -277,7 +280,7 @@ class Trainer:
 
         # Monitor Logs
         if self.monitor:
-            print_progress(self.epoch, self.logs, self.n_epochs)
+            print_progress(self.epoch, self.logs, self.n_epochs, self.monitor_only_val)
 
     @torch.no_grad()
     def validate(self):

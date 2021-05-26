@@ -8,25 +8,32 @@ from torch.utils.data import DataLoader
 from scarches.dataset import trVAEDataset
 
 
-def print_progress(epoch, logs, n_epochs=10000):
+def print_progress(epoch, logs, n_epochs=10000, only_val_losses=True):
     """Creates Message for '_print_progress_bar'.
 
        Parameters
        ----------
        epoch: Integer
             Current epoch iteration.
-       logs: dict
+       logs: Dict
             Dictionary of all current losses.
        n_epochs: Integer
             Maximum value of epochs.
+       only_val_losses: Boolean
+            If 'True' only the validation dataset losses are displayed, if 'False' additionally the training dataset
+            losses are displayed.
 
        Returns
        -------
     """
     message = ""
     for key in logs:
-        if "val_" in key and "unweighted" not in key:
-            message += f" - {key:s}: {logs[key][-1]:7.10f}"
+        if only_val_losses:
+            if "val_" in key and "unweighted" not in key:
+                message += f" - {key:s}: {logs[key][-1]:7.10f}"
+        else:
+            if "unweighted" not in key:
+                message += f" - {key:s}: {logs[key][-1]:7.10f}"
 
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
 
