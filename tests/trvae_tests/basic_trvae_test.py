@@ -23,6 +23,7 @@ trvae = sca.models.TRVAE(
 trvae.train(
     n_epochs=n_epochs_vae,
     alpha_epoch_anneal=200,
+    monitor_only_val=False,
 )
 
 adata_latent = sc.AnnData(trvae.get_latent())
