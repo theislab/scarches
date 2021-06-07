@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import pickle
 from typing import Optional, Union
+from copy import deepcopy
 from .trvae_model import TRVAE
 
 class Adaptor:
@@ -124,12 +125,14 @@ def attach_adaptors(
             which are already in the model (in `trvae_model.conditions_`).
     """
     attr_dict = trvae_model._get_public_attributes()
-    init_params = TRVAE._get_init_params_from_dict(attr_dict)
+    init_params = deepcopy(TRVAE._get_init_params_from_dict(attr_dict))
 
     adpt_conditions = []
     cond_params = {}
 
     for adaptor in adaptors:
+        if isinstance(adaptor, str):
+            adaptor = Adaptor(adaptor)
         adaptor._validate_params(trvae_model.adata.var_names, init_params)
         adpt_conditions.append(adaptor.condition)
         for k, p in adaptor.cond_params.items():
