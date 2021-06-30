@@ -31,4 +31,4 @@ def label_encoder(adata, encoder, condition_key=None):
 
     for condition, label in encoder.items():
         labels[adata.obs[condition_key] == condition] = label
-    return labels.reshape(-1, 1)
+    return labels

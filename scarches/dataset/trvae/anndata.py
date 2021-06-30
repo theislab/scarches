@@ -51,7 +51,7 @@ class AnnotatedDataset(Dataset):
                 encoder=self.condition_encoder,
                 condition_key=condition_key,
             )
-            self.conditions = torch.tensor(np.array(self.conditions).reshape(-1, ), dtype=torch.long)
+            self.conditions = torch.tensor(self.conditions, dtype=torch.long)
 
         # Encode cell type strings to integer
         if self.cell_type_keys is not None:
