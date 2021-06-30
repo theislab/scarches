@@ -15,18 +15,18 @@ class AnnotatedDataset(Dataset):
             Annotated data matrix.
        condition_key: String
             column name of conditions in `adata.obs` data frame.
-       condition_encoder: Dict or None
-            dictionary of encoded conditions. if `None`, will create one.
-       cell_type_key: String
-            column name of celltypes in `adata.obs` data frame.
-       cell_type_encoder: Dict or None
-            dictionary of encoded celltypes. if `None`, will create one.
+       condition_encoder: Dict
+            dictionary of encoded conditions.
+       cell_type_keys: List
+            List of column names of different celltype hierarchies in `adata.obs` data frame.
+       cell_type_encoder: Dict
+            dictionary of encoded celltypes.
     """
     def __init__(self,
                  adata,
                  condition_key=None,
                  condition_encoder=None,
-                 cell_type_key=None,
+                 cell_type_keys=None,
                  cell_type_encoder=None,
                  ):
 
@@ -34,7 +34,7 @@ class AnnotatedDataset(Dataset):
 
         self.condition_key = condition_key
         self.condition_encoder = condition_encoder
-        self.cell_type_key = cell_type_key
+        self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
 
         if sparse.issparse(adata.X):
@@ -44,19 +44,28 @@ class AnnotatedDataset(Dataset):
         self.size_factors = torch.tensor(adata.obs['trvae_size_factors'])
         self.labeled_vector = torch.tensor(adata.obs['trvae_labeled'])
 
-        # Create Condition Encoder
+        # Encode condition strings to integer
         if self.condition_key is not None:
-            self.conditions, self.condition_encoder = label_encoder(adata,
-                                                                    encoder=self.condition_encoder,
-                                                                    condition_key=condition_key)
+            self.conditions = label_encoder(
+                adata,
+                encoder=self.condition_encoder,
+                condition_key=condition_key,
+            )
             self.conditions = torch.tensor(np.array(self.conditions).reshape(-1, ), dtype=torch.long)
 
-        # Create Cell Type Encoder
-        if self.cell_type_key is not None:
-            self.cell_types, self.cell_type_encoder = label_encoder(adata,
-                                                                    encoder=self.cell_type_encoder,
-                                                                    condition_key=cell_type_key)
-            self.cell_types = torch.tensor(np.array(self.cell_types).reshape(-1, ), dtype=torch.long)
+        # Encode cell type strings to integer
+        if self.cell_type_keys is not None:
+            self.cell_types = list()
+            for cell_type_key in cell_type_keys:
+                level_cell_types = label_encoder(
+                    adata,
+                    encoder=self.cell_type_encoder,
+                    condition_key=cell_type_key,
+                )
+                self.cell_types.append(level_cell_types)
+
+            self.cell_types = np.stack(self.cell_types).T
+            self.cell_types = torch.tensor(self.cell_types, dtype=torch.long)
 
     def __getitem__(self, index):
         outputs = dict()
@@ -68,8 +77,8 @@ class AnnotatedDataset(Dataset):
         if self.condition_key:
             outputs["batch"] = self.conditions[index]
 
-        if self.cell_type_key:
-            outputs["celltype"] = self.cell_types[index]
+        if self.cell_type_keys:
+            outputs["celltypes"] = self.cell_types[index, :]
 
         return outputs
 

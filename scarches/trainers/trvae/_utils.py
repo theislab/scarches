@@ -118,7 +118,7 @@ def make_dataset(adata,
                  train_frac=0.9,
                  use_stratified_split=False,
                  condition_key=None,
-                 cell_type_key=None,
+                 cell_type_keys=None,
                  condition_encoder=None,
                  cell_type_encoder=None,
                  labeled_indices=None,
@@ -148,21 +148,23 @@ def make_dataset(adata,
     else:
         train_adata, validation_adata = train_test_split(adata, train_frac)
 
-    data_set_train = trVAEDataset(train_adata,
-                                      condition_key=condition_key,
-                                      cell_type_key=cell_type_key,
-                                      condition_encoder=condition_encoder,
-                                      cell_type_encoder=cell_type_encoder,
-                                      )
+    data_set_train = trVAEDataset(
+        train_adata,
+        condition_key=condition_key,
+        cell_type_keys=cell_type_keys,
+        condition_encoder=condition_encoder,
+        cell_type_encoder=cell_type_encoder,
+    )
     if train_frac == 1:
         return data_set_train, None
     else:
-        data_set_valid = trVAEDataset(validation_adata,
-                                          condition_key=condition_key,
-                                          cell_type_key=cell_type_key,
-                                          condition_encoder=condition_encoder,
-                                          cell_type_encoder=cell_type_encoder,
-                                          )
+        data_set_valid = trVAEDataset(
+            validation_adata,
+            condition_key=condition_key,
+            cell_type_keys=cell_type_keys,
+            condition_encoder=condition_encoder,
+            cell_type_encoder=cell_type_encoder,
+        )
         return data_set_train, data_set_valid
 
 
