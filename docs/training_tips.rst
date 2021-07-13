@@ -14,7 +14,7 @@ trVAE
 
 scVI 
    - scVI require access to raw count data.
-   - scVI already has a default good parameter the only thing you might change is `n_hidden` which we suggest increasing to 2 (min) and max 4-5 for more
+   - scVI already has a default good parameter the only thing you might change is `n_layers` which we suggest increasing to 2 (min) and max 4-5 for more
    complicated datasets.
 
    
