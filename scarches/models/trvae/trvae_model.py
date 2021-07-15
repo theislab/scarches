@@ -48,6 +48,10 @@ class TRVAE(BaseMixin):
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
             If `True` layer normalization will be applied to layers.
+       condition_weights: Dict
+            Weight samples' contribution to loss based on their condition weight.
+            Dictionary with K: condition, V: weight.
+            If None perform no sample weighting.
     """
     def __init__(
         self,
@@ -64,10 +68,12 @@ class TRVAE(BaseMixin):
         beta: float = 1,
         use_bn: bool = False,
         use_ln: bool = True,
+        condition_weights: dict = None,
     ):
         self.adata = adata
 
         self.condition_key_ = condition_key
+        self.condition_weights_ = condition_weights
 
         if conditions is None:
             if condition_key is not None:
@@ -133,6 +139,7 @@ class TRVAE(BaseMixin):
             self.model,
             self.adata,
             condition_key=self.condition_key_,
+            condition_weights=self.condition_weights_,
             **kwargs)
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True

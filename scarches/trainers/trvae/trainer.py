@@ -62,7 +62,12 @@ class Trainer:
             Passes the 'n_workers' parameter for the torch.utils.data.DataLoader class.
        seed: Integer
             Define a specific random seed to get reproducable results.
+       condition_weights: Dict
+            Weight samples' contribution to loss based on their condition weight.
+            Dictionary with K: condition, V: weight.
+            If None perform no sample weighting.
     """
+
     def __init__(self,
                  model,
                  adata,
@@ -73,12 +78,14 @@ class Trainer:
                  use_early_stopping: bool = True,
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
+                 condition_weights: dict = None,
                  **kwargs):
 
         self.adata = adata
         self.model = model
         self.condition_key = condition_key
         self.cell_type_keys = cell_type_keys
+        self.condition_weights = condition_weights
 
         self.batch_size = batch_size
         self.alpha_epoch_anneal = alpha_epoch_anneal
@@ -139,6 +146,7 @@ class Trainer:
             cell_type_keys=self.cell_type_keys,
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
+            condition_weights=self.condition_weights,
         )
 
     def initialize_loaders(self):

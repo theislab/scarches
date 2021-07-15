@@ -50,6 +50,10 @@ class trVAETrainer(Trainer):
                 Passes the 'n_workers' parameter for the torch.utils.data.DataLoader class.
            seed: Integer
                 Define a specific random seed to get reproducable results.
+           condition_weights: Dict
+                Weight samples' contribution to loss based on their condition weight.
+                Dictionary with K: condition, V: weight.
+                If None perform no sample weighting.
         """
     def __init__(
             self,

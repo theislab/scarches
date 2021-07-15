@@ -17,11 +17,18 @@ adata.obs['trvae_size_factors'] = size_factors
 labeled_array = np.ones((len(adata), 1))
 adata.obs['trvae_labeled'] = labeled_array
 
+condition_counts = adata.obs[condition_key].value_counts().to_frame()
+condition_counts.columns = ['count']
+condition_counts['weight'] = 1 / condition_counts['count']
+condition_counts['weight'] = condition_counts['weight'] / condition_counts['weight'].sum()
+condition_weights = condition_counts['weight'].to_dict()
+
 dataset = trVAEDataset(
     adata,
     condition_key,
     condition_encoder,
     [cell_type_key],
-    cell_type_encoder
+    cell_type_encoder,
+    condition_weights
 )
 print(dataset)

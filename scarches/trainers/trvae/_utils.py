@@ -2,7 +2,8 @@ import sys
 import numpy as np
 import re
 import torch
-from torch._six import container_abcs
+#from torch._six import container_abcs
+import collections.abc as container_abcs
 from torch.utils.data import DataLoader
 
 from scarches.dataset import trVAEDataset
@@ -122,6 +123,7 @@ def make_dataset(adata,
                  condition_encoder=None,
                  cell_type_encoder=None,
                  labeled_indices=None,
+                 condition_weights=None,
                  ):
     """Splits 'adata' into train and validation data and converts them into 'CustomDatasetFromAdata' objects.
 
@@ -154,6 +156,7 @@ def make_dataset(adata,
         cell_type_keys=cell_type_keys,
         condition_encoder=condition_encoder,
         cell_type_encoder=cell_type_encoder,
+        condition_weights=condition_weights,
     )
     if train_frac == 1:
         return data_set_train, None
@@ -164,6 +167,7 @@ def make_dataset(adata,
             cell_type_keys=cell_type_keys,
             condition_encoder=condition_encoder,
             cell_type_encoder=cell_type_encoder,
+            condition_weights=condition_weights,
         )
         return data_set_train, data_set_valid
 

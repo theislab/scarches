@@ -178,7 +178,7 @@ class trVAE(nn.Module):
         output = self.decoder(latent, c)
         return output[-1]
 
-    def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
+    def forward(self, x=None, batch=None, sizefactor=None, labeled=None, sampleweight=None):
         x_log = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_log = x
@@ -189,34 +189,34 @@ class trVAE(nn.Module):
 
         if self.recon_loss == "mse":
             recon_x, y1 = outputs
-            recon_loss = mse(recon_x, x_log).sum(dim=-1).mean()
+            recon_loss = (mse(recon_x, x_log).sum(dim=-1) * sampleweight).mean()
         elif self.recon_loss == "zinb":
             dec_mean_gamma, dec_dropout, y1 = outputs
             size_factor_view = sizefactor.unsqueeze(1).expand(dec_mean_gamma.size(0), dec_mean_gamma.size(1))
             dec_mean = dec_mean_gamma * size_factor_view
             dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
-            recon_loss = -zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout).sum(dim=-1).mean()
+            recon_loss = (-zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout).sum(dim=-1) * sampleweight).mean()
         elif self.recon_loss == "nb":
             dec_mean_gamma, y1 = outputs
             size_factor_view = sizefactor.unsqueeze(1).expand(dec_mean_gamma.size(0), dec_mean_gamma.size(1))
             dec_mean = dec_mean_gamma * size_factor_view
             dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
-            recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
+            recon_loss = (-nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1) * sampleweight).mean()
 
         z1_var = torch.exp(z1_log_var) + 1e-4
-        kl_div = kl_divergence(
+        kl_div = (kl_divergence(
             Normal(z1_mean, torch.sqrt(z1_var)),
             Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
-        ).sum(dim=1).mean()
+        ).sum(dim=1) * sampleweight).mean()
 
         mmd_loss = torch.tensor(0.0, device=z1.device)
 
         if self.use_mmd:
             if self.mmd_on == "z":
-                mmd_loss = mmd(z1, batch,self.n_conditions, self.beta, self.mmd_boundary)
+                mmd_loss = mmd(z1, batch, self.n_conditions, self.beta, self.mmd_boundary)
             else:
-                mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
+                mmd_loss = mmd(y1, batch, self.n_conditions, self.beta, self.mmd_boundary)
 
         return recon_loss, kl_div, mmd_loss

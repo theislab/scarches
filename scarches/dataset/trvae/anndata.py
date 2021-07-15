@@ -21,13 +21,19 @@ class AnnotatedDataset(Dataset):
             List of column names of different celltype hierarchies in `adata.obs` data frame.
        cell_type_encoder: Dict
             dictionary of encoded celltypes.
+       condition_weights: Dict
+            Weight samples' contribution to loss based on their condition weight.
+            Dictionary with K: condition, V: weight.
+            If None perform no sample weighting (e.g. all weights are set to 1).
     """
+
     def __init__(self,
                  adata,
                  condition_key=None,
                  condition_encoder=None,
                  cell_type_keys=None,
                  cell_type_encoder=None,
+                 condition_weights=None,
                  ):
 
         self.X_norm = None
@@ -36,6 +42,7 @@ class AnnotatedDataset(Dataset):
         self.condition_encoder = condition_encoder
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
+        self.condition_weights = condition_weights
 
         if sparse.issparse(adata.X):
             adata = remove_sparsity(adata)
@@ -52,6 +59,14 @@ class AnnotatedDataset(Dataset):
                 condition_key=condition_key,
             )
             self.conditions = torch.tensor(self.conditions, dtype=torch.long)
+
+        # Encode sample weights based on condition weights
+        if self.condition_key is not None and self.condition_weights is not None:
+            weights = [self.condition_weights[condition] for condition in adata.obs[condition_key]]
+            # TODO add warning if some conditions are not in weights dict
+        else:
+            weights = np.ones(adata.shape[0])
+        self.sample_weights = torch.tensor(weights)
 
         # Encode cell type strings to integer
         if self.cell_type_keys is not None:
@@ -79,6 +94,8 @@ class AnnotatedDataset(Dataset):
 
         if self.cell_type_keys:
             outputs["celltypes"] = self.cell_types[index, :]
+
+        outputs["sampleweight"] = self.sample_weights[index]
 
         return outputs
 
