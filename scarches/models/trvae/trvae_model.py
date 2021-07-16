@@ -50,8 +50,10 @@ class TRVAE(BaseMixin):
             If `True` layer normalization will be applied to layers.
        condition_weights: Dict
             Weight samples' contribution to loss based on their condition weight.
-            Dictionary with K: condition, V: weight.
+            Dictionary with K: condition_weights_col values, V: weight.
             If None perform no sample weighting.
+       condition_weights_col: String
+            Column name in adata.obs used for condition_weights.
     """
     def __init__(
         self,
@@ -69,11 +71,13 @@ class TRVAE(BaseMixin):
         use_bn: bool = False,
         use_ln: bool = True,
         condition_weights: dict = None,
+        condition_weights_col: str =None
     ):
         self.adata = adata
 
         self.condition_key_ = condition_key
         self.condition_weights_ = condition_weights
+        self.condition_weights_col_ = condition_weights_col
 
         if conditions is None:
             if condition_key is not None:
@@ -140,6 +144,7 @@ class TRVAE(BaseMixin):
             self.adata,
             condition_key=self.condition_key_,
             condition_weights=self.condition_weights_,
+            condition_weights_col=self.condition_weights_col_,
             **kwargs)
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True

@@ -25,6 +25,8 @@ class AnnotatedDataset(Dataset):
             Weight samples' contribution to loss based on their condition weight.
             Dictionary with K: condition, V: weight.
             If None perform no sample weighting (e.g. all weights are set to 1).
+       condition_weights_col: String
+            Column name in adata.obs used for condition_weights.
     """
 
     def __init__(self,
@@ -34,6 +36,7 @@ class AnnotatedDataset(Dataset):
                  cell_type_keys=None,
                  cell_type_encoder=None,
                  condition_weights=None,
+                 condition_weights_col=None,
                  ):
 
         self.X_norm = None
@@ -43,6 +46,7 @@ class AnnotatedDataset(Dataset):
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
         self.condition_weights = condition_weights
+        self.condition_weights_col = condition_weights_col
 
         if sparse.issparse(adata.X):
             adata = remove_sparsity(adata)
@@ -61,11 +65,12 @@ class AnnotatedDataset(Dataset):
             self.conditions = torch.tensor(self.conditions, dtype=torch.long)
 
         # Encode sample weights based on condition weights
-        if self.condition_key is not None and self.condition_weights is not None:
-            weights = [self.condition_weights[condition] for condition in adata.obs[condition_key]]
-            # TODO add warning if some conditions are not in weights dict
-        else:
+        if self.condition_weights_col is not None and self.condition_weights is not None:
+            weights = [self.condition_weights[condition] for condition in adata.obs[condition_weights_col]]
+        elif self.condition_weights_col is None and self.condition_weights is None:
             weights = np.ones(adata.shape[0])
+        else:
+            raise ValueError('Both or neither of condition_weights_col and condition_weights must be given')
         self.sample_weights = torch.tensor(weights)
 
         # Encode cell type strings to integer

@@ -124,6 +124,7 @@ def make_dataset(adata,
                  cell_type_encoder=None,
                  labeled_indices=None,
                  condition_weights=None,
+                 condition_weights_col=None,
                  ):
     """Splits 'adata' into train and validation data and converts them into 'CustomDatasetFromAdata' objects.
 
@@ -157,6 +158,7 @@ def make_dataset(adata,
         condition_encoder=condition_encoder,
         cell_type_encoder=cell_type_encoder,
         condition_weights=condition_weights,
+        condition_weights_col=condition_weights_col,
     )
     if train_frac == 1:
         return data_set_train, None
@@ -168,6 +170,7 @@ def make_dataset(adata,
             condition_encoder=condition_encoder,
             cell_type_encoder=cell_type_encoder,
             condition_weights=condition_weights,
+            condition_weights_col=condition_weights_col,
         )
         return data_set_train, data_set_valid
 

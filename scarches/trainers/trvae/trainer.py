@@ -66,6 +66,8 @@ class Trainer:
             Weight samples' contribution to loss based on their condition weight.
             Dictionary with K: condition, V: weight.
             If None perform no sample weighting.
+       condition_weights_col: String
+            Column name in adata.obs used for condition_weights.
     """
 
     def __init__(self,
@@ -79,6 +81,7 @@ class Trainer:
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
                  condition_weights: dict = None,
+                 condition_weights_col: str = None,
                  **kwargs):
 
         self.adata = adata
@@ -86,6 +89,7 @@ class Trainer:
         self.condition_key = condition_key
         self.cell_type_keys = cell_type_keys
         self.condition_weights = condition_weights
+        self.condition_weights_col = condition_weights_col
 
         self.batch_size = batch_size
         self.alpha_epoch_anneal = alpha_epoch_anneal
@@ -147,6 +151,7 @@ class Trainer:
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
             condition_weights=self.condition_weights,
+            condition_weights_col=self.condition_weights_col,
         )
 
     def initialize_loaders(self):

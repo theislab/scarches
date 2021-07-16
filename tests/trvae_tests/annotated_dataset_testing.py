@@ -29,6 +29,7 @@ dataset = trVAEDataset(
     condition_encoder,
     [cell_type_key],
     cell_type_encoder,
-    condition_weights
+    condition_weights,
+    condition_key
 )
 print(dataset)

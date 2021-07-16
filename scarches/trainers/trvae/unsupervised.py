@@ -54,6 +54,8 @@ class trVAETrainer(Trainer):
                 Weight samples' contribution to loss based on their condition weight.
                 Dictionary with K: condition, V: weight.
                 If None perform no sample weighting.
+           condition_weights_col: String
+                Column name in adata.obs used for condition_weights.
         """
     def __init__(
             self,
