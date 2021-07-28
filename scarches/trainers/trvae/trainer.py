@@ -47,9 +47,6 @@ class Trainer:
        use_stratified_sampling: Boolean
             If 'True', the sampler tries to load equally distributed batches concerning the conditions in every
             iteration.
-       use_stratified_split: Boolean
-            If `True`, the train and validation data will be constructed in such a way that both have same distribution
-            of conditions in the data.
        monitor: Boolean
             If `True', the progress of the training will be printed after each epoch.
        monitor_only_val: Boolean
@@ -90,7 +87,6 @@ class Trainer:
         self.n_samples = kwargs.pop("n_samples", None)
         self.train_frac = kwargs.pop("train_frac", 0.9)
         self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
-        self.use_stratified_split = kwargs.pop("use_stratified_split", False)
 
         self.weight_decay = kwargs.pop("weight_decay", 0.04)
         self.clip_value = kwargs.pop("clip_value", 0.0)
@@ -134,7 +130,6 @@ class Trainer:
         self.train_data, self.valid_data = make_dataset(
             self.adata,
             train_frac=self.train_frac,
-            use_stratified_split=self.use_stratified_split,
             condition_key=self.condition_key,
             cell_type_keys=self.cell_type_keys,
             condition_encoder=self.model.condition_encoder,

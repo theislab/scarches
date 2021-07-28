@@ -70,7 +70,7 @@ def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, leng
     sys.stdout.flush()
 
 
-def train_test_split(adata, train_frac=0.85, condition_key=None):
+def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=None):
     """Splits 'Anndata' object into training and validation data.
 
        Parameters
@@ -89,24 +89,51 @@ def train_test_split(adata, train_frac=0.85, condition_key=None):
         return adata, None
     else:
         indices = np.arange(adata.shape[0])
-        n_val_samples = int(adata.shape[0] * (1 - train_frac))
+
         if condition_key is not None:
+            train_idx = []
+            val_idx = []
             conditions = adata.obs[condition_key].unique().tolist()
-            n_conditions = len(conditions)
-            n_val_samples_per_condition = int(n_val_samples / n_conditions)
-            condition_indices_train = []
-            condition_indices_val = []
-            for i in range(n_conditions):
-                idx = indices[adata.obs[condition_key] == conditions[i]]
-                np.random.shuffle(idx)
-                condition_indices_val.append(idx[:n_val_samples_per_condition])
-                condition_indices_train.append(idx[n_val_samples_per_condition:])
-            train_idx = np.concatenate(condition_indices_train)
-            val_idx = np.concatenate(condition_indices_val)
+            for condition in conditions:
+                cond_idx = indices[adata.obs[condition_key] == condition]
+                n_train_samples = int(train_frac * len(cond_idx))
+                np.random.shuffle(cond_idx)
+                train_idx.append(cond_idx[:n_train_samples])
+                val_idx.append(cond_idx[n_train_samples:])
+
+            train_idx = np.concatenate(train_idx)
+            val_idx = np.concatenate(val_idx)
+
+        elif cell_type_key is not None:
+            labeled_idx = indices[adata.obs['trvae_labeled'] == 1]
+            unlabeled_idx = indices[adata.obs['trvae_labeled'] == 0]
+            train_labeled_idx = []
+            val_labeled_idx = []
+            train_unlabeled_idx = []
+            val_unlabeled_idx = []
+            if len(labeled_idx) > 0:
+                cell_types = adata[labeled_idx].obs[cell_type_key].unique().tolist()
+                for cell_type in cell_types:
+                    ct_idx = labeled_idx[adata[labeled_idx].obs[cell_type_key] == cell_type]
+                    n_train_samples = int(train_frac * len(ct_idx))
+                    np.random.shuffle(ct_idx)
+                    train_labeled_idx.append(ct_idx[:n_train_samples])
+                    val_labeled_idx.append(ct_idx[n_train_samples:])
+            if len(unlabeled_idx) > 0:
+                n_train_samples = int(train_frac * len(unlabeled_idx))
+                train_unlabeled_idx.append(unlabeled_idx[:n_train_samples])
+                val_unlabeled_idx.append(unlabeled_idx[n_train_samples:])
+            train_idx = train_labeled_idx + train_unlabeled_idx
+            val_idx = val_labeled_idx + val_unlabeled_idx
+
+            train_idx = np.concatenate(train_idx)
+            val_idx = np.concatenate(val_idx)
+
         else:
+            n_train_samples = int(train_frac * len(indices))
             np.random.shuffle(indices)
-            val_idx = indices[:n_val_samples]
-            train_idx = indices[n_val_samples:]
+            train_idx = indices[:n_train_samples]
+            val_idx = indices[n_train_samples:]
 
         train_data = adata[train_idx, :]
         valid_data = adata[val_idx, :]
@@ -116,7 +143,6 @@ def train_test_split(adata, train_frac=0.85, condition_key=None):
 
 def make_dataset(adata,
                  train_frac=0.9,
-                 use_stratified_split=False,
                  condition_key=None,
                  cell_type_keys=None,
                  condition_encoder=None,
@@ -143,7 +169,17 @@ def make_dataset(adata,
         labeled_array[labeled_indices] = 1
     adata.obs['trvae_labeled'] = labeled_array
 
-    if use_stratified_split:
+    if cell_type_keys is not None:
+        finest_level = None
+        n_cts = 0
+        for cell_type_key in cell_type_keys:
+            if len(adata.obs[cell_type_key].unique().tolist()) >= n_cts:
+                n_cts = len(adata.obs[cell_type_key].unique().tolist())
+                finest_level = cell_type_key
+
+        train_adata, validation_adata = train_test_split(adata, train_frac, cell_type_key=finest_level)
+
+    elif condition_key is not None:
         train_adata, validation_adata = train_test_split(adata, train_frac, condition_key=condition_key)
     else:
         train_adata, validation_adata = train_test_split(adata, train_frac)
