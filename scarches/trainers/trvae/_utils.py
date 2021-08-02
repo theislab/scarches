@@ -101,12 +101,12 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
                 cell_types = adata[labeled_idx].obs[cell_type_key].unique().tolist()
                 for cell_type in cell_types:
                     ct_idx = labeled_idx[adata[labeled_idx].obs[cell_type_key] == cell_type]
-                    n_train_samples = int(train_frac * len(ct_idx))
+                    n_train_samples = int(np.ceil(train_frac * len(ct_idx)))
                     np.random.shuffle(ct_idx)
                     train_labeled_idx.append(ct_idx[:n_train_samples])
                     val_labeled_idx.append(ct_idx[n_train_samples:])
             if len(unlabeled_idx) > 0:
-                n_train_samples = int(train_frac * len(unlabeled_idx))
+                n_train_samples = int(np.ceil(train_frac * len(unlabeled_idx)))
                 train_unlabeled_idx.append(unlabeled_idx[:n_train_samples])
                 val_unlabeled_idx.append(unlabeled_idx[n_train_samples:])
             train_idx = train_labeled_idx + train_unlabeled_idx
@@ -121,7 +121,7 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
             conditions = adata.obs[condition_key].unique().tolist()
             for condition in conditions:
                 cond_idx = indices[adata.obs[condition_key] == condition]
-                n_train_samples = int(train_frac * len(cond_idx))
+                n_train_samples = int(np.ceil(train_frac * len(cond_idx)))
                 np.random.shuffle(cond_idx)
                 train_idx.append(cond_idx[:n_train_samples])
                 val_idx.append(cond_idx[n_train_samples:])
@@ -130,7 +130,7 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
             val_idx = np.concatenate(val_idx)
 
         else:
-            n_train_samples = int(train_frac * len(indices))
+            n_train_samples = int(np.ceil(train_frac * len(indices)))
             np.random.shuffle(indices)
             train_idx = indices[:n_train_samples]
             val_idx = indices[n_train_samples:]
