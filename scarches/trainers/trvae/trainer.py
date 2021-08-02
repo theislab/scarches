@@ -72,6 +72,7 @@ class Trainer:
                  alpha_epoch_anneal: int = None,
                  alpha_kl: float = 1.,
                  early_stopping_kwargs: dict = None,
+                 log_sf: bool = False,
                  **kwargs):
 
         self.adata = adata
@@ -126,6 +127,8 @@ class Trainer:
         self.val_iters_per_epoch = None
 
         self.logs = defaultdict(list)
+
+        self.log_sf = log_sf
 
     def calc_alpha_coeff(self):
         """Calculates current alpha coefficient for alpha annealing.
@@ -200,6 +203,7 @@ class Trainer:
             cell_type_key=self.cell_type_key,
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=None,
+            log_sf = self.log_sf
         )
 
         if self.n_samples is None or self.n_samples > len(self.train_data):

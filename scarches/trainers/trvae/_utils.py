@@ -114,6 +114,7 @@ def make_dataset(adata,
                  cell_type_key=None,
                  condition_encoder=None,
                  cell_type_encoder=None,
+                 log_sf=False
                  ):
     """Splits 'adata' into train and validation data and converts them into 'CustomDatasetFromAdata' objects.
 
@@ -134,6 +135,7 @@ def make_dataset(adata,
                                       cell_type_key=cell_type_key,
                                       condition_encoder=condition_encoder,
                                       cell_type_encoder=cell_type_encoder,
+                                      log_sf=log_sf
                                       )
     if train_frac == 1:
         return data_set_train, None
@@ -143,6 +145,7 @@ def make_dataset(adata,
                                           cell_type_key=cell_type_key,
                                           condition_encoder=condition_encoder,
                                           cell_type_encoder=cell_type_encoder,
+                                          log_sf=log_sf
                                           )
         return data_set_train, data_set_valid
 

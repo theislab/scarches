@@ -32,6 +32,7 @@ class AnnotatedDataset(Dataset):
                  cell_type_key=None,
                  cell_type_encoder=None,
                  unique_conditions=None,
+                 log_sf=False
                  ):
 
         # Desparse Adata
@@ -49,7 +50,11 @@ class AnnotatedDataset(Dataset):
         self.cell_type_encoder = cell_type_encoder
         self.unique_cell_types = None
 
-        size_factors = np.log(adata.X.sum(1))
+        size_factors = self.adata.X.sum(1)
+        # for backwards compatibility check
+        # will be removed
+        if log_sf:
+            size_factors = np.log(size_factors)
         if len(size_factors.shape) < 2:
             size_factors = np.expand_dims(size_factors, axis=1)
         self.adata.obs['size_factors'] = size_factors
