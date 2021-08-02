@@ -90,21 +90,7 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
     else:
         indices = np.arange(adata.shape[0])
 
-        if condition_key is not None:
-            train_idx = []
-            val_idx = []
-            conditions = adata.obs[condition_key].unique().tolist()
-            for condition in conditions:
-                cond_idx = indices[adata.obs[condition_key] == condition]
-                n_train_samples = int(train_frac * len(cond_idx))
-                np.random.shuffle(cond_idx)
-                train_idx.append(cond_idx[:n_train_samples])
-                val_idx.append(cond_idx[n_train_samples:])
-
-            train_idx = np.concatenate(train_idx)
-            val_idx = np.concatenate(val_idx)
-
-        elif cell_type_key is not None:
+        if cell_type_key is not None:
             labeled_idx = indices[adata.obs['trvae_labeled'] == 1]
             unlabeled_idx = indices[adata.obs['trvae_labeled'] == 0]
             train_labeled_idx = []
@@ -125,6 +111,20 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
                 val_unlabeled_idx.append(unlabeled_idx[n_train_samples:])
             train_idx = train_labeled_idx + train_unlabeled_idx
             val_idx = val_labeled_idx + val_unlabeled_idx
+
+            train_idx = np.concatenate(train_idx)
+            val_idx = np.concatenate(val_idx)
+
+        elif condition_key is not None:
+            train_idx = []
+            val_idx = []
+            conditions = adata.obs[condition_key].unique().tolist()
+            for condition in conditions:
+                cond_idx = indices[adata.obs[condition_key] == condition]
+                n_train_samples = int(train_frac * len(cond_idx))
+                np.random.shuffle(cond_idx)
+                train_idx.append(cond_idx[:n_train_samples])
+                val_idx.append(cond_idx[n_train_samples:])
 
             train_idx = np.concatenate(train_idx)
             val_idx = np.concatenate(val_idx)
