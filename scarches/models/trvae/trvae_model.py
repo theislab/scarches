@@ -361,16 +361,44 @@ class TRVAE(BaseMixin):
                 labels[c == condition] = label
             c = torch.tensor(labels, device=device)
 
-        x = torch.tensor(x, device=device)
+        x = torch.tensor(x)
 
         latents = []
-        indices = torch.arange(x.size(0), device=device)
+        indices = torch.arange(x.size(0))
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_latent(x[batch,:], c[batch], mean)
+            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean)
             latents += [latent.cpu().detach()]
 
         return np.array(torch.cat(latents))
+
+    def _latent_directions(self, method="sum", return_confidence=False):
+        terms_weights = self.model.decoder.L0.expr_L.weight.data
+
+        if method == "sum":
+            signs = terms_weights.sum(0).cpu().numpy()
+            signs[signs>0] = 1.
+            signs[signs<0] = -1.
+            confidence = None
+        elif method == "counts":
+            num_nz = torch.count_nonzero(terms_weights, dim=0)
+            upreg_genes = torch.count_nonzero(terms_weights > 0, dim=0)
+            signs = upreg_genes / (num_nz+(num_nz==0))
+            signs = signs.cpu().numpy()
+
+            confidence = signs.copy()
+            confidence = np.abs(confidence-0.5)/0.5
+            confidence[num_nz==0] = 0
+
+            signs[signs>0.5] = 1.
+            signs[signs<0.5] = -1.
+
+            signs[signs==0.5] = 0
+            signs[num_nz==0] = 0
+        else:
+            raise ValueError("Unrecognized method for getting the latent direction.")
+
+        return signs if not return_confidence else (signs, confidence)
 
     def get_y(
         self,
