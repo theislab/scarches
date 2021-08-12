@@ -3,6 +3,7 @@ import os
 import torch
 import pickle
 import numpy as np
+import pandas as pd
 
 from anndata import AnnData, read
 from copy import deepcopy
@@ -399,6 +400,87 @@ class TRVAE(BaseMixin):
             raise ValueError("Unrecognized method for getting the latent direction.")
 
         return signs if not return_confidence else (signs, confidence)
+
+    def latent_enrich(
+        self,
+        groups,
+        comparison="rest",
+        n_perm=3000,
+        directions=None,
+        adata=None
+    ):
+        if adata is None:
+            adata = self.adata
+
+        if isinstance(groups, str):
+            cats_col = adata.obs[groups]
+            cats = cats_col.unique()
+        elif isinstance(groups, dict):
+            cats = []
+            all_cells = []
+            for group, cells in groups.items():
+                cats.append(group)
+                all_cells += cells
+            adata = adata[all_cells]
+            cats_col = pd.Series(index=adata.obs_names, dtype=str)
+            for group, cells in groups.items():
+                cats_col[cells] = group
+        else:
+            raise ValueError("groups should be a string or a dict.")
+
+        if comparison != "rest" and set(comparison).issubset(cats):
+            raise ValueError("comparison should be 'rest' or among the passed groups")
+
+        scores = {}
+
+        if comparison != "rest" and isinstance(comparison, str):
+            comparison = [comparison]
+
+        for cat in cats:
+            if cat in comparison:
+                continue
+
+            cat_mask = cats_col == cat
+            if comparison == "rest":
+                others_mask = ~cat_mask
+            else:
+                others_mask = cats_col.isin(comparison)
+
+            choice_1 = np.random.choice(cat_mask.sum(), n_perm)
+            choice_2 = np.random.choice(others_mask.sum(), n_perm)
+
+            adata_cat = adata[cat_mask][choice_1]
+            adata_others = adata[others_mask][choice_2]
+
+            z0 = self.get_latent(
+                adata_cat.X,
+                adata_cat.obs[self.condition_key_],
+                mean=False
+            )
+            z1 = self.get_latent(
+                adata_others.X,
+                adata_others.obs[self.condition_key_],
+                mean=False
+            )
+
+            if directions is not None:
+                z0 *= directions
+                z1 *= directions
+
+            zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
+
+            p_h0 = np.mean(z0 > z1, axis=0)
+            p_h1 = 1.0 - p_h0
+            epsilon = 1e-12
+            bf = np.log(p_h0 + epsilon) - np.log(p_h1 + epsilon)
+
+            p_h0[zeros_mask] = 0
+            p_h1[zeros_mask] = 0
+            bf[zeros_mask] = 0
+
+            scores[cat] = dict(p_h0=p_h0, p_h1=p_h1, bf=bf)
+
+        return scores
 
     def get_y(
         self,
