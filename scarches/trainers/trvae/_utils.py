@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import re
 import torch
-from torch._six import container_abcs
+import collections.abc as container_abcs
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 from scarches.dataset.trvae import AnnotatedDataset
