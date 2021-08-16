@@ -408,6 +408,7 @@ class TRVAE(BaseMixin):
         comparison="rest",
         n_perm=3000,
         directions=None,
+        select_terms=None,
         adata=None
     ):
         if adata is None:
@@ -467,6 +468,10 @@ class TRVAE(BaseMixin):
             if directions is not None:
                 z0 *= directions
                 z1 *= directions
+
+            if select_terms is not None:
+                z0 = z0[:, select_terms]
+                z1 = z1[:, select_terms]
 
             zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
 
