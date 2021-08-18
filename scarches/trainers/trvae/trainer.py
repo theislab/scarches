@@ -174,7 +174,7 @@ class Trainer:
                 self.on_iteration(batch_data)
 
             # Validation of Model, Monitoring, Early Stopping
-            self.on_epoch_end(self.print_n_deactive)
+            self.on_epoch_end()
             if self.use_early_stopping:
                 if not self.check_early_stop():
                     break

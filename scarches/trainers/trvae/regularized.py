@@ -129,7 +129,7 @@ class VIATrainer(trVAETrainer):
 
         return continue_training
 
-    def on_epoch_end(self,print_n_deactive):
+    def on_epoch_end(self):
         if self.print_n_deactive:
             if self.alpha is not None:
                 n_deact_terms = self.model.decoder.n_inactive_terms()
