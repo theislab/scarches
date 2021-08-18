@@ -1,5 +1,6 @@
 from .unsupervised import trVAETrainer
 import torch
+import sys
 
 class ProxGroupLasso:
     def __init__(self, alpha, omega=None, inplace=True):
@@ -87,6 +88,7 @@ class VIATrainer(trVAETrainer):
             alpha,
             omega=None,
             beta=1.,
+            print_n_deactive=False,
             **kwargs
     ):
         super().__init__(model, adata, **kwargs)
@@ -94,6 +96,7 @@ class VIATrainer(trVAETrainer):
         self.alpha = alpha
         self.omega = omega
         self.prox_operator = None
+        self.print_n_deactive = print_n_deactive
 
         self.watch_lr = None
 
@@ -126,14 +129,14 @@ class VIATrainer(trVAETrainer):
 
         return continue_training
 
-    def on_epoch_end(self):
-        if self.alpha is not None:
-            n_deact_terms = self.model.decoder.n_inactive_terms()
-            msg = f'Number of deactivated terms: {n_deact_terms}'
-            if self.epoch > 0:
-                msg = '\n' + msg
-            print(msg)
-
+    def on_epoch_end(self,print_n_deactive):
+        if self.print_n_deactive:
+            if self.alpha is not None:
+                n_deact_terms = self.model.decoder.n_inactive_terms()
+                msg = f'Number of deactivated terms: {n_deact_terms}'
+                if self.epoch > 0:
+                    msg = '\n' + msg
+                print(msg)
         super().on_epoch_end()
 
     def loss(self, total_batch=None):
