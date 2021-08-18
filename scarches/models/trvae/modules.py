@@ -235,7 +235,8 @@ class Decoder(nn.Module):
 
 class MaskedLinearDecoder(nn.Module):
 
-    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, use_relu=False):
+    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, last_layer="softmax",
+                 use_relu=False):
         super().__init__()
 
         print("Decoder Architecture:")
@@ -255,7 +256,14 @@ class MaskedLinearDecoder(nn.Module):
             print("\tUsing ReLU after the masked linear layer.")
 
         if self.recon_loss == 'nb':
-            self.mean_decoder = nn.Softmax(dim=-1)
+            if last_layer == "softmax":
+                self.mean_decoder = nn.Softmax(dim=-1)
+            elif last_layer == "softplus":
+                self.mean_decoder = nn.Softplus()
+            elif last_layer == "exp":
+                self.mean_decoder = torch.exp
+            else:
+                raise ValueError("Unrecognized last layer.")
 
     def forward(self, z, batch=None):
         if batch is not None:

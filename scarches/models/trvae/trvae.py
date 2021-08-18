@@ -58,10 +58,12 @@ class trVAE(nn.Module):
                  mmd_on: str = 'z',
                  mmd_boundary: Optional[int] = None,
                  recon_loss: Optional[str] = 'nb',
+                 use_l_encoder: bool = False,
                  beta: float = 1,
                  use_bn: bool = False,
                  use_ln: bool = True,
                  mask: Optional[torch.Tensor] = None,
+                 decoder_last_layer: str = "softmax",
                  use_decoder_relu: bool = False,
                  mmd_instead_kl: bool = False
                  ):
@@ -87,6 +89,8 @@ class trVAE(nn.Module):
         self.mmd_on = mmd_on
 
         self.mmd_instead_kl = mmd_instead_kl
+        self.decoder_last_layer = decoder_last_layer
+        self.use_l_encoder = use_l_encoder
 
         self.dr_rate = dr_rate
         if self.dr_rate > 0:
@@ -112,6 +116,16 @@ class trVAE(nn.Module):
                                self.use_dr,
                                self.dr_rate,
                                self.n_conditions)
+
+        if self.use_l_encoder:
+            self.l_encoder = Encoder([self.input_dim, 128],
+                                     1,
+                                     self.use_bn,
+                                     self.use_ln,
+                                     self.use_dr,
+                                     self.dr_rate,
+                                     self.n_conditions)
+
         if mask is None:
             self.decoder = Decoder(decoder_layer_sizes,
                                    self.latent_dim,
@@ -127,6 +141,7 @@ class trVAE(nn.Module):
                                                self.n_conditions,
                                                mask,
                                                self.recon_loss,
+                                               self.decoder_last_layer,
                                                use_decoder_relu)
 
     def sampling(self, mu, log_var):
@@ -215,9 +230,14 @@ class trVAE(nn.Module):
             dispersion = torch.exp(dispersion)
             recon_loss = -zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout).sum(dim=-1).mean()
         elif self.recon_loss == "nb":
+            if self.use_l_encoder and self.decoder_last_layer == "softmax":
+                sizefactor = torch.exp(self.sampling(*self.l_encoder(x_log, batch))).flatten()
             dec_mean_gamma, y1 = outputs
             size_factor_view = sizefactor.unsqueeze(1).expand(dec_mean_gamma.size(0), dec_mean_gamma.size(1))
-            dec_mean = dec_mean_gamma * size_factor_view
+            if self.decoder_last_layer == "softmax":
+                dec_mean = dec_mean_gamma * size_factor_view
+            else:
+                dec_mean = dec_mean_gamma
             dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
