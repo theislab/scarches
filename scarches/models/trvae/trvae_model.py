@@ -380,6 +380,15 @@ class TRVAE(BaseMixin):
 
         return np.array(torch.cat(latents))
 
+    def terms_genes(self, terms: Union[str, list]='terms'):
+        if isinstance(terms, str):
+            terms = self.adata.uns[terms]
+        else:
+            if len(terms) != len(self.mask_):
+                raise ValueError('The list of terms should have the same length as the mask.')
+        I = np.array(self.mask_, dtype=bool)
+        return {term: self.adata.var_names[I[i]].tolist() for i, term in enumerate(terms)}
+
     def _latent_directions(self, method="sum", return_confidence=False):
         terms_weights = self.model.decoder.L0.expr_L.weight.data
 
