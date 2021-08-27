@@ -59,6 +59,10 @@ def plot_abs_bfs(scores, terms, keys=None, n_cols=3, **kwargs):
 
     fig, axs = plt.subplots(n_rows, n_cols)
     for key, ix in zip(keys, product(range(n_rows), range(n_cols))):
+        if n_rows == 1:
+            ix = ix[1]
+        elif n_cols == 1:
+            ix = ix[0]
         plot_abs_bfs_key(scores, terms, key, ax=axs[ix], **kwargs)
 
     n_inactive = n_rows * n_cols - n_keys
