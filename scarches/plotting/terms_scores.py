@@ -2,7 +2,8 @@ from itertools import product
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_abs_bfs_key(scores, terms, key, n_points=30, lim_val=2.3, fontsize=8, scale_y=2, yt_step=0.3, ax=None):
+def plot_abs_bfs_key(scores, terms, key, n_points=30, lim_val=2.3, fontsize=8, scale_y=2, yt_step=0.3,
+                     title=None, ax=None):
 
     txt_args = dict(
         rotation='vertical',
@@ -34,7 +35,7 @@ def plot_abs_bfs_key(scores, terms, key, n_points=30, lim_val=2.3, fontsize=8, s
 
     ax.set_xlabel("Rank")
     ax.set_ylabel("Absolute log bayes factors")
-    ax.set_title(key)
+    ax.set_title(key if title is None else title)
 
     return ax.figure
 
