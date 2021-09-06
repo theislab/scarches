@@ -67,6 +67,7 @@ class Trainer:
                  cell_type_keys: str = None,
                  batch_size: int = 128,
                  alpha_epoch_anneal: int = None,
+                 alpha_kl: float = 1.,
                  use_early_stopping: bool = True,
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
@@ -82,6 +83,9 @@ class Trainer:
         self.alpha_iter_anneal = kwargs.pop("alpha_iter_anneal", None)
         self.use_early_stopping = use_early_stopping
         self.reload_best = reload_best
+
+        self.alpha_kl = alpha_kl
+
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
 
         self.n_samples = kwargs.pop("n_samples", None)
@@ -186,11 +190,11 @@ class Trainer:
            Current annealed alpha value
         """
         if self.alpha_epoch_anneal is not None:
-            alpha_coeff = min(self.epoch / self.alpha_epoch_anneal, 1)
+            alpha_coeff = min(self.alpha_kl * self.epoch / self.alpha_epoch_anneal, self.alpha_kl)
         elif self.alpha_iter_anneal is not None:
-            alpha_coeff = min(((self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), 1)
+            alpha_coeff = min((self.alpha_kl * (self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), self.alpha_kl)
         else:
-            alpha_coeff = 1
+            alpha_coeff = self.alpha_kl
         return alpha_coeff
 
     def train(self,

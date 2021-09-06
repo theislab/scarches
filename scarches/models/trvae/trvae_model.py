@@ -11,10 +11,10 @@ from typing import Optional, Union
 from .trvae import trVAE
 from scarches.trainers.trvae.unsupervised import trVAETrainer
 from scarches.models.base._utils import _validate_var_names
-from scarches.models.base._base import BaseMixin
+from scarches.models.base._base import BaseMixin, SurgeryMixin, CVAELatentsMixin
 
 
-class TRVAE(BaseMixin):
+class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
     """Model for scArches class. This class contains the implementation of Conditional Variational Auto-encoder.
 
        Parameters
@@ -137,100 +137,6 @@ class TRVAE(BaseMixin):
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
-    def get_latent(
-        self,
-        x: Optional[np.ndarray] = None,
-        c: Optional[np.ndarray] = None,
-        mean: bool = False
-    ):
-        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
-           data.
-
-           Parameters
-           ----------
-           x
-                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-                If None, then `self.adata.X` is used.
-           c
-                `numpy nd-array` of original (unencoded) desired labels for each sample.
-           mean
-                return mean instead of random sample from the latent space
-
-           Returns
-           -------
-                Returns array containing latent space encoding of 'x'.
-        """
-        device = next(self.model.parameters()).device
-        if x is None and c is None:
-            x = self.adata.X
-            if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_key_]
-
-        if c is not None:
-            c = np.asarray(c)
-            if not set(c).issubset(self.conditions_):
-                raise ValueError("Incorrect conditions")
-            labels = np.zeros(c.shape[0])
-            for condition, label in self.model.condition_encoder.items():
-                labels[c == condition] = label
-            c = torch.tensor(labels, device=device)
-
-        x = torch.tensor(x, device=device)
-
-        latents = []
-        indices = torch.arange(x.size(0), device=device)
-        subsampled_indices = indices.split(512)
-        for batch in subsampled_indices:
-            latent = self.model.get_latent(x[batch,:], c[batch], mean)
-            latents += [latent.cpu().detach()]
-
-        return np.array(torch.cat(latents))
-
-    def get_y(
-        self,
-        x: Optional[np.ndarray] = None,
-        c: Optional[np.ndarray] = None,
-    ):
-        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
-           data.
-
-           Parameters
-           ----------
-           x
-                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-                If None, then `self.adata.X` is used.
-           c
-                `numpy nd-array` of original (unencoded) desired labels for each sample.
-           Returns
-           -------
-                Returns array containing output of first decoder layer.
-        """
-        device = next(self.model.parameters()).device
-        if x is None and c is None:
-            x = self.adata.X
-            if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_key_]
-
-        if c is not None:
-            c = np.asarray(c)
-            if not set(c).issubset(self.conditions_):
-                raise ValueError("Incorrect conditions")
-            labels = np.zeros(c.shape[0])
-            for condition, label in self.model.condition_encoder.items():
-                labels[c == condition] = label
-            c = torch.tensor(labels, device=device)
-
-        x = torch.tensor(x, device=device)
-
-        latents = []
-        indices = torch.arange(x.size(0), device=device)
-        subsampled_indices = indices.split(512)
-        for batch in subsampled_indices:
-            latent = self.model.get_y(x[batch,:], c[batch])
-            latents += [latent.cpu().detach()]
-
-        return np.array(torch.cat(latents))
-
     @classmethod
     def _get_init_params_from_dict(cls, dct):
         init_params = {
@@ -258,75 +164,3 @@ class TRVAE(BaseMixin):
         adata_conditions = adata.obs[dct['condition_key_']].unique().tolist()
         if not set(adata_conditions).issubset(dct['conditions_']):
             raise ValueError("Incorrect conditions")
-
-    @classmethod
-    def load_query_data(
-        cls,
-        adata: AnnData,
-        reference_model: Union[str, 'TRVAE'],
-        freeze: bool = True,
-        freeze_expression: bool = True,
-        remove_dropout: bool = True,
-    ):
-        """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
-
-           Parameters
-           ----------
-           adata
-                Query anndata object.
-           reference_model
-                TRVAE model to expand or a path to TRVAE model folder.
-           freeze: Boolean
-                If 'True' freezes every part of the network except the first layers of encoder/decoder.
-           freeze_expression: Boolean
-                If 'True' freeze every weight in first layers except the condition weights.
-           remove_dropout: Boolean
-                If 'True' remove Dropout for Transfer Learning.
-
-           Returns
-           -------
-           new_model: trVAE
-                New TRVAE model to train on query data.
-        """
-        if isinstance(reference_model, str):
-            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            adata = _validate_var_names(adata, var_names)
-        else:
-            attr_dict = reference_model._get_public_attributes()
-            model_state_dict = reference_model.model.state_dict()
-        init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
-
-        conditions = init_params['conditions']
-        condition_key = init_params['condition_key']
-
-        new_conditions = []
-        adata_conditions = adata.obs[condition_key].unique().tolist()
-        # Check if new conditions are already known
-        for item in adata_conditions:
-            if item not in conditions:
-                new_conditions.append(item)
-
-        # Add new conditions to overall conditions
-        for condition in new_conditions:
-            conditions.append(condition)
-
-        if remove_dropout:
-            init_params['dr_rate'] = 0.0
-
-        new_model = cls(adata, **init_params)
-        new_model._load_expand_params_from_dict(model_state_dict)
-
-        if freeze:
-            new_model.model.freeze = True
-            for name, p in new_model.model.named_parameters():
-                p.requires_grad = False
-                if 'theta' in name:
-                    p.requires_grad = True
-                if freeze_expression:
-                    if 'cond_L.weight' in name:
-                        p.requires_grad = True
-                else:
-                    if "L0" in name or "N0" in name:
-                        p.requires_grad = True
-
-        return new_model
