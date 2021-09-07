@@ -50,35 +50,42 @@ class MaskedCondLayers(nn.Module):
 
 class MaskedLinearDecoder(nn.Module):
 
-    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, last_layer="softmax",
+    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, last_layer=None,
                  use_relu=False):
         super().__init__()
 
+        if recon_loss == "mse":
+            if last_layer == "softmax":
+                raise ValueError("Can't specify softmax last layer with mse loss.")
+            last_layer = "identity" if last_layer is None else last_layer
+        elif recon_loss == "nb":
+            last_layer = "softmax" if last_layer is None else last_layer
+        else:
+            raise ValueError("Unrecognized loss.")
+
         print("Decoder Architecture:")
         print("\tMasked linear layer in, out and cond: ", in_dim, out_dim, n_cond)
-
-        self.use_relu = use_relu and recon_loss == 'mse'
-
-        self.recon_loss = recon_loss
 
         self.n_cond = 0
         if n_cond is not None:
             self.n_cond = n_cond
 
         self.L0 = MaskedCondLayers(in_dim, out_dim, n_cond, bias=False, mask=mask)
-        if use_relu:
-            self.A0 = nn.ReLU()
-            print("\tUsing ReLU after the masked linear layer.")
 
-        if self.recon_loss == 'nb':
-            if last_layer == "softmax":
-                self.mean_decoder = nn.Softmax(dim=-1)
-            elif last_layer == "softplus":
-                self.mean_decoder = nn.Softplus()
-            elif last_layer == "exp":
-                self.mean_decoder = torch.exp
-            else:
-                raise ValueError("Unrecognized last layer.")
+        if last_layer == "softmax":
+            self.mean_decoder = nn.Softmax(dim=-1)
+        elif last_layer == "softplus":
+            self.mean_decoder = nn.Softplus()
+        elif last_layer == "exp":
+            self.mean_decoder = torch.exp
+        elif last_layer == "relu":
+            self.mean_decoder = nn.ReLU()
+        elif last_layer == "identity":
+            self.mean_decoder = lambda a: a
+        else:
+            raise ValueError("Unrecognized last layer.")
+
+        print("Last layer:", last_layer)
 
     def forward(self, z, batch=None):
         if batch is not None:
@@ -88,13 +95,7 @@ class MaskedLinearDecoder(nn.Module):
         else:
             dec_latent = self.L0(z)
 
-        if self.use_relu:
-            recon_x = self.A0(dec_latent)
-        else:
-            recon_x = dec_latent
-
-        if self.recon_loss == 'nb':
-            recon_x = self.mean_decoder(recon_x)
+        recon_x = self.mean_decoder(dec_latent)
 
         return recon_x, dec_latent
 

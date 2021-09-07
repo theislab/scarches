@@ -35,8 +35,6 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
        mask: Tensor or None
             if not None, Tensor of 0s and 1s from utils.add_annotations to create VAE with a masked linear decoder.
             Automatically sets recon_loss to 'mse'.
-       use_decoder_relu: Boolean
-            Use ReLU after the linear layer in the interpretable (masked) linear decoder.
     """
 
     def __init__(self,
@@ -50,8 +48,7 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                  use_l_encoder: bool = False,
                  use_bn: bool = False,
                  use_ln: bool = True,
-                 decoder_last_layer: str = "softmax",
-                 use_decoder_relu: bool = False,
+                 decoder_last_layer: Optional[str] = None
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -108,8 +105,7 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                            self.n_conditions,
                                            mask,
                                            self.recon_loss,
-                                           self.decoder_last_layer,
-                                           use_decoder_relu)
+                                           self.decoder_last_layer)
 
         if self.use_l_encoder:
             self.l_encoder = Encoder([self.input_dim, 128],
