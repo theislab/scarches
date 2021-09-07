@@ -51,8 +51,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_bn: bool = False,
         use_ln: bool = True,
         mask: Optional[Union[np.ndarray, list]] = None,
-        decoder_last_layer: str = "softmax",
-        use_decoder_relu: bool = False
+        decoder_last_layer: Optional[str] = None
     ):
         self.adata = adata
 
@@ -74,7 +73,6 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         self.input_dim_ = adata.n_vars
 
-        self.use_decoder_relu_ = use_decoder_relu
         self.use_l_encoder_ = use_l_encoder
         self.decoder_last_layer_ = decoder_last_layer
 
@@ -93,8 +91,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             self.use_l_encoder_,
             self.use_bn_,
             self.use_ln_,
-            self.decoder_last_layer_,
-            self.use_decoder_relu_,
+            self.decoder_last_layer_
         )
 
         self.is_trained_ = False
@@ -142,7 +139,11 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         I = np.array(self.mask_, dtype=bool)
         return {term: self.adata.var_names[I[i]].tolist() for i, term in enumerate(terms)}
 
-    def _latent_directions(self, method="sum", return_confidence=False):
+    def latent_directions(self, method="sum", get_confidence=False,
+                          adata=None, key_added='directions'):
+        if adata is None:
+            adata = self.adata
+
         terms_weights = self.model.decoder.L0.expr_L.weight.data
 
         if method == "sum":
@@ -168,16 +169,20 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         else:
             raise ValueError("Unrecognized method for getting the latent direction.")
 
-        return signs if not return_confidence else (signs, confidence)
+        adata.uns[key_added] = signs
+        if get_confidence and confidence is not None:
+            adata.uns[key_added + '_confindence'] = confidence
 
     def latent_enrich(
         self,
         groups,
-        comparison="rest",
+        comparison='rest',
         n_perm=3000,
-        directions=None,
+        use_directions=False,
+        directions_key='directions',
         select_terms=None,
-        adata=None
+        adata=None,
+        key_added='bf_scores'
     ):
         if adata is None:
             adata = self.adata
@@ -233,7 +238,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 mean=False
             )
 
-            if directions is not None:
+            if use_directions:
+                directions = adata.uns[directions_key]
                 z0 *= directions
                 z1 *= directions
 
@@ -254,7 +260,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
             scores[cat] = dict(p_h0=p_h0, p_h1=p_h1, bf=bf)
 
-        return scores
+        adata.uns[key_added] = scores
 
     @classmethod
     def _get_init_params_from_dict(cls, dct):
@@ -268,7 +274,6 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             'use_bn': dct['use_bn_'],
             'use_ln': dct['use_ln_'],
             'mask': dct['mask_'],
-            'use_decoder_relu': dct['use_decoder_relu_'],
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False
         }
