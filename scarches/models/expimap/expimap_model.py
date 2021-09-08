@@ -268,7 +268,6 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             'condition_key': dct['condition_key_'],
             'conditions': dct['conditions_'],
             'hidden_layer_sizes': dct['hidden_layer_sizes_'],
-            'latent_dim': dct['latent_dim_'],
             'dr_rate': dct['dr_rate_'],
             'recon_loss': dct['recon_loss_'],
             'use_bn': dct['use_bn_'],
