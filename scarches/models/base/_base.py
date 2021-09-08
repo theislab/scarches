@@ -4,6 +4,7 @@ import torch
 import pickle
 import numpy as np
 
+from copy import deepcopy
 from anndata import AnnData, read
 from typing import Optional, Union
 from torch.distributions import Normal

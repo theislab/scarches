@@ -85,7 +85,7 @@ class MaskedLinearDecoder(nn.Module):
         else:
             raise ValueError("Unrecognized last layer.")
 
-        print("Last layer:", last_layer)
+        print("Last Decoder layer:", last_layer)
 
     def forward(self, z, batch=None):
         if batch is not None:
