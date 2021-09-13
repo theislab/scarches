@@ -52,7 +52,7 @@ def plot_abs_bfs(adata, scores_key="bf_scores", terms: Union[str, list]="terms",
         raise ValueError('Incorrect length of terms.')
 
     if keys is None:
-        keys = scores.keys()
+        keys = list(scores.keys())
 
     if len(keys) == 1:
         keys = keys[0]
