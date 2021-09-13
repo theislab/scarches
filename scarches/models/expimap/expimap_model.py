@@ -34,10 +34,19 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             Dropput rate applied to all layers, if `dr_rate`==0 no dropout will be applied.
        recon_loss: String
             Definition of Reconstruction-Loss-Method, 'mse' or 'nb'.
+       use_l_encoder: Boolean
+            If True and `decoder_last_layer`='softmax', libary size encoder is used.
        use_bn: Boolean
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
             If `True` layer normalization will be applied to layers.
+       mask: Array or List
+            if not None, an array of 0s and 1s from utils.add_annotations to create VAE with a masked linear decoder.
+       mask_key: String
+            A key in `adata.varm` for the mask if the mask is not provided.
+       decoder_last_layer: String or None
+            The last layer of the decoder. Must be 'softmax' (default for 'nb' loss), identity(default for 'mse' loss),
+            'softplus', 'exp' or 'relu'.
     """
     def __init__(
         self,
@@ -51,9 +60,13 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_bn: bool = False,
         use_ln: bool = True,
         mask: Optional[Union[np.ndarray, list]] = None,
+        mask_key: str = 'I',
         decoder_last_layer: Optional[str] = None
     ):
         self.adata = adata
+
+        if mask is None and mask_key not in self.adata.varm:
+            raise ValueError('Please provide mask.')
 
         self.condition_key_ = condition_key
 
@@ -75,6 +88,9 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         self.use_l_encoder_ = use_l_encoder
         self.decoder_last_layer_ = decoder_last_layer
+
+        if mask is None:
+            mask = adata.varm[mask_key].T
 
         self.mask_ = mask if isinstance(mask, list) else mask.tolist()
         mask = torch.tensor(mask).float()

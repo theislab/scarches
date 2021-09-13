@@ -23,18 +23,22 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
        hidden_layer_sizes: List
             A list of hidden layer sizes for encoder network. Decoder network will be the reversed order.
        latent_dim: Integer
-            Bottleneck layer (z)  size.
+            Bottleneck layer (z) size.
        dr_rate: Float
-            Dropput rate applied to all layers, if `dr_rate`==0 no dropout will be applied.
+            Dropput rate applied to all layers, if `dr_rate`=0 no dropout will be applied.
        recon_loss: String
             Definition of Reconstruction-Loss-Method, 'mse' or 'nb'.
+       use_l_encoder: Boolean
+            If True and `decoder_last_layer`='softmax', libary size encoder is used.
        use_bn: Boolean
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
             If `True` layer normalization will be applied to layers.
        mask: Tensor or None
             if not None, Tensor of 0s and 1s from utils.add_annotations to create VAE with a masked linear decoder.
-            Automatically sets recon_loss to 'mse'.
+       decoder_last_layer: String or None
+            The last layer of the decoder. Must be 'softmax' (default for 'nb' loss), identity(default for 'mse' loss),
+            'softplus', 'exp' or 'relu'.
     """
 
     def __init__(self,
@@ -54,7 +58,7 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
         assert isinstance(hidden_layer_sizes, list)
         assert isinstance(latent_dim, int)
         assert isinstance(conditions, list)
-        assert recon_loss in ["mse", "nb", "zinb"], "'recon_loss' must be 'mse', 'nb' or 'zinb'"
+        assert recon_loss in ["mse", "nb"], "'recon_loss' must be 'mse' or 'nb'"
 
         print("\nINITIALIZING NEW NETWORK..............")
         self.input_dim = input_dim
