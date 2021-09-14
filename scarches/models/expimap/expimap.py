@@ -73,7 +73,14 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
 
         self.use_mmd = False
 
-        self.decoder_last_layer = decoder_last_layer
+        if decoder_last_layer is None:
+            if recon_loss == 'nb':
+                self.decoder_last_layer = 'softmax'
+            else:
+                self.decoder_last_layer = 'identity'
+        else:
+            self.decoder_last_layer = decoder_last_layer
+
         self.use_l_encoder = use_l_encoder
 
         self.dr_rate = dr_rate
