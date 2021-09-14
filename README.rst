@@ -58,7 +58,21 @@ post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us 
 
 Reference
 -------------------------------
-If scArches is useful in your research, please consider citing this `preprint <https://www.biorxiv.org/content/10.1101/2020.07.16.205997v1/>`_.
+If scArches is useful in your research, please consider citing following `paper <https://www.nature.com/articles/s41587-021-01001-7>`_:
+::
+
+
+       @article{lotfollahi2021mapping,
+         title={Mapping single-cell data to reference atlases by transfer learning},
+         author={Lotfollahi, Mohammad and Naghipourfar, Mohsen and Luecken, Malte D and Khajavi,
+         Matin and B{\"u}ttner, Maren and Wagenstetter, Marco and Avsec, {\v{Z}}iga and Gayoso,
+         Adam and Yosef, Nir and Interlandi, Marta and others},
+         journal={Nature Biotechnology},
+         pages={1--10},
+         year={2021},
+         publisher={Nature Publishing Group}}
+
+
 
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
