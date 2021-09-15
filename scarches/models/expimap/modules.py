@@ -101,7 +101,7 @@ class MaskedLinearDecoder(nn.Module):
 
     def nonzero_terms(self):
         v = self.L0.expr_L.weight.data
-        return (v.norm(p=2, dim=0)>0).cpu().numpy()
+        return (v.norm(p=1, dim=0)>0).cpu().numpy()
 
     def n_inactive_terms(self):
         n = (~self.nonzero_terms()).sum()

@@ -146,6 +146,9 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
+    def nonzero_terms(self):
+        return self.model.decoder.nonzero_terms()
+
     def terms_genes(self, terms: Union[str, list]='terms'):
         if isinstance(terms, str):
             terms = self.adata.uns[terms]
