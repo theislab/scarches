@@ -65,7 +65,9 @@ class trVAE(nn.Module):
                  mask: Optional[torch.Tensor] = None,
                  decoder_last_layer: str = "softmax",
                  use_decoder_relu: bool = False,
-                 mmd_instead_kl: bool = False
+                 mmd_instead_kl: bool = False,
+                 n_ext_decoder: int = 0,
+                 n_expand_encoder: int = 0
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -87,6 +89,9 @@ class trVAE(nn.Module):
         self.use_bn = use_bn
         self.use_ln = use_ln
         self.mmd_on = mmd_on
+
+        self.n_expand_encoder = n_expand_encoder
+        self.n_ext_decoder = n_ext_decoder
 
         self.mmd_instead_kl = mmd_instead_kl
         self.decoder_last_layer = decoder_last_layer
@@ -115,7 +120,8 @@ class trVAE(nn.Module):
                                self.use_ln,
                                self.use_dr,
                                self.dr_rate,
-                               self.n_conditions)
+                               self.n_conditions,
+                               self.n_expand_encoder)
 
         if self.use_l_encoder:
             self.l_encoder = Encoder([self.input_dim, 128],
@@ -142,7 +148,8 @@ class trVAE(nn.Module):
                                                mask,
                                                self.recon_loss,
                                                self.decoder_last_layer,
-                                               use_decoder_relu)
+                                               use_decoder_relu,
+                                               self.n_ext_decoder)
 
     def sampling(self, mu, log_var):
         """Samples from standard Normal distribution and applies re-parametrization trick.

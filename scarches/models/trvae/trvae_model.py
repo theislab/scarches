@@ -229,7 +229,9 @@ class TRVAE(BaseMixin):
         mask: Optional[Union[np.ndarray, list]] = None,
         decoder_last_layer: str = "softmax",
         use_decoder_relu: bool = False,
-        mmd_instead_kl: bool = False
+        mmd_instead_kl: bool = False,
+        n_ext_decoder: int = 0,
+        n_expand_encoder: int = 0
     ):
         self.adata = adata
 
@@ -266,6 +268,9 @@ class TRVAE(BaseMixin):
             mask = torch.tensor(mask).float()
             self.latent_dim_ = len(self.mask_)
 
+        self.n_ext_decoder_ = n_ext_decoder
+        self.n_expand_encoder_ = n_expand_encoder
+
         self.model = trVAE(
             self.input_dim_,
             self.conditions_,
@@ -283,7 +288,9 @@ class TRVAE(BaseMixin):
             mask,
             self.decoder_last_layer_,
             self.use_decoder_relu_,
-            self.mmd_instead_kl_
+            self.mmd_instead_kl_,
+            self.n_ext_decoder_,
+            self.n_expand_encoder_
         )
 
         self.is_trained_ = False
@@ -297,6 +304,7 @@ class TRVAE(BaseMixin):
         eps: float = 0.01,
         alpha: Optional[float] = None,
         omega: Optional[torch.Tensor] = None,
+        gamma_ext: Optional[float] = None,
         **kwargs
     ):
         """Train the model.
@@ -325,6 +333,7 @@ class TRVAE(BaseMixin):
                 self.adata,
                 alpha=alpha,
                 omega=omega,
+                gamma_ext=gamma_ext,
                 condition_key=self.condition_key_,
                 **kwargs
             )
@@ -567,7 +576,9 @@ class TRVAE(BaseMixin):
             'use_decoder_relu': dct['use_decoder_relu_'],
             'mmd_instead_kl': dct['mmd_instead_kl_'],
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
-            'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False
+            'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
+            'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
+            'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
         }
 
         return init_params
@@ -588,7 +599,10 @@ class TRVAE(BaseMixin):
         reference_model: Union[str, 'TRVAE'],
         freeze: bool = True,
         freeze_expression: bool = True,
+        unfreeze_ext: bool = True,
         remove_dropout: bool = True,
+        new_n_ext_decoder: Optional[int] = None,
+        new_n_expand_encoder: Optional[int] = None
     ):
         """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
 
@@ -617,6 +631,11 @@ class TRVAE(BaseMixin):
             attr_dict = reference_model._get_public_attributes()
             model_state_dict = reference_model.model.state_dict()
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
+
+        if new_n_ext_decoder is not None:
+            init_params['n_ext_decoder'] = new_n_ext_decoder
+        if new_n_expand_encoder is not None:
+            init_params['n_expand_encoder'] = new_n_expand_encoder
 
         conditions = init_params['conditions']
         condition_key = init_params['condition_key']
@@ -649,6 +668,12 @@ class TRVAE(BaseMixin):
                         p.requires_grad = True
                 else:
                     if "L0" in name or "N0" in name:
+                        p.requires_grad = True
+
+                if unfreeze_ext:
+                    if 'ext_L.weight' in name:
+                        p.requires_grad = True
+                    if 'expand_mean_encoder' in name or 'expand_var_encoder' in name:
                         p.requires_grad = True
 
         return new_model

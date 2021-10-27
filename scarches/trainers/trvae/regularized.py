@@ -28,6 +28,31 @@ class ProxGroupLasso:
 
         return W
 
+class ProxOperL1:
+    def __init__(self, alpha, I=None, inplace=True):
+        self._I = ~I.bool() if I is not None else None
+        self._alpha=alpha
+        self._inplace=inplace
+
+    def __call__(self, W):
+        if not self._inplace:
+            W = W.clone()
+
+        W_geq_alpha = W>=self._alpha
+        W_leq_neg_alpha = W<=-self._alpha
+        W_cond_joint = ~W_geq_alpha&~W_leq_neg_alpha
+
+        if self._I is not None:
+            W_geq_alpha &= self._I
+            W_leq_neg_alpha &= self._I
+            W_cond_joint &= self._I
+
+        W -= W_geq_alpha.float()*self._alpha
+        W += W_leq_neg_alpha.float()*self._alpha
+        W -= W_cond_joint.float()*W
+
+        return W
+
 class VIATrainer(trVAETrainer):
     """ScArches Unsupervised Trainer class. This class contains the implementation of the unsupervised CVAE/TRVAE
        Trainer.
@@ -87,6 +112,7 @@ class VIATrainer(trVAETrainer):
             adata,
             alpha,
             omega=None,
+            gamma_ext=None,
             beta=1.,
             print_n_deactive=False,
             **kwargs
@@ -95,8 +121,11 @@ class VIATrainer(trVAETrainer):
 
         self.alpha = alpha
         self.omega = omega
-        self.prox_operator = None
+        self.prox_operator_lasso = None
         self.print_n_deactive = print_n_deactive
+
+        self.gamma_ext = gamma_ext
+        self.prox_operator_l1_ext = None
 
         self.watch_lr = None
 
@@ -109,14 +138,25 @@ class VIATrainer(trVAETrainer):
             self.beta = None
 
     def on_iteration(self, batch_data):
-        if self.prox_operator is None and self.alpha is not None:
+        if self.prox_operator_lasso is None and self.alpha is not None:
             self.watch_lr = self.optimizer.param_groups[0]['lr']
-            self.prox_operator = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
+            self.prox_operator_lasso = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
+            self.lasso_init = True
+
+        has_ext = self.model.decoder.L0.n_ext > 0
+        if self.prox_operator_l1_ext is None and self.gamma_ext is not None and has_ext:
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
+            self.l1_ext_init = True
+            if self.watch_lr is None:
+                self.watch_lr = self.optimizer.param_groups[0]['lr']
 
         super().on_iteration(batch_data)
 
-        if self.prox_operator is not None:
-            self.prox_operator(self.model.decoder.L0.expr_L.weight.data)
+        if self.prox_operator_lasso is not None:
+            self.prox_operator_lasso(self.model.decoder.L0.expr_L.weight.data)
+
+        if self.prox_operator_l1_ext is not None:
+            self.prox_operator_l1_ext(self.model.decoder.L0.ext_L.weight.data)
 
     def check_early_stop(self):
         continue_training = super().check_early_stop()
@@ -125,7 +165,10 @@ class VIATrainer(trVAETrainer):
             new_lr = self.optimizer.param_groups[0]['lr']
             if self.watch_lr is not None and self.watch_lr != new_lr:
                 self.watch_lr = new_lr
-                self.prox_operator = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
+                if self.lasso_init:
+                    self.prox_operator_lasso = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
+                if self.l1_ext_init:
+                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
 
         return continue_training
 

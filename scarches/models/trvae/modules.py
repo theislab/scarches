@@ -47,7 +47,7 @@ class CondLayers(nn.Module):
         if self.n_cond != 0:
             self.cond_L = nn.Linear(self.n_cond, n_out, bias=False)
 
-        if self.n_ext !=0:
+        if self.n_ext != 0:
             self.ext_L = nn.Linear(self.n_ext, n_out, bias=False)
 
     def forward(self, x: torch.Tensor):
@@ -263,7 +263,7 @@ class Decoder(nn.Module):
 class MaskedLinearDecoder(nn.Module):
 
     def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, last_layer="softmax",
-                 use_relu=False):
+                 use_relu=False, n_ext=0):
         super().__init__()
 
         print("Decoder Architecture:")
@@ -277,7 +277,7 @@ class MaskedLinearDecoder(nn.Module):
         if n_cond is not None:
             self.n_cond = n_cond
 
-        self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, mask=mask)
+        self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, n_ext=n_ext, mask=mask)
         if use_relu:
             self.A0 = nn.ReLU()
             print("\tUsing ReLU after the masked linear layer.")
