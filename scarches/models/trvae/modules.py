@@ -32,23 +32,40 @@ class CondLayers(nn.Module):
             n_out: int,
             n_cond: int,
             bias: bool,
+            n_ext: int = 0,
             mask: Optional[torch.Tensor] = None
     ):
         super().__init__()
         self.n_cond = n_cond
+        self.n_ext = n_ext
+
         if mask is None:
             self.expr_L = nn.Linear(n_in, n_out, bias=bias)
         else:
             self.expr_L = MaskedLinear(n_in, n_out, mask, bias=bias)
+
         if self.n_cond != 0:
             self.cond_L = nn.Linear(self.n_cond, n_out, bias=False)
 
+        if self.n_ext !=0:
+            self.ext_L = nn.Linear(self.n_ext, n_out, bias=False)
+
     def forward(self, x: torch.Tensor):
         if self.n_cond == 0:
-            out = self.expr_L(x)
+            expr, cond = x, None
         else:
             expr, cond = torch.split(x, [x.shape[1] - self.n_cond, self.n_cond], dim=1)
-            out = self.expr_L(expr) + self.cond_L(cond)
+
+        if self.n_ext == 0:
+            ext = None
+        else:
+            expr, ext = torch.split(expr, [expr.shape[1] - self.n_ext, self.n_ext], dim=1)
+
+        out = self.expr_L(expr)
+        if ext is not None:
+            out = out + self.ext_L(ext)
+        if cond is not None:
+            out = out + self.cond_L(cond)
         return out
 
 
@@ -81,9 +98,11 @@ class Encoder(nn.Module):
                  use_ln: bool,
                  use_dr: bool,
                  dr_rate: float,
-                 num_classes: Optional[int] = None):
+                 num_classes: Optional[int] = None,
+                 n_expand: int = 0):
         super().__init__()
         self.n_classes = 0
+        self.n_expand = n_expand
         if num_classes is not None:
             self.n_classes = num_classes
         self.FC = None
@@ -111,6 +130,10 @@ class Encoder(nn.Module):
         self.mean_encoder = nn.Linear(layer_sizes[-1], latent_dim)
         self.log_var_encoder = nn.Linear(layer_sizes[-1], latent_dim)
 
+        if self.n_expand != 0:
+            self.expand_mean_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
+            self.expand_var_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
+
     def forward(self, x, batch=None):
         if batch is not None:
             batch = one_hot_encoder(batch, n_cls=self.n_classes)
@@ -119,6 +142,10 @@ class Encoder(nn.Module):
             x = self.FC(x)
         means = self.mean_encoder(x)
         log_vars = self.log_var_encoder(x)
+
+        if self.n_expand != 0:
+            means = torch.cat((means, self.expand_mean_encoder(x)), dim=-1)
+            log_vars = torch.cat((log_vars, self.expand_var_encoder(x)), dim=-1)
         return means, log_vars
 
 
