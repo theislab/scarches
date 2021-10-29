@@ -231,7 +231,8 @@ class TRVAE(BaseMixin):
         use_decoder_relu: bool = False,
         mmd_instead_kl: bool = False,
         n_ext_decoder: int = 0,
-        n_expand_encoder: int = 0
+        n_expand_encoder: int = 0,
+        soft_mask: bool = False
     ):
         self.adata = adata
 
@@ -271,6 +272,8 @@ class TRVAE(BaseMixin):
         self.n_ext_decoder_ = n_ext_decoder
         self.n_expand_encoder_ = n_expand_encoder
 
+        self.soft_mask_ = soft_mask
+
         self.model = trVAE(
             self.input_dim_,
             self.conditions_,
@@ -290,7 +293,8 @@ class TRVAE(BaseMixin):
             self.use_decoder_relu_,
             self.mmd_instead_kl_,
             self.n_ext_decoder_,
-            self.n_expand_encoder_
+            self.n_expand_encoder_,
+            self.soft_mask_
         )
 
         self.is_trained_ = False
@@ -579,6 +583,7 @@ class TRVAE(BaseMixin):
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
             'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
+            'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False
         }
 
         return init_params

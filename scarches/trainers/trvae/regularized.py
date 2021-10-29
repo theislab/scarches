@@ -53,6 +53,22 @@ class ProxOperL1:
 
         return W
 
+def get_prox_operator(alpha, omega, alpha_l1, mask):
+    if alpha is not None:
+        p_gr = ProxGroupLasso(alpha, omega)
+    else:
+        p_gr = lambda W: W
+
+    prox_op = p_gr
+
+    if alpha_l1 is not None:
+        if mask is None:
+            raise ValueError('Provide soft mask.')
+        p_l1_annot = ProxOperL1(lambda1, mask)
+        prox_op = lambda W: p_gr(p_l1_annot(W))
+
+    return prox_op
+
 class VIATrainer(trVAETrainer):
     """ScArches Unsupervised Trainer class. This class contains the implementation of the unsupervised CVAE/TRVAE
        Trainer.
@@ -112,6 +128,7 @@ class VIATrainer(trVAETrainer):
             adata,
             alpha,
             omega=None,
+            alpha_l1=None,
             gamma_ext=None,
             beta=1.,
             print_n_deactive=False,
@@ -121,7 +138,8 @@ class VIATrainer(trVAETrainer):
 
         self.alpha = alpha
         self.omega = omega
-        self.prox_operator_lasso = None
+        slf.alpha_l1 = alpha_l1
+        self.prox_operator_compose = None
         self.print_n_deactive = print_n_deactive
 
         self.gamma_ext = gamma_ext
@@ -137,23 +155,26 @@ class VIATrainer(trVAETrainer):
         else:
             self.beta = None
 
+        self.compose_init = False
+        self.l1_ext_init = False
+
     def on_iteration(self, batch_data):
-        if self.prox_operator_lasso is None and self.alpha is not None:
+        if self.prox_operator_compose is None and (self.alpha is not None or alpha_l1 is not None):
             self.watch_lr = self.optimizer.param_groups[0]['lr']
-            self.prox_operator_lasso = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
-            self.lasso_init = True
+            self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1, self.model.mask)
+            self.compose_init = True
 
         has_ext = self.model.decoder.L0.n_ext > 0
         if self.prox_operator_l1_ext is None and self.gamma_ext is not None and has_ext:
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
-            self.l1_ext_init = True
             if self.watch_lr is None:
                 self.watch_lr = self.optimizer.param_groups[0]['lr']
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
+            self.l1_ext_init = True
 
         super().on_iteration(batch_data)
 
-        if self.prox_operator_lasso is not None:
-            self.prox_operator_lasso(self.model.decoder.L0.expr_L.weight.data)
+        if self.prox_operator_compose is not None:
+            self.prox_operator_compose(self.model.decoder.L0.expr_L.weight.data)
 
         if self.prox_operator_l1_ext is not None:
             self.prox_operator_l1_ext(self.model.decoder.L0.ext_L.weight.data)
@@ -165,8 +186,8 @@ class VIATrainer(trVAETrainer):
             new_lr = self.optimizer.param_groups[0]['lr']
             if self.watch_lr is not None and self.watch_lr != new_lr:
                 self.watch_lr = new_lr
-                if self.lasso_init:
-                    self.prox_operator_lasso = ProxGroupLasso(self.alpha*self.watch_lr, self.omega)
+                if self.compose_init:
+                    self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1, self.model.mask)
                 if self.l1_ext_init:
                     self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
 

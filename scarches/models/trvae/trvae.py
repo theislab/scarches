@@ -67,7 +67,8 @@ class trVAE(nn.Module):
                  use_decoder_relu: bool = False,
                  mmd_instead_kl: bool = False,
                  n_ext_decoder: int = 0,
-                 n_expand_encoder: int = 0
+                 n_expand_encoder: int = 0,
+                 soft_mask: bool = False
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -108,6 +109,8 @@ class trVAE(nn.Module):
         else:
             self.theta = None
 
+        self.soft_mask = soft_mask and mask is not None
+
         self.hidden_layer_sizes = hidden_layer_sizes
         encoder_layer_sizes = self.hidden_layer_sizes.copy()
         encoder_layer_sizes.insert(0, self.input_dim)
@@ -142,6 +145,11 @@ class trVAE(nn.Module):
                                    self.dr_rate,
                                    self.n_conditions)
         else:
+            if soft_mask:
+                self.mask = mask.t()
+                mask = None
+            else:
+                self.mask = None
             self.decoder = MaskedLinearDecoder(self.latent_dim,
                                                self.input_dim,
                                                self.n_conditions,
