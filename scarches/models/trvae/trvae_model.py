@@ -229,7 +229,7 @@ class TRVAE(BaseMixin):
         mask: Optional[Union[np.ndarray, list]] = None,
         decoder_last_layer: str = "softmax",
         use_decoder_relu: bool = False,
-        mmd_instead_kl: bool = False,
+        use_hsic: bool = False,
         n_ext_decoder: int = 0,
         n_expand_encoder: int = 0,
         soft_mask: bool = False
@@ -260,7 +260,7 @@ class TRVAE(BaseMixin):
         self.input_dim_ = adata.n_vars
 
         self.use_decoder_relu_ = use_decoder_relu
-        self.mmd_instead_kl_ = mmd_instead_kl
+        self.use_hsic_ = use_hsic and n_expand_encoder > 0
         self.use_l_encoder_ = use_l_encoder
         self.decoder_last_layer_ = decoder_last_layer
         self.mask_ = None
@@ -291,7 +291,7 @@ class TRVAE(BaseMixin):
             mask,
             self.decoder_last_layer_,
             self.use_decoder_relu_,
-            self.mmd_instead_kl_,
+            self.use_hsic_,
             self.n_ext_decoder_,
             self.n_expand_encoder_,
             self.soft_mask_
@@ -578,7 +578,7 @@ class TRVAE(BaseMixin):
             'use_ln': dct['use_ln_'],
             'mask': dct['mask_'],
             'use_decoder_relu': dct['use_decoder_relu_'],
-            'mmd_instead_kl': dct['mmd_instead_kl_'],
+            'use_hsic': dct['use_hsic_'] if 'use_hsic_' in dct else False,
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,

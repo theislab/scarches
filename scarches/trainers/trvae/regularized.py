@@ -150,7 +150,7 @@ class VIATrainer(trVAETrainer):
         if self.omega is not None:
             self.omega = self.omega.to(self.device)
 
-        if self.model.mmd_instead_kl:
+        if self.model.use_hsic:
             self.beta = beta
         else:
             self.beta = None
@@ -207,12 +207,13 @@ class VIATrainer(trVAETrainer):
         if self.beta is None:
             return super().loss(total_batch)
         else:
-            recon_loss, mmd_z_loss, mmd_loss = self.model(**total_batch)
-            loss = recon_loss + self.beta*mmd_z_loss + mmd_loss
+            recon_loss, kl_loss, mmd_loss, hsic_loss = self.model(**total_batch)
+            loss = recon_loss + self.calc_alpha_coeff()*kl_loss + mmd_loss + self.beta*hsic_loss
             self.iter_logs["loss"].append(loss)
-            self.iter_logs["unweighted_loss"].append(recon_loss + mmd_z_loss + mmd_loss)
+            self.iter_logs["unweighted_loss"].append(recon_loss + kl_loss + mmd_loss + hsic_loss)
             self.iter_logs["recon_loss"].append(recon_loss)
-            self.iter_logs["mmd_z_loss"].append(mmd_z_loss)
+            self.iter_logs["kl_loss"].append(kl_loss)
+            self.iter_logs["hsic_loss"].append(kl_loss)
             if self.model.use_mmd:
                 self.iter_logs["mmd_loss"].append(mmd_loss)
             return loss

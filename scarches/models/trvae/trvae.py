@@ -6,7 +6,7 @@ from torch.distributions import Normal, kl_divergence
 import torch.nn.functional as F
 
 from .modules import Encoder, Decoder, MaskedLinearDecoder
-from .losses import mse, mmd, zinb, nb, mmd_loss_calc
+from .losses import mse, mmd, zinb, nb, mmd_loss_calc, hsic
 from ._utils import one_hot_encoder
 
 
@@ -65,7 +65,7 @@ class trVAE(nn.Module):
                  mask: Optional[torch.Tensor] = None,
                  decoder_last_layer: str = "softmax",
                  use_decoder_relu: bool = False,
-                 mmd_instead_kl: bool = False,
+                 use_hsic: bool = False,
                  n_ext_decoder: int = 0,
                  n_expand_encoder: int = 0,
                  soft_mask: bool = False
@@ -94,7 +94,7 @@ class trVAE(nn.Module):
         self.n_expand_encoder = n_expand_encoder
         self.n_ext_decoder = n_ext_decoder
 
-        self.mmd_instead_kl = mmd_instead_kl
+        self.use_hsic = use_hsic
         self.decoder_last_layer = decoder_last_layer
         self.use_l_encoder = use_l_encoder
 
@@ -257,15 +257,11 @@ class trVAE(nn.Module):
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
 
-        if self.mmd_instead_kl:
-            z_prior = Normal(torch.zeros_like(z1), torch.ones_like(z1)).sample()
-            mmd_z_loss = mmd_loss_calc(z1, z_prior)
-        else:
-            z1_var = torch.exp(z1_log_var) + 1e-4
-            kl_div = kl_divergence(
-                Normal(z1_mean, torch.sqrt(z1_var)),
-                Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
-            ).sum(dim=1).mean()
+        z1_var = torch.exp(z1_log_var) + 1e-4
+        kl_div = kl_divergence(
+            Normal(z1_mean, torch.sqrt(z1_var)),
+            Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
+        ).sum(dim=1).mean()
 
         mmd_loss = 0
         if self.use_mmd:
@@ -274,4 +270,9 @@ class trVAE(nn.Module):
             else:
                 mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
 
-        return (recon_loss, kl_div, mmd_loss) if not self.mmd_instead_kl else (recon_loss, mmd_z_loss, mmd_loss)
+        if self.use_hsic:
+            z_ann = z1[:, :-self.n_expand_encoder]
+            z_ext = z1[:, -self.n_expand_encoder:]
+            hsic_loss = hsic(z_ann, z_ext)
+
+        return (recon_loss, kl_div, mmd_loss) if not self.use_hsic else recon_loss, kl_div, mmd_loss, hsic_loss

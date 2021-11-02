@@ -1,6 +1,7 @@
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
+from scipy.special import gamma
 
 from ._utils import partition, pairwise_distance
 
@@ -218,3 +219,30 @@ def mmd(y,c,n_conditions, beta, boundary):
                 loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
 
     return beta * loss
+
+
+def kernel_matrix(x: torch.Tensor, sigma):
+    x1  = torch.unsqueeze(x, 0)
+    x2  = torch.unsqueeze(x, 1)
+    if len(x.size()) > 1:
+        return torch.exp( -0.5 * torch.sum(torch.pow(x1-x2, 2), axis=2) / sigma**2)
+    else:
+        return torch.exp( -0.5 * torch.pow(x1-x2, 2) / sigma**2)
+
+def bandwidth(d):
+    """
+    in the case of Gaussian random variables and the use of a RBF kernel,
+    this can be used to select the bandwidth according to the median heuristic
+    """
+    gz = 2 * gamma(0.5 * (d+1)) / gamma(0.5 * d)
+    return 1. / (2. * gz**2)
+
+def hsic(z, s):
+    d_z = z.shape[1]
+    d_s = s.shape[1]
+
+    zz = kernel_matrix(z, bandwidth(d_z))
+    ss = kernel_matrix(s, bandwidth(d_s))
+
+    h  = (zz * ss).mean() + zz.mean() * ss.mean() - 2 * torch.mean(zz.mean(1) * ss.mean(1))
+    return h.sqrt()
