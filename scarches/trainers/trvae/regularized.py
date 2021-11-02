@@ -159,13 +159,16 @@ class VIATrainer(trVAETrainer):
         self.l1_ext_init = False
 
     def on_iteration(self, batch_data):
-        if self.prox_operator_compose is None and (self.alpha is not None or alpha_l1 is not None):
+        if self.prox_operator_compose is None and (self.alpha is not None or self.alpha_l1 is not None):
             self.watch_lr = self.optimizer.param_groups[0]['lr']
 
-            dvc = self.model.decoder.L0.expr_L.weight.device
-            self.model.mask = self.model.mask.to(dvc)
+            if self.model.mask is not None:
+                dvc = self.model.decoder.L0.expr_L.weight.device
+                self.model.mask = self.model.mask.to(dvc)
 
-            self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1*self.watch_lr, self.model.mask)
+            alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
+            alpha_l1_corr = self.alpha_l1*self.watch_lr if self.alpha_l1 is not None else None
+            self.prox_operator_compose = get_prox_operator(alpha_corr, self.omega, alpha_l1_corr, self.model.mask)
             self.compose_init = True
 
         has_ext = self.model.decoder.L0.n_ext > 0
@@ -191,7 +194,9 @@ class VIATrainer(trVAETrainer):
             if self.watch_lr is not None and self.watch_lr != new_lr:
                 self.watch_lr = new_lr
                 if self.compose_init:
-                    self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1*self.watch_lr, self.model.mask)
+                    alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
+                    alpha_l1_corr = self.alpha_l1*self.watch_lr if self.alpha_l1 is not None else None
+                    self.prox_operator_compose = get_prox_operator(alpha_corr, self.omega, alpha_l1_corr, self.model.mask)
                 if self.l1_ext_init:
                     self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
 

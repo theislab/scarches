@@ -105,8 +105,17 @@ class BaseMixin:
             # new categoricals changed size
             else:
                 load_ten = load_ten.to(device)
-                dim_diff = new_ten.size()[-1] - load_ten.size()[-1]
-                fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
+                # only one dim diff
+                new_shape = new_ten.shape
+                n_dims = len(new_shape)
+                sel = [slice(None)] * n_dims
+                for i in range(n_dims):
+                    dim_diff = new_shape[i] - load_ten.shape[i]
+                    axs = i
+                    sel[i] = slice(-dim_diff, None)
+                    if dim_diff > 0:
+                        break
+                fixed_ten = torch.cat([load_ten, new_ten[tuple(sel)]], dim=axs)
                 load_state_dict[key] = fixed_ten
 
         for key, ten in new_state_dict.items():
