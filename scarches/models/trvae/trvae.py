@@ -145,6 +145,7 @@ class trVAE(nn.Module):
                                    self.dr_rate,
                                    self.n_conditions)
         else:
+            self.n_inact_genes = (1-mask).sum().item()
             if soft_mask:
                 self.mask = mask.t()
                 mask = None
@@ -275,4 +276,4 @@ class trVAE(nn.Module):
             z_ext = z1[:, -self.n_expand_encoder:]
             hsic_loss = hsic(z_ann, z_ext)
 
-        return (recon_loss, kl_div, mmd_loss) if not self.use_hsic else recon_loss, kl_div, mmd_loss, hsic_loss
+        return (recon_loss, kl_div, mmd_loss) if not self.use_hsic else (recon_loss, kl_div, mmd_loss, hsic_loss)

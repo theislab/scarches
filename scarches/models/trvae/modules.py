@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 from typing import Optional
 
@@ -131,6 +132,7 @@ class Encoder(nn.Module):
         self.log_var_encoder = nn.Linear(layer_sizes[-1], latent_dim)
 
         if self.n_expand != 0:
+            print("\tExpanded Mean/Var Layer in/out:", layer_sizes[-1], self.n_expand)
             self.expand_mean_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
             self.expand_var_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
 
@@ -267,11 +269,17 @@ class MaskedLinearDecoder(nn.Module):
         super().__init__()
 
         print("Decoder Architecture:")
-        print("\tMasked linear layer in, out and cond: ", in_dim, out_dim, n_cond)
+        print("\tCond layer in, ext, cond, out and : ", in_dim, n_ext, n_cond, out_dim)
+        if mask is not None:
+            print('\twith hard mask.')
+        else:
+            print('\twith soft mask.')
 
         self.use_relu = use_relu and recon_loss == 'mse'
 
         self.recon_loss = recon_loss
+
+        self.n_ext = n_ext
 
         self.n_cond = 0
         if n_cond is not None:
@@ -312,7 +320,9 @@ class MaskedLinearDecoder(nn.Module):
 
     def nonzero_terms(self):
         v = self.L0.expr_L.weight.data
-        return (v.norm(p=2, dim=0)>0).cpu().numpy()
+        nz = (v.norm(p=1, dim=0)>0).cpu().numpy()
+        nz = np.append(nz, np.full(self.n_ext, True))
+        return nz
 
     def n_inactive_terms(self):
         n = (~self.nonzero_terms()).sum()

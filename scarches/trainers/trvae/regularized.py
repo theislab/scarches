@@ -64,7 +64,7 @@ def get_prox_operator(alpha, omega, alpha_l1, mask):
     if alpha_l1 is not None:
         if mask is None:
             raise ValueError('Provide soft mask.')
-        p_l1_annot = ProxOperL1(lambda1, mask)
+        p_l1_annot = ProxOperL1(alpha_l1, mask)
         prox_op = lambda W: p_gr(p_l1_annot(W))
 
     return prox_op
@@ -138,7 +138,7 @@ class VIATrainer(trVAETrainer):
 
         self.alpha = alpha
         self.omega = omega
-        slf.alpha_l1 = alpha_l1
+        self.alpha_l1 = alpha_l1
         self.prox_operator_compose = None
         self.print_n_deactive = print_n_deactive
 
@@ -161,7 +161,11 @@ class VIATrainer(trVAETrainer):
     def on_iteration(self, batch_data):
         if self.prox_operator_compose is None and (self.alpha is not None or alpha_l1 is not None):
             self.watch_lr = self.optimizer.param_groups[0]['lr']
-            self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1, self.model.mask)
+
+            dvc = self.model.decoder.L0.expr_L.weight.device
+            self.model.mask = self.model.mask.to(dvc)
+
+            self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1*self.watch_lr, self.model.mask)
             self.compose_init = True
 
         has_ext = self.model.decoder.L0.n_ext > 0
@@ -187,7 +191,7 @@ class VIATrainer(trVAETrainer):
             if self.watch_lr is not None and self.watch_lr != new_lr:
                 self.watch_lr = new_lr
                 if self.compose_init:
-                    self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1, self.model.mask)
+                    self.prox_operator_compose = get_prox_operator(self.alpha*self.watch_lr, self.omega, self.alpha_l1*self.watch_lr, self.model.mask)
                 if self.l1_ext_init:
                     self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
 
@@ -201,6 +205,17 @@ class VIATrainer(trVAETrainer):
                 if self.epoch > 0:
                     msg = '\n' + msg
                 print(msg)
+                print('-------------------')
+            if self.alpha_l1 is not None:
+                share_deact_genes = (self.model.decoder.L0.expr_L.weight.data.abs()==0)&~self.model.mask.bool()
+                share_deact_genes = share_deact_genes.float().sum().cpu().numpy() / self.model.n_inact_genes
+                print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
+                print('-------------------')
+            if self.l1_ext_init:
+                sparse_share = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
+                print ('Active genes in extension terms:', self.model.input_dim-sparse_share)
+                sparse_share = sparse_share / self.model.input_dim
+                print('Sparcity share in extension terms:', sparse_share)
         super().on_epoch_end()
 
     def loss(self, total_batch=None):

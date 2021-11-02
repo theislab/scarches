@@ -109,6 +109,10 @@ class BaseMixin:
                 fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
                 load_state_dict[key] = fixed_ten
 
+        for key, ten in new_state_dict.items():
+            if key not in load_state_dict:
+                load_state_dict[key] = ten
+
         self.model.load_state_dict(load_state_dict)
 
     @classmethod
