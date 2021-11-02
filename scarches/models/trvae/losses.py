@@ -243,4 +243,4 @@ def hsic(z, s):
     ss = kernel_matrix(s, bandwidth(d_s))
 
     h  = (zz * ss).mean() + zz.mean() * ss.mean() - 2 * torch.mean(zz.mean(1) * ss.mean(1))
-    return h
+    return h.sqrt()
