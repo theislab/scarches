@@ -217,9 +217,9 @@ class VIATrainer(trVAETrainer):
                 print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
                 print('-------------------')
             if self.l1_ext_init:
-                sparse_share = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
-                print ('Active genes in extension terms:', self.model.input_dim-sparse_share)
-                sparse_share = sparse_share / self.model.input_dim
+                active_genes = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
+                print ('Active genes in extension terms:', active_genes)
+                sparse_share = 1. - active_genes / self.model.input_dim
                 print('Sparcity share in extension terms:', sparse_share)
         super().on_epoch_end()
 
