@@ -224,10 +224,8 @@ def mmd(y,c,n_conditions, beta, boundary):
 def kernel_matrix(x: torch.Tensor, sigma):
     x1  = torch.unsqueeze(x, 0)
     x2  = torch.unsqueeze(x, 1)
-    if len(x.size()) > 1:
-        return torch.exp( -0.5 * torch.sum(torch.pow(x1-x2, 2), axis=2) / sigma**2)
-    else:
-        return torch.exp( -0.5 * torch.pow(x1-x2, 2) / sigma**2)
+
+    return torch.exp( -sigma * torch.sum(torch.pow(x1-x2, 2), axis=2) )
 
 def bandwidth(d):
     """
@@ -245,4 +243,4 @@ def hsic(z, s):
     ss = kernel_matrix(s, bandwidth(d_s))
 
     h  = (zz * ss).mean() + zz.mean() * ss.mean() - 2 * torch.mean(zz.mean(1) * ss.mean(1))
-    return h.sqrt()
+    return h
