@@ -233,7 +233,7 @@ class VIATrainer(trVAETrainer):
             self.iter_logs["unweighted_loss"].append(recon_loss + kl_loss + mmd_loss + hsic_loss)
             self.iter_logs["recon_loss"].append(recon_loss)
             self.iter_logs["kl_loss"].append(kl_loss)
-            self.iter_logs["hsic_loss"].append(kl_loss)
+            self.iter_logs["hsic_loss"].append(hsic_loss)
             if self.model.use_mmd:
                 self.iter_logs["mmd_loss"].append(mmd_loss)
             return loss
