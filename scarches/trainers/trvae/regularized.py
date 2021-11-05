@@ -130,8 +130,10 @@ class VIATrainer(trVAETrainer):
             omega=None,
             alpha_l1=None,
             gamma_ext=None,
+            gamma_epoch_anneal=None,
             beta=1.,
             print_n_deactive=False,
+            gamma_anneal_each=5,
             **kwargs
     ):
         super().__init__(model, adata, **kwargs)
@@ -144,6 +146,9 @@ class VIATrainer(trVAETrainer):
 
         self.gamma_ext = gamma_ext
         self.prox_operator_l1_ext = None
+        self.gamma_epoch_anneal = gamma_epoch_anneal
+        self.corr_coeff = None
+        self.gamma_anneal_each = gamma_anneal_each
 
         self.watch_lr = None
 
@@ -175,7 +180,11 @@ class VIATrainer(trVAETrainer):
         if self.prox_operator_l1_ext is None and self.gamma_ext is not None and has_ext:
             if self.watch_lr is None:
                 self.watch_lr = self.optimizer.param_groups[0]['lr']
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
+            if self.gamma_epoch_anneal is not None:
+                self.corr_coeff = 1. / self.gamma_epoch_anneal
+            else:
+                self.corr_coeff = 1.
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
             self.l1_ext_init = True
 
         super().on_iteration(batch_data)
@@ -198,7 +207,7 @@ class VIATrainer(trVAETrainer):
                     alpha_l1_corr = self.alpha_l1*self.watch_lr if self.alpha_l1 is not None else None
                     self.prox_operator_compose = get_prox_operator(alpha_corr, self.omega, alpha_l1_corr, self.model.mask)
                 if self.l1_ext_init:
-                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr)
+                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
 
         return continue_training
 
@@ -221,6 +230,16 @@ class VIATrainer(trVAETrainer):
                 print ('Active genes in extension terms:', active_genes)
                 sparse_share = 1. - active_genes / self.model.input_dim
                 print('Sparcity share in extension terms:', sparse_share)
+
+        use_gamma_anneal = self.gamma_epoch_anneal is not None and self.l1_ext_init
+        time_to_anneal = self.epoch % self.gamma_anneal_each == 0
+        if use_gamma_anneal and self.epoch > 0 and time_to_anneal and self.epoch <= self.gamma_epoch_anneal:
+            self.corr_coeff = min(self.epoch / self.gamma_epoch_anneal, 1.)
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
+
+            if self.print_n_deactive:
+                print('New gamma_ext corr coeff:', self.corr_coeff)
+
         super().on_epoch_end()
 
     def loss(self, total_batch=None):
