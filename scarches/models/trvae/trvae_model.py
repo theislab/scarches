@@ -245,7 +245,8 @@ class TRVAE(BaseMixin):
         use_hsic: bool = False,
         n_ext_decoder: int = 0,
         n_expand_encoder: int = 0,
-        soft_mask: bool = False
+        soft_mask: bool = False,
+        hsic_one_vs_all: bool = False
     ):
         self.adata = adata
 
@@ -274,6 +275,7 @@ class TRVAE(BaseMixin):
 
         self.use_decoder_relu_ = use_decoder_relu
         self.use_hsic_ = use_hsic and n_expand_encoder > 0
+        self.hsic_one_vs_all_ = hsic_one_vs_all
         self.use_l_encoder_ = use_l_encoder
         self.decoder_last_layer_ = decoder_last_layer
         self.mask_ = None
@@ -307,7 +309,8 @@ class TRVAE(BaseMixin):
             self.use_hsic_,
             self.n_ext_decoder_,
             self.n_expand_encoder_,
-            self.soft_mask_
+            self.soft_mask_,
+            self.hsic_one_vs_all_
         )
 
         self.is_trained_ = False
@@ -596,7 +599,8 @@ class TRVAE(BaseMixin):
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
             'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
-            'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False
+            'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False,
+            'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False
         }
 
         return init_params

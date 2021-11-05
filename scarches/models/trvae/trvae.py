@@ -68,7 +68,8 @@ class trVAE(nn.Module):
                  use_hsic: bool = False,
                  n_ext_decoder: int = 0,
                  n_expand_encoder: int = 0,
-                 soft_mask: bool = False
+                 soft_mask: bool = False,
+                 hsic_one_vs_all: bool = False
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -95,6 +96,7 @@ class trVAE(nn.Module):
         self.n_ext_decoder = n_ext_decoder
 
         self.use_hsic = use_hsic
+        self.hsic_one_vs_all = hsic_one_vs_all
         self.decoder_last_layer = decoder_last_layer
         self.use_l_encoder = use_l_encoder
 
@@ -272,8 +274,18 @@ class trVAE(nn.Module):
                 mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
 
         if self.use_hsic:
-            z_ann = z1[:, :-self.n_expand_encoder]
-            z_ext = z1[:, -self.n_expand_encoder:]
-            hsic_loss = hsic(z_ann, z_ext)
+            if not self.hsic_one_vs_all:
+                z_ann = z1[:, :-self.n_expand_encoder]
+                z_ext = z1[:, -self.n_expand_encoder:]
+                hsic_loss = hsic(z_ann, z_ext)
+            else:
+                hsic_loss = 0.
+                sz = self.latent_dim + self.n_expand_encoder
+                for i in range(self.n_expand_encoder):
+                    sel_cols = torch.full((sz,), True, device=z1.device)
+                    sel_cols[self.latent_dim + i] = False
+                    rest = z1[:, sel_cols]
+                    term = z1[:, ~sel_cols]
+                    hsic_loss = hsic_loss + hsic(term, rest)
 
         return (recon_loss, kl_div, mmd_loss) if not self.use_hsic else (recon_loss, kl_div, mmd_loss, hsic_loss)
