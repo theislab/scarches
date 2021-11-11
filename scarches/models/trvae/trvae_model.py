@@ -246,7 +246,8 @@ class TRVAE(BaseMixin):
         n_ext_decoder: int = 0,
         n_expand_encoder: int = 0,
         soft_mask: bool = False,
-        hsic_one_vs_all: bool = False
+        hsic_one_vs_all: bool = False,
+        ext_mask: Optional[Union[np.ndarray, list]] = None
     ):
         self.adata = adata
 
@@ -284,6 +285,11 @@ class TRVAE(BaseMixin):
             mask = torch.tensor(mask).float()
             self.latent_dim_ = len(self.mask_)
 
+        self.ext_mask_ = None
+        if ext_mask is not None:
+            self.ext_mask_ = ext_mask if isinstance(ext_mask, list) else ext_mask.tolist()
+            ext_mask = torch.tensor(ext_mask).float()
+
         self.n_ext_decoder_ = n_ext_decoder
         self.n_expand_encoder_ = n_expand_encoder
 
@@ -310,7 +316,8 @@ class TRVAE(BaseMixin):
             self.n_ext_decoder_,
             self.n_expand_encoder_,
             self.soft_mask_,
-            self.hsic_one_vs_all_
+            self.hsic_one_vs_all_,
+            ext_mask
         )
 
         self.is_trained_ = False
@@ -600,7 +607,8 @@ class TRVAE(BaseMixin):
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
             'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
             'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False,
-            'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False
+            'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False,
+            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None
         }
 
         return init_params

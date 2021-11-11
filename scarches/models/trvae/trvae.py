@@ -69,7 +69,8 @@ class trVAE(nn.Module):
                  n_ext_decoder: int = 0,
                  n_expand_encoder: int = 0,
                  soft_mask: bool = False,
-                 hsic_one_vs_all: bool = False
+                 hsic_one_vs_all: bool = False,
+                 ext_mask: Optional[torch.Tensor] = None
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -112,6 +113,17 @@ class trVAE(nn.Module):
             self.theta = None
 
         self.soft_mask = soft_mask and mask is not None
+
+        if ext_mask is not None:
+            ext_shape = ext_mask.shape
+            if ext_shape[0] != self.n_ext_decoder:
+                raise ValueError('Dim 0 of ext_mask should be the same as n_ext_decoder.')
+            if ext_shape[1] != self.input_dim:
+                raise ValueError('Dim 1 of ext_mask should be the same as input_dim.')
+            self.n_inact_ext_genes = (1-ext_mask).sum().item()
+            self.ext_mask = ext_mask.t()
+        else:
+            self.ext_mask = None
 
         self.hidden_layer_sizes = hidden_layer_sizes
         encoder_layer_sizes = self.hidden_layer_sizes.copy()

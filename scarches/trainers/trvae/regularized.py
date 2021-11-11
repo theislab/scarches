@@ -183,6 +183,10 @@ class VIATrainer(trVAETrainer):
                 dvc = self.model.decoder.L0.expr_L.weight.device
                 self.model.mask = self.model.mask.to(dvc)
 
+            if self.model.ext_mask is not None:
+                dvc = self.model.decoder.L0.ext_L.weight.device
+                self.model.ext_mask = self.model.ext_mask.to(dvc)
+
             alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
             if self.alpha_l1 is not None:
                 alpha_l1_corr = self.alpha_l1*self.watch_lr
@@ -204,7 +208,8 @@ class VIATrainer(trVAETrainer):
                 self.corr_coeff = 1. / self.gamma_epoch_anneal
             else:
                 self.corr_coeff = 1.
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
+                                                   self.model.ext_mask)
             self.l1_ext_init = True
 
         super().on_iteration(batch_data)
@@ -231,7 +236,8 @@ class VIATrainer(trVAETrainer):
                     self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
                                                                         alpha_l1_corr, self.model.mask)
                 if self.l1_ext_init:
-                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
+                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
+                                                           self.model.ext_mask)
 
         return continue_training
 
@@ -250,10 +256,15 @@ class VIATrainer(trVAETrainer):
                 print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
                 print('-------------------')
             if self.l1_ext_init:
-                active_genes = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
-                print ('Active genes in extension terms:', active_genes)
-                sparse_share = 1. - active_genes / self.model.input_dim
-                print('Sparcity share in extension terms:', sparse_share)
+                if self.model.ext_mask is None:
+                    active_genes = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
+                    print ('Active genes in extension terms:', active_genes)
+                    sparse_share = 1. - active_genes / self.model.input_dim
+                    print('Sparcity share in extension terms:', sparse_share)
+                else:
+                    share_deact_ext_genes = (self.model.decoder.L0.ext_L.weight.data.abs()==0)&~self.model.ext_mask.bool()
+                    share_deact_ext_genes = share_deact_ext_genes.float().sum().cpu().numpy() / self.model.n_inact_ext_genes
+                    print('Share of deactivated inactive genes in extension terms: %.4f' % share_deact_ext_genes)
 
         use_alpha_l1_anneal = self.alpha_l1_epoch_anneal is not None and self.compose_p_l1_annot is not None
         time_to_anneal = self.epoch % self.alpha_l1_anneal_each == 0
@@ -268,7 +279,8 @@ class VIATrainer(trVAETrainer):
         time_to_anneal = self.epoch % self.gamma_anneal_each == 0
         if use_gamma_anneal and self.epoch > 0 and time_to_anneal and self.epoch <= self.gamma_epoch_anneal:
             self.corr_coeff = min(self.epoch / self.gamma_epoch_anneal, 1.)
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
+                                                   self.model.ext_mask)
 
             if self.print_n_deactive:
                 print('New gamma_ext corr coeff:', self.corr_coeff)
