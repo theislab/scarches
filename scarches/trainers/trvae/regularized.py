@@ -194,8 +194,9 @@ class VIATrainer(trVAETrainer):
                     self.corr_coeff_a_l1 = 1. / self.alpha_l1_epoch_anneal
                     alpha_l1_corr *= self.corr_coeff_a_l1
                 else:
-                    alpha_l1_corr = None
                     self.corr_coeff_a_l1 = 1.
+            else:
+                alpha_l1_corr = None
             self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
                                                                 alpha_l1_corr, self.model.mask)
             self.compose_init = True
