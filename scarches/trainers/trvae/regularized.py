@@ -53,21 +53,6 @@ class ProxOperL1:
 
         return W
 
-def get_prox_operator(alpha, omega, alpha_l1, mask):
-    if alpha is not None:
-        p_gr = ProxGroupLasso(alpha, omega)
-    else:
-        p_gr = lambda W: W
-
-    prox_op = p_gr
-
-    if alpha_l1 is not None:
-        if mask is None:
-            raise ValueError('Provide soft mask.')
-        p_l1_annot = ProxOperL1(alpha_l1, mask)
-        prox_op = lambda W: p_gr(p_l1_annot(W))
-
-    return prox_op
 
 class VIATrainer(trVAETrainer):
     """ScArches Unsupervised Trainer class. This class contains the implementation of the unsupervised CVAE/TRVAE
@@ -129,6 +114,8 @@ class VIATrainer(trVAETrainer):
             alpha,
             omega=None,
             alpha_l1=None,
+            alpha_l1_epoch_anneal=None,
+            alpha_l1_anneal_each=5,
             gamma_ext=None,
             gamma_epoch_anneal=None,
             beta=1.,
@@ -150,6 +137,10 @@ class VIATrainer(trVAETrainer):
         self.corr_coeff = None
         self.gamma_anneal_each = gamma_anneal_each
 
+        self.alpha_l1_epoch_anneal = alpha_l1_epoch_anneal
+        self.corr_coeff_a_l1 = None
+        self.alpha_l1_anneal_each = alpha_l1_anneal_each
+
         self.watch_lr = None
 
         if self.omega is not None:
@@ -163,6 +154,27 @@ class VIATrainer(trVAETrainer):
         self.compose_init = False
         self.l1_ext_init = False
 
+        self.compose_p_gr = None
+        self.compose_p_l1_annot = None
+
+    def get_prox_operator(self, alpha, omega, alpha_l1, mask):
+        if alpha is not None:
+            p_gr = ProxGroupLasso(alpha, omega)
+            self.compose_p_gr = p_gr
+        else:
+            p_gr = lambda W: W
+
+        prox_op = p_gr
+
+        if alpha_l1 is not None:
+            if mask is None:
+                raise ValueError('Provide soft mask.')
+            p_l1_annot = ProxOperL1(alpha_l1, mask)
+            self.compose_p_l1_annot = p_l1_annot
+            prox_op = lambda W: p_gr(p_l1_annot(W))
+
+        return prox_op
+
     def on_iteration(self, batch_data):
         if self.prox_operator_compose is None and (self.alpha is not None or self.alpha_l1 is not None):
             self.watch_lr = self.optimizer.param_groups[0]['lr']
@@ -172,8 +184,16 @@ class VIATrainer(trVAETrainer):
                 self.model.mask = self.model.mask.to(dvc)
 
             alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
-            alpha_l1_corr = self.alpha_l1*self.watch_lr if self.alpha_l1 is not None else None
-            self.prox_operator_compose = get_prox_operator(alpha_corr, self.omega, alpha_l1_corr, self.model.mask)
+            if self.alpha_l1 is not None:
+                alpha_l1_corr = self.alpha_l1*self.watch_lr
+                if self.alpha_l1_epoch_anneal is not None:
+                    self.corr_coeff_a_l1 = 1. / self.alpha_l1_epoch_anneal
+                    alpha_l1_corr *= self.corr_coeff_a_l1
+                else:
+                    alpha_l1_corr = None
+                    self.corr_coeff_a_l1 = 1.
+            self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
+                                                                alpha_l1_corr, self.model.mask)
             self.compose_init = True
 
         has_ext = self.model.decoder.L0.n_ext > 0
@@ -204,8 +224,12 @@ class VIATrainer(trVAETrainer):
                 self.watch_lr = new_lr
                 if self.compose_init:
                     alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
-                    alpha_l1_corr = self.alpha_l1*self.watch_lr if self.alpha_l1 is not None else None
-                    self.prox_operator_compose = get_prox_operator(alpha_corr, self.omega, alpha_l1_corr, self.model.mask)
+                    if self.alpha_l1 is not None:
+                        alpha_l1_corr = self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1
+                    else:
+                        alpha_l1_corr = None
+                    self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
+                                                                        alpha_l1_corr, self.model.mask)
                 if self.l1_ext_init:
                     self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
 
@@ -230,6 +254,15 @@ class VIATrainer(trVAETrainer):
                 print ('Active genes in extension terms:', active_genes)
                 sparse_share = 1. - active_genes / self.model.input_dim
                 print('Sparcity share in extension terms:', sparse_share)
+
+        use_alpha_l1_anneal = self.alpha_l1_epoch_anneal is not None and self.compose_p_l1_annot is not None
+        time_to_anneal = self.epoch % self.alpha_l1_anneal_each == 0
+        if use_alpha_l1_anneal and self.epoch > 0 and time_to_anneal and self.epoch <= self.alpha_l1_epoch_anneal:
+            self.corr_coeff_a_l1 = min(self.epoch / self.alpha_l1_epoch_anneal, 1.)
+            self.compose_p_l1_annot._alpha = self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1
+
+            if self.print_n_deactive:
+                print('New alpha_l1 corr coeff:', self.corr_coeff_a_l1)
 
         use_gamma_anneal = self.gamma_epoch_anneal is not None and self.l1_ext_init
         time_to_anneal = self.epoch % self.gamma_anneal_each == 0
