@@ -161,6 +161,9 @@ class trVAE(nn.Module):
         else:
             self.n_inact_genes = (1-mask).sum().item()
             if soft_mask:
+                soft_shape = mask.shape
+                if soft_shape[0] != latent_dim or soft_shape[1] != input_dim:
+                    raise ValueError('Incorrect shape of the soft mask.')
                 self.mask = mask.t()
                 mask = None
             else:
