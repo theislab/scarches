@@ -3,6 +3,7 @@ from scvi.nn import DecoderSCVI, one_hot
 from scvi.distributions import NegativeBinomial, ZeroInflatedNegativeBinomial
 from scvi import _CONSTANTS
 from torch.distributions import Normal, Poisson
+from torch.distributions import kl_divergence as kl
 import torch.nn.functional as F
 import torch
 
@@ -58,7 +59,7 @@ class CellDecoderVAE(BaseModuleClass):
         )
 
     def _get_inference_input(self, tensors):
-        return dict(ind_x=tensors["ind_x"])
+        return dict(ind_x=tensors["ind_x"].flatten().long())
 
     def _get_generative_input(self, tensors, inference_outputs):
         z = inference_outputs["z"]

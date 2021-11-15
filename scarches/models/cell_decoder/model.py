@@ -12,7 +12,7 @@ class CellDecoder(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass):
         adata.obs["_indices"] = np.arange(adata.n_obs)
         register_tensor_from_anndata(adata, "ind_x", "obs", "_indices")
 
-        super(CellEncoder, self).__init__(adata)
+        super(CellDecoder, self).__init__(adata)
 
         n_batch = self.summary_stats["n_batch"]
 
