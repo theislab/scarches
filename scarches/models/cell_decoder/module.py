@@ -20,7 +20,8 @@ class CellDecoderVAE(BaseModuleClass):
         gene_likelihood: str = "zinb",
         deeply_inject_covariates: bool = True,
         use_batch_norm_decoder: bool = True,
-        use_layer_norm_decoder: bool = False
+        use_layer_norm_decoder: bool = False,
+        var_activation: str = 'softplus'
     ):
 
         super().__init__()
@@ -45,7 +46,14 @@ class CellDecoderVAE(BaseModuleClass):
             )
 
         self.z_m = torch.nn.Parameter(torch.randn(n_obs, n_latent))
-        self.z_log_v = torch.nn.Parameter(torch.randn(n_obs, n_latent))
+        self.z_raw_v = torch.nn.Parameter(torch.randn(n_obs, n_latent))
+
+        if var_activation == 'softplus':
+            self.var_activation = F.softplus
+        elif var_activation == 'exp':
+            self.var_activation = torch.exp
+        else:
+            raise ValueError('Unknown var_activation.')
 
         self.decoder = DecoderSCVI(
             n_latent,
@@ -76,7 +84,7 @@ class CellDecoderVAE(BaseModuleClass):
     @auto_move_data
     def inference(self, ind_x):
         z_m_s = self.z_m[ind_x]
-        z_v_s = torch.exp(self.z_log_v[ind_x])
+        z_v_s = self.var_activation(self.z_raw_v[ind_x])
 
         z = Normal(z_m_s, z_v_s.sqrt()).rsample()
 
