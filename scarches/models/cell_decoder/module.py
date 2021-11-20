@@ -45,8 +45,8 @@ class CellDecoderVAE(BaseModuleClass):
                 "{}.format(self.dispersion)"
             )
 
-        self.z_m = torch.nn.Parameter(torch.randn(n_obs, n_latent))
-        self.z_raw_v = torch.nn.Parameter(torch.randn(n_obs, n_latent))
+        self.z_m = torch.nn.Parameter(torch.zeros(n_obs, n_latent))
+        self.z_raw_v = torch.nn.Parameter(torch.ones(n_obs, n_latent) * -3.)
 
         if var_activation == 'softplus':
             self.var_activation = F.softplus
