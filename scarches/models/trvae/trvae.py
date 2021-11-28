@@ -67,8 +67,10 @@ class trVAE(nn.Module):
                  use_decoder_relu: bool = False,
                  use_hsic: bool = False,
                  n_ext_decoder: int = 0,
+                 n_ext_m_decoder: int = 0,
                  n_expand_encoder: int = 0,
                  soft_mask: bool = False,
+                 soft_ext_mask: bool = False,
                  hsic_one_vs_all: bool = False,
                  ext_mask: Optional[torch.Tensor] = None
                  ):
@@ -95,8 +97,9 @@ class trVAE(nn.Module):
 
         self.n_expand_encoder = n_expand_encoder
         self.n_ext_decoder = n_ext_decoder
+        self.n_ext_m_decoder = n_ext_m_decoder
 
-        self.use_hsic = use_hsic
+        self.use_hsic = use_hsic and n_ext_decoder > 0
         self.hsic_one_vs_all = hsic_one_vs_all
         self.decoder_last_layer = decoder_last_layer
         self.use_l_encoder = use_l_encoder
@@ -113,17 +116,7 @@ class trVAE(nn.Module):
             self.theta = None
 
         self.soft_mask = soft_mask and mask is not None
-
-        if ext_mask is not None:
-            ext_shape = ext_mask.shape
-            if ext_shape[0] != self.n_ext_decoder:
-                raise ValueError('Dim 0 of ext_mask should be the same as n_ext_decoder.')
-            if ext_shape[1] != self.input_dim:
-                raise ValueError('Dim 1 of ext_mask should be the same as input_dim.')
-            self.n_inact_ext_genes = (1-ext_mask).sum().item()
-            self.ext_mask = ext_mask.t()
-        else:
-            self.ext_mask = None
+        self.soft_ext_mask = soft_ext_mask and ext_mask is not None
 
         self.hidden_layer_sizes = hidden_layer_sizes
         encoder_layer_sizes = self.hidden_layer_sizes.copy()
@@ -168,14 +161,29 @@ class trVAE(nn.Module):
                 mask = None
             else:
                 self.mask = None
+
+            if ext_mask is not None and self.soft_ext_mask:
+                ext_shape = ext_mask.shape
+                if ext_shape[0] != self.n_ext_m_decoder:
+                    raise ValueError('Dim 0 of ext_mask should be the same as n_ext_m_decoder.')
+                if ext_shape[1] != self.input_dim:
+                    raise ValueError('Dim 1 of ext_mask should be the same as input_dim.')
+                self.n_inact_ext_genes = (1-ext_mask).sum().item()
+                self.ext_mask = ext_mask.t()
+                ext_mask = None
+            else:
+                self.ext_mask = None
+
             self.decoder = MaskedLinearDecoder(self.latent_dim,
                                                self.input_dim,
                                                self.n_conditions,
                                                mask,
+                                               ext_mask,
                                                self.recon_loss,
                                                self.decoder_last_layer,
                                                use_decoder_relu,
-                                               self.n_ext_decoder)
+                                               self.n_ext_decoder,
+                                               self.n_ext_m_decoder)
 
     def sampling(self, mu, log_var):
         """Samples from standard Normal distribution and applies re-parametrization trick.
@@ -290,15 +298,16 @@ class trVAE(nn.Module):
 
         if self.use_hsic:
             if not self.hsic_one_vs_all:
-                z_ann = z1[:, :-self.n_expand_encoder]
-                z_ext = z1[:, -self.n_expand_encoder:]
+                z_ann = z1[:, :-self.n_ext_decoder]
+                z_ext = z1[:, -self.n_ext_decoder:]
                 hsic_loss = hsic(z_ann, z_ext)
             else:
                 hsic_loss = 0.
                 sz = self.latent_dim + self.n_expand_encoder
-                for i in range(self.n_expand_encoder):
+                shift = self.latent_dim + self.n_ext_m_decoder
+                for i in range(self.n_ext_decoder):
                     sel_cols = torch.full((sz,), True, device=z1.device)
-                    sel_cols[self.latent_dim + i] = False
+                    sel_cols[shift + i] = False
                     rest = z1[:, sel_cols]
                     term = z1[:, ~sel_cols]
                     hsic_loss = hsic_loss + hsic(term, rest)

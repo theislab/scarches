@@ -34,11 +34,14 @@ class CondLayers(nn.Module):
             n_cond: int,
             bias: bool,
             n_ext: int = 0,
-            mask: Optional[torch.Tensor] = None
+            n_ext_m: int = 0,
+            mask: Optional[torch.Tensor] = None,
+            ext_mask: Optional[torch.Tensor] = None
     ):
         super().__init__()
         self.n_cond = n_cond
         self.n_ext = n_ext
+        self.n_ext_m = n_ext_m
 
         if mask is None:
             self.expr_L = nn.Linear(n_in, n_out, bias=bias)
@@ -51,6 +54,12 @@ class CondLayers(nn.Module):
         if self.n_ext != 0:
             self.ext_L = nn.Linear(self.n_ext, n_out, bias=False)
 
+        if self.n_ext_m != 0:
+            if ext_mask is not None:
+                self.ext_L_m = MaskedLinear(self.n_ext_m, n_out, ext_mask, bias=False)
+            else:
+                self.ext_L_m = nn.Linear(self.n_ext_m, n_out, bias=False)
+
     def forward(self, x: torch.Tensor):
         if self.n_cond == 0:
             expr, cond = x, None
@@ -62,9 +71,16 @@ class CondLayers(nn.Module):
         else:
             expr, ext = torch.split(expr, [expr.shape[1] - self.n_ext, self.n_ext], dim=1)
 
+        if self.n_ext_m == 0:
+            ext_m = None
+        else:
+            expr, ext_m = torch.split(expr, [expr.shape[1] - self.n_ext_m, self.n_ext_m], dim=1)
+
         out = self.expr_L(expr)
         if ext is not None:
             out = out + self.ext_L(ext)
+        if ext_m is not None:
+            out = out + self.ext_L_m(ext_m)
         if cond is not None:
             out = out + self.cond_L(cond)
         return out
@@ -264,12 +280,12 @@ class Decoder(nn.Module):
 
 class MaskedLinearDecoder(nn.Module):
 
-    def __init__(self, in_dim, out_dim, n_cond, mask, recon_loss, last_layer="softmax",
-                 use_relu=False, n_ext=0):
+    def __init__(self, in_dim, out_dim, n_cond, mask, ext_mask, recon_loss, last_layer="softmax",
+                 use_relu=False, n_ext=0, n_ext_m=0):
         super().__init__()
 
         print("Decoder Architecture:")
-        print("\tCond layer in, ext, cond, out and : ", in_dim, n_ext, n_cond, out_dim)
+        print("\tCond layer in, ext, ext_m, cond, out and : ", in_dim, n_ext, n_ext_m, n_cond, out_dim)
         if mask is not None:
             print('\twith hard mask.')
         else:
@@ -280,12 +296,14 @@ class MaskedLinearDecoder(nn.Module):
         self.recon_loss = recon_loss
 
         self.n_ext = n_ext
+        self.n_ext_m = n_ext_m
 
         self.n_cond = 0
         if n_cond is not None:
             self.n_cond = n_cond
 
-        self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, n_ext=n_ext, mask=mask)
+        self.L0 = CondLayers(in_dim, out_dim, n_cond, bias=False, n_ext=n_ext, n_ext_m=n_ext_m,
+                             mask=mask, ext_mask=ext_mask)
         if use_relu:
             self.A0 = nn.ReLU()
             print("\tUsing ReLU after the masked linear layer.")

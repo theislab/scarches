@@ -244,8 +244,10 @@ class TRVAE(BaseMixin):
         use_decoder_relu: bool = False,
         use_hsic: bool = False,
         n_ext_decoder: int = 0,
+        n_ext_m_decoder: int = 0,
         n_expand_encoder: int = 0,
         soft_mask: bool = False,
+        soft_ext_mask: bool = False,
         hsic_one_vs_all: bool = False,
         ext_mask: Optional[Union[np.ndarray, list]] = None
     ):
@@ -292,8 +294,10 @@ class TRVAE(BaseMixin):
 
         self.n_ext_decoder_ = n_ext_decoder
         self.n_expand_encoder_ = n_expand_encoder
+        self.n_ext_m_decoder_ = n_ext_m_decoder
 
         self.soft_mask_ = soft_mask
+        self.soft_ext_mask_ = soft_ext_mask
 
         self.model = trVAE(
             self.input_dim_,
@@ -314,8 +318,10 @@ class TRVAE(BaseMixin):
             self.use_decoder_relu_,
             self.use_hsic_,
             self.n_ext_decoder_,
+            self.n_ext_m_decoder_,
             self.n_expand_encoder_,
             self.soft_mask_,
+            self.soft_ext_mask_,
             self.hsic_one_vs_all_,
             ext_mask
         )
@@ -605,8 +611,10 @@ class TRVAE(BaseMixin):
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
+            'n_ext_m_decoder': dct['n_ext_m_decoder_'] if 'n_ext_decoder_' in dct else 0,
             'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
             'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False,
+            'soft_ext_mask': dct['soft_ext_mask_'] if 'soft_ext_mask_' in dct else False,
             'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False,
             'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None
         }
@@ -632,7 +640,10 @@ class TRVAE(BaseMixin):
         unfreeze_ext: bool = True,
         remove_dropout: bool = True,
         new_n_ext_decoder: Optional[int] = None,
-        new_n_expand_encoder: Optional[int] = None
+        new_n_ext_m_decoder: Optional[int] = None,
+        new_n_expand_encoder: Optional[int] = None,
+        new_ext_mask: Optional[Union[np.ndarray, list]] = None,
+        new_soft_ext_mask: bool = False
     ):
         """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
 
@@ -666,6 +677,12 @@ class TRVAE(BaseMixin):
             init_params['n_ext_decoder'] = new_n_ext_decoder
         if new_n_expand_encoder is not None:
             init_params['n_expand_encoder'] = new_n_expand_encoder
+        if new_n_ext_m_decoder is not None:
+            init_params['n_ext_m_decoder'] = new_n_ext_m_decoder
+            if new_ext_mask is None:
+                raise ValueError('Provide new ext_mask')
+            init_params['ext_mask'] = new_ext_mask
+            init_params['soft_ext_mask'] = new_soft_ext_mask
 
         conditions = init_params['conditions']
         condition_key = init_params['condition_key']
@@ -701,7 +718,7 @@ class TRVAE(BaseMixin):
                         p.requires_grad = True
 
                 if unfreeze_ext:
-                    if 'ext_L.weight' in name:
+                    if 'ext_L.weight' in name or 'ext_L_m.weight' in name:
                         p.requires_grad = True
                     if 'expand_mean_encoder' in name or 'expand_var_encoder' in name:
                         p.requires_grad = True

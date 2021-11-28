@@ -137,6 +137,8 @@ class VIATrainer(trVAETrainer):
         self.corr_coeff = None
         self.gamma_anneal_each = gamma_anneal_each
 
+        self.prox_op_l1_mask = None
+
         self.alpha_l1_epoch_anneal = alpha_l1_epoch_anneal
         self.corr_coeff_a_l1 = None
         self.alpha_l1_anneal_each = alpha_l1_anneal_each
@@ -157,6 +159,13 @@ class VIATrainer(trVAETrainer):
         self.compose_p_gr = None
         self.compose_p_l1_annot = None
 
+        use_gl_l1 = self.alpha is not None or (self.alpha_l1 is not None and self.model.mask is not None)
+        self.use_compose = use_gl_l1 and self.model.decoder.L0.expr_L.weight.requires_grad
+
+        self.use_mask_ext = self.alpha_l1 is not None and self.model.n_ext_m_decoder > 0
+        self.use_mask_ext = self.use_mask_ext and self.model.decoder.L0.ext_L_m.weight.requires_grad
+        self.use_mask_ext = self.use_mask_ext and self.model.ext_mask is not None
+
     def get_prox_operator(self, alpha, omega, alpha_l1, mask):
         if alpha is not None:
             p_gr = ProxGroupLasso(alpha, omega)
@@ -166,9 +175,7 @@ class VIATrainer(trVAETrainer):
 
         prox_op = p_gr
 
-        if alpha_l1 is not None:
-            if mask is None:
-                raise ValueError('Provide soft mask.')
+        if alpha_l1 is not None and mask is not None:
             p_l1_annot = ProxOperL1(alpha_l1, mask)
             self.compose_p_l1_annot = p_l1_annot
             prox_op = lambda W: p_gr(p_l1_annot(W))
@@ -176,7 +183,9 @@ class VIATrainer(trVAETrainer):
         return prox_op
 
     def on_iteration(self, batch_data):
-        if self.prox_operator_compose is None and (self.alpha is not None or self.alpha_l1 is not None):
+        empty_ops = self.prox_operator_compose is None and self.prox_op_l1_mask is None
+        use_any_ops = self.use_compose or self.use_mask_ext
+        if empty_ops and use_any_ops:
             self.watch_lr = self.optimizer.param_groups[0]['lr']
 
             if self.model.mask is not None:
@@ -184,7 +193,7 @@ class VIATrainer(trVAETrainer):
                 self.model.mask = self.model.mask.to(dvc)
 
             if self.model.ext_mask is not None:
-                dvc = self.model.decoder.L0.ext_L.weight.device
+                dvc = self.model.decoder.L0.ext_L_m.weight.device
                 self.model.ext_mask = self.model.ext_mask.to(dvc)
 
             alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
@@ -197,9 +206,14 @@ class VIATrainer(trVAETrainer):
                     self.corr_coeff_a_l1 = 1.
             else:
                 alpha_l1_corr = None
-            self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
-                                                                alpha_l1_corr, self.model.mask)
-            self.compose_init = True
+            if self.use_compose:
+                print('Init proximal operator for main terms.')
+                self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
+                                                                    alpha_l1_corr, self.model.mask)
+                self.compose_init = True
+            if self.use_mask_ext:
+                print('Init soft mask proximal operator for annotated extension.')
+                self.prox_op_l1_mask = ProxOperL1(alpha_l1_corr, self.model.ext_mask)
 
         has_ext = self.model.decoder.L0.n_ext > 0
         if self.prox_operator_l1_ext is None and self.gamma_ext is not None and has_ext:
@@ -209,14 +223,17 @@ class VIATrainer(trVAETrainer):
                 self.corr_coeff = 1. / self.gamma_epoch_anneal
             else:
                 self.corr_coeff = 1.
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
-                                                   self.model.ext_mask)
+            print('Init proximal operator for unannotated extension.')
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
             self.l1_ext_init = True
 
         super().on_iteration(batch_data)
 
-        if self.prox_operator_compose is not None:
+        if self.use_compose:
             self.prox_operator_compose(self.model.decoder.L0.expr_L.weight.data)
+
+        if self.use_mask_ext:
+            self.prox_op_l1_mask(self.model.decoder.L0.ext_L_m.weight.data)
 
         if self.prox_operator_l1_ext is not None:
             self.prox_operator_l1_ext(self.model.decoder.L0.ext_L.weight.data)
@@ -228,17 +245,19 @@ class VIATrainer(trVAETrainer):
             new_lr = self.optimizer.param_groups[0]['lr']
             if self.watch_lr is not None and self.watch_lr != new_lr:
                 self.watch_lr = new_lr
-                if self.compose_init:
+                if self.compose_init or self.use_mask_ext:
                     alpha_corr = self.alpha*self.watch_lr if self.alpha is not None else None
                     if self.alpha_l1 is not None:
                         alpha_l1_corr = self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1
                     else:
                         alpha_l1_corr = None
-                    self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
-                                                                        alpha_l1_corr, self.model.mask)
+                    if self.compose_init:
+                        self.prox_operator_compose = self.get_prox_operator(alpha_corr, self.omega,
+                                                                            alpha_l1_corr, self.model.mask)
+                    if self.use_mask_ext:
+                        self.prox_op_l1_mask = ProxOperL1(alpha_l1_corr, self.model.ext_mask)
                 if self.l1_ext_init:
-                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
-                                                           self.model.ext_mask)
+                    self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
 
         return continue_training
 
@@ -252,26 +271,31 @@ class VIATrainer(trVAETrainer):
                 print(msg)
                 print('-------------------')
             if self.alpha_l1 is not None:
-                share_deact_genes = (self.model.decoder.L0.expr_L.weight.data.abs()==0)&~self.model.mask.bool()
-                share_deact_genes = share_deact_genes.float().sum().cpu().numpy() / self.model.n_inact_genes
-                print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
-                print('-------------------')
-            if self.l1_ext_init:
-                if self.model.ext_mask is None:
-                    active_genes = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
-                    print ('Active genes in extension terms:', active_genes)
-                    sparse_share = 1. - active_genes / self.model.input_dim
-                    print('Sparcity share in extension terms:', sparse_share)
-                else:
-                    share_deact_ext_genes = (self.model.decoder.L0.ext_L.weight.data.abs()==0)&~self.model.ext_mask.bool()
+                if self.compose_p_l1_annot is not None:
+                    share_deact_genes = (self.model.decoder.L0.expr_L.weight.data.abs()==0)&~self.model.mask.bool()
+                    share_deact_genes = share_deact_genes.float().sum().cpu().numpy() / self.model.n_inact_genes
+                    print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
+                    print('-------------------')
+                if self.use_mask_ext:
+                    share_deact_ext_genes = (self.model.decoder.L0.ext_L_m.weight.data.abs()==0)&~self.model.ext_mask.bool()
                     share_deact_ext_genes = share_deact_ext_genes.float().sum().cpu().numpy() / self.model.n_inact_ext_genes
                     print('Share of deactivated inactive genes in extension terms: %.4f' % share_deact_ext_genes)
+            if self.l1_ext_init:
+                active_genes = (self.model.decoder.L0.ext_L.weight.data.abs().cpu().numpy()>0).sum(0)
+                print ('Active genes in extension terms:', active_genes)
+                sparse_share = 1. - active_genes / self.model.input_dim
+                print('Sparcity share in extension terms:', sparse_share)
 
-        use_alpha_l1_anneal = self.alpha_l1_epoch_anneal is not None and self.compose_p_l1_annot is not None
+        any_alpha_l1_ops = self.compose_p_l1_annot is not None or self.use_mask_ext
+        use_alpha_l1_anneal = self.alpha_l1_epoch_anneal is not None and any_alpha_l1_ops
         time_to_anneal = self.epoch % self.alpha_l1_anneal_each == 0
         if use_alpha_l1_anneal and self.epoch > 0 and time_to_anneal and self.epoch <= self.alpha_l1_epoch_anneal:
             self.corr_coeff_a_l1 = min(self.epoch / self.alpha_l1_epoch_anneal, 1.)
-            self.compose_p_l1_annot._alpha = self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1
+            if self.compose_p_l1_annot is not None:
+                self.compose_p_l1_annot._alpha = self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1
+            if self.use_mask_ext:
+                self.prox_op_l1_mask = ProxOperL1(self.alpha_l1*self.watch_lr*self.corr_coeff_a_l1,
+                                                  self.model.ext_mask)
 
             if self.print_n_deactive:
                 print('New alpha_l1 corr coeff:', self.corr_coeff_a_l1)
@@ -280,8 +304,7 @@ class VIATrainer(trVAETrainer):
         time_to_anneal = self.epoch % self.gamma_anneal_each == 0
         if use_gamma_anneal and self.epoch > 0 and time_to_anneal and self.epoch <= self.gamma_epoch_anneal:
             self.corr_coeff = min(self.epoch / self.gamma_epoch_anneal, 1.)
-            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff,
-                                                   self.model.ext_mask)
+            self.prox_operator_l1_ext = ProxOperL1(self.gamma_ext*self.watch_lr*self.corr_coeff)
 
             if self.print_n_deactive:
                 print('New gamma_ext corr coeff:', self.corr_coeff)
