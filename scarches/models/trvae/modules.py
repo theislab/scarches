@@ -339,6 +339,7 @@ class MaskedLinearDecoder(nn.Module):
     def nonzero_terms(self):
         v = self.L0.expr_L.weight.data
         nz = (v.norm(p=1, dim=0)>0).cpu().numpy()
+        nz = np.append(nz, np.full(self.n_ext_m, True))
         nz = np.append(nz, np.full(self.n_ext, True))
         return nz
 

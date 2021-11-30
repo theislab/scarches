@@ -611,7 +611,7 @@ class TRVAE(BaseMixin):
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
             'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
             'n_ext_decoder': dct['n_ext_decoder_'] if 'n_ext_decoder_' in dct else 0,
-            'n_ext_m_decoder': dct['n_ext_m_decoder_'] if 'n_ext_decoder_' in dct else 0,
+            'n_ext_m_decoder': dct['n_ext_m_decoder_'] if 'n_ext_m_decoder_' in dct else 0,
             'n_expand_encoder': dct['n_expand_encoder_'] if 'n_expand_encoder_' in dct else 0,
             'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False,
             'soft_ext_mask': dct['soft_ext_mask_'] if 'soft_ext_mask_' in dct else False,
