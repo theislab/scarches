@@ -377,7 +377,8 @@ class TRVAE(BaseMixin):
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
-        mean: bool = False
+        mean: bool = False,
+        mean_var: bool = False
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
@@ -413,14 +414,29 @@ class TRVAE(BaseMixin):
 
         x = torch.tensor(x)
 
-        latents = []
+        is_mean_var = not mean and mean_var
+
+        if is_mean_var:
+            latents = [[], []]
+        else:
+            latents = []
+
         indices = torch.arange(x.size(0))
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean)
-            latents += [latent.cpu().detach()]
+            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean, mean_var)
+            if is_mean_var:
+                latents[0] += [latent[0].cpu().detach()]
+                latents[1] += [latent[1].cpu().detach()]
+            else:
+                latents += [latent.cpu().detach()]
 
-        return np.array(torch.cat(latents))
+        if is_mean_var:
+            merged = np.array(torch.cat(latents[0])), np.array(torch.cat(latents[1]))
+        else:
+            merged = np.array(torch.cat(latents))
+
+        return merged
 
     def terms_genes(self, terms: Union[str, list]='terms'):
         if isinstance(terms, str):
@@ -466,7 +482,8 @@ class TRVAE(BaseMixin):
         n_perm=3000,
         directions=None,
         select_terms=None,
-        adata=None
+        adata=None,
+        exact=False
     ):
         if adata is None:
             adata = self.adata
@@ -514,25 +531,44 @@ class TRVAE(BaseMixin):
             z0 = self.get_latent(
                 adata_cat.X,
                 adata_cat.obs[self.condition_key_],
-                mean=False
+                mean=False,
+                mean_var=exact
             )
             z1 = self.get_latent(
                 adata_others.X,
                 adata_others.obs[self.condition_key_],
-                mean=False
+                mean=False,
+                mean_var=exact
             )
 
-            if directions is not None:
-                z0 *= directions
-                z1 *= directions
+            if not exact:
+                if directions is not None:
+                    z0 *= directions
+                    z1 *= directions
 
-            if select_terms is not None:
-                z0 = z0[:, select_terms]
-                z1 = z1[:, select_terms]
+                if select_terms is not None:
+                    z0 = z0[:, select_terms]
+                    z1 = z1[:, select_terms]
 
-            zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
+                to_reduce = z0 > z1
 
-            p_h0 = np.mean(z0 > z1, axis=0)
+                zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
+            else:
+                from scipy.special import erfc
+
+                means0, vars0 = z0
+                means1, vars1 = z1
+
+                if directions is not None:
+                    means0 *= directions
+                    means1 *= directions
+
+                to_reduce = (means1 - means0) / np.sqrt(2 * (vars0 + vars1))
+                to_reduce = 0.5 * erfc(to_reduce)
+
+                zeros_mask = (np.abs(means0).sum(0) == 0) | (np.abs(means1).sum(0) == 0)
+
+            p_h0 = np.mean(to_reduce, axis=0)
             p_h1 = 1.0 - p_h0
             epsilon = 1e-12
             bf = np.log(p_h0 + epsilon) - np.log(p_h1 + epsilon)
