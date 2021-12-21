@@ -5,8 +5,7 @@ import torch.nn as nn
 from torch.distributions import Normal, kl_divergence
 import torch.nn.functional as F
 
-from .modules import MaskedLinearDecoder
-from ..trvae.modules import Encoder
+from .modules import MaskedLinearDecoder, ExtEncoder
 from ..trvae.losses import mse, nb
 from ..trvae._utils import one_hot_encoder
 from scarches.models.base._base import CVAELatentsModelMixin
@@ -103,13 +102,13 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
 
         self.cell_type_encoder = None
 
-        self.encoder = Encoder(encoder_layer_sizes,
-                               self.latent_dim,
-                               self.use_bn,
-                               self.use_ln,
-                               self.use_dr,
-                               self.dr_rate,
-                               self.n_conditions)
+        self.encoder = ExtEncoder(encoder_layer_sizes,
+                                  self.latent_dim,
+                                  self.use_bn,
+                                  self.use_ln,
+                                  self.use_dr,
+                                  self.dr_rate,
+                                  self.n_conditions)
 
         self.decoder = MaskedLinearDecoder(self.latent_dim,
                                            self.input_dim,
