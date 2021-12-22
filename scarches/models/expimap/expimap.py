@@ -51,7 +51,14 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                  use_l_encoder: bool = False,
                  use_bn: bool = False,
                  use_ln: bool = True,
-                 decoder_last_layer: Optional[str] = None
+                 decoder_last_layer: Optional[str] = None,
+                 soft_mask: bool = False,
+                 n_ext: int = 0,
+                 n_ext_m: int = 0,
+                 use_hsic: bool = False,
+                 hsic_one_vs_all: bool = False,
+                 ext_mask: Optional[torch.Tensor] = None,
+                 soft_ext_mask: bool = False
                  ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
@@ -71,6 +78,16 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
         self.use_ln = use_ln
 
         self.use_mmd = False
+
+        self.n_ext_encoder = n_ext + n_ext_m
+        self.n_ext_decoder = n_ext
+        self.n_ext_m_decoder = n_ext_m
+
+        self.use_hsic = use_hsic and self.n_ext_decoder > 0
+        self.hsic_one_vs_all = hsic_one_vs_all
+
+        self.soft_mask = soft_mask and mask is not None
+        self.soft_ext_mask = soft_ext_mask and ext_mask is not None
 
         if decoder_last_layer is None:
             if recon_loss == 'nb':
@@ -108,14 +125,40 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                   self.use_ln,
                                   self.use_dr,
                                   self.dr_rate,
-                                  self.n_conditions)
+                                  self.n_conditions,
+                                  self.n_ext_encoder)
+
+        if self.soft_mask:
+            self.n_inact_genes = (1-mask).sum().item()
+            soft_shape = mask.shape
+            if soft_shape[0] != latent_dim or soft_shape[1] != input_dim:
+                raise ValueError('Incorrect shape of the soft mask.')
+            self.mask = mask.t()
+            mask = None
+        else:
+            self.mask = None
+
+        if self.soft_ext_mask:
+            self.n_inact_ext_genes = (1-ext_mask).sum().item()
+            ext_shape = ext_mask.shape
+            if ext_shape[0] != self.n_ext_m_decoder:
+                raise ValueError('Dim 0 of ext_mask should be the same as n_ext_m_decoder.')
+            if ext_shape[1] != self.input_dim:
+                raise ValueError('Dim 1 of ext_mask should be the same as input_dim.')
+            self.ext_mask = ext_mask.t()
+            ext_mask = None
+        else:
+            self.ext_mask = None
 
         self.decoder = MaskedLinearDecoder(self.latent_dim,
                                            self.input_dim,
                                            self.n_conditions,
                                            mask,
+                                           ext_mask,
                                            self.recon_loss,
-                                           self.decoder_last_layer)
+                                           self.decoder_last_layer,
+                                           self.n_ext_decoder,
+                                           self.n_ext_m_decoder)
 
         if self.use_l_encoder:
             self.l_encoder = Encoder([self.input_dim, 128],

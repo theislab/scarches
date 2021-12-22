@@ -61,7 +61,14 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_ln: bool = True,
         mask: Optional[Union[np.ndarray, list]] = None,
         mask_key: str = 'I',
-        decoder_last_layer: Optional[str] = None
+        decoder_last_layer: Optional[str] = None,
+        soft_mask: bool = False,
+        n_ext: int = 0,
+        n_ext_m: int = 0,
+        use_hsic: bool = False,
+        hsic_one_vs_all: bool = False,
+        ext_mask: Optional[torch.Tensor] = None,
+        soft_ext_mask: bool = False
     ):
         self.adata = adata
 
@@ -96,6 +103,20 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         mask = torch.tensor(mask).float()
         self.latent_dim_ = len(self.mask_)
 
+        self.ext_mask_ = None
+        if ext_mask is not None:
+            self.ext_mask_ = ext_mask if isinstance(ext_mask, list) else ext_mask.tolist()
+            ext_mask = torch.tensor(ext_mask).float()
+
+        self.n_ext_ = n_ext
+        self.n_ext_m_ = n_ext_m
+
+        self.soft_mask_ = soft_mask
+        self.soft_ext_mask_ = soft_ext_mask
+
+        self.use_hsic_ = use_hsic and n_ext > 0
+        self.hsic_one_vs_all_ = hsic_one_vs_all
+
         self.model = expiMap(
             self.input_dim_,
             self.latent_dim_,
@@ -107,7 +128,14 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             self.use_l_encoder_,
             self.use_bn_,
             self.use_ln_,
-            self.decoder_last_layer_
+            self.decoder_last_layer_,
+            self.soft_mask_,
+            self.n_ext_,
+            self.n_ext_m_,
+            self.use_hsic_,
+            self.hsic_one_vs_all_,
+            ext_mask,
+            self.soft_ext_mask_
         )
 
         self.is_trained_ = False
@@ -293,7 +321,14 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             'use_ln': dct['use_ln_'],
             'mask': dct['mask_'],
             'decoder_last_layer': dct['decoder_last_layer_'] if 'decoder_last_layer_' in dct else "softmax",
-            'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False
+            'use_l_encoder': dct['use_l_encoder_'] if 'use_l_encoder_' in dct else False,
+            'n_ext': dct['n_ext_'] if 'n_ext_' in dct else 0,
+            'n_ext_m': dct['n_ext_m_'] if 'n_ext_m_' in dct else 0,
+            'soft_mask': dct['soft_mask_'] if 'soft_mask_' in dct else False,
+            'soft_ext_mask': dct['soft_ext_mask_'] if 'soft_ext_mask_' in dct else False,
+            'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False,
+            'use_hsic': dct['use_hsic_'] if 'use_hsic_' in dct else False,
+            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None
         }
 
         return init_params
