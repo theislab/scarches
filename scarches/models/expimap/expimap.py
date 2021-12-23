@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from .modules import MaskedLinearDecoder, ExtEncoder
 from ..trvae.losses import mse, nb
+from .losses import hsic
 from ..trvae._utils import one_hot_encoder
 from scarches.models.base._base import CVAELatentsModelMixin
 
@@ -200,4 +201,20 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
             Normal(torch.zeros_like(z1_mean), torch.ones_like(z1_var))
         ).sum(dim=1).mean()
 
-        return recon_loss, kl_div, torch.tensor(0.)
+        if self.use_hsic:
+            if not self.hsic_one_vs_all:
+                z_ann = z1[:, :-self.n_ext_decoder]
+                z_ext = z1[:, -self.n_ext_decoder:]
+                hsic_loss = hsic(z_ann, z_ext)
+            else:
+                hsic_loss = 0.
+                sz = self.latent_dim + self.n_ext_encoder
+                shift = self.latent_dim + self.n_ext_m_decoder
+                for i in range(self.n_ext_decoder):
+                    sel_cols = torch.full((sz,), True, device=z1.device)
+                    sel_cols[shift + i] = False
+                    rest = z1[:, sel_cols]
+                    term = z1[:, ~sel_cols]
+                    hsic_loss = hsic_loss + hsic(term, rest)
+
+        return (recon_loss, kl_div) if not self.use_hsic else (recon_loss, kl_div, hsic_loss)
