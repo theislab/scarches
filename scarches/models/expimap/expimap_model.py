@@ -224,11 +224,12 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self,
         groups,
         comparison='rest',
-        n_perm=3000,
+        n_sample=5000,
         use_directions=False,
         directions_key='directions',
         select_terms=None,
         adata=None,
+        exact=True,
         key_added='bf_scores'
     ):
         if adata is None:
@@ -268,35 +269,64 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             else:
                 others_mask = cats_col.isin(comparison)
 
-            choice_1 = np.random.choice(cat_mask.sum(), n_perm)
-            choice_2 = np.random.choice(others_mask.sum(), n_perm)
+            choice_1 = np.random.choice(cat_mask.sum(), n_sample)
+            choice_2 = np.random.choice(others_mask.sum(), n_sample)
 
             adata_cat = adata[cat_mask][choice_1]
             adata_others = adata[others_mask][choice_2]
 
+            if use_directions:
+                directions = adata.uns[directions_key]
+            else:
+                directions = None
+
             z0 = self.get_latent(
                 adata_cat.X,
                 adata_cat.obs[self.condition_key_],
-                mean=False
+                mean=False,
+                mean_var=exact
             )
             z1 = self.get_latent(
                 adata_others.X,
                 adata_others.obs[self.condition_key_],
-                mean=False
+                mean=False,
+                mean_var=exact
             )
 
-            if use_directions:
-                directions = adata.uns[directions_key]
-                z0 *= directions
-                z1 *= directions
+            if not exact:
+                if directions is not None:
+                    z0 *= directions
+                    z1 *= directions
 
-            if select_terms is not None:
-                z0 = z0[:, select_terms]
-                z1 = z1[:, select_terms]
+                if select_terms is not None:
+                    z0 = z0[:, select_terms]
+                    z1 = z1[:, select_terms]
 
-            zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
+                to_reduce = z0 > z1
 
-            p_h0 = np.mean(z0 > z1, axis=0)
+                zeros_mask = (np.abs(z0).sum(0) == 0) | (np.abs(z1).sum(0) == 0)
+            else:
+                from scipy.special import erfc
+
+                means0, vars0 = z0
+                means1, vars1 = z1
+
+                if directions is not None:
+                    means0 *= directions
+                    means1 *= directions
+
+                if select_terms is not None:
+                    means0 = means0[:, select_terms]
+                    means1 = means1[:, select_terms]
+                    vars0 = vars0[:, select_terms]
+                    vars1 = vars1[:, select_terms]
+
+                to_reduce = (means1 - means0) / np.sqrt(2 * (vars0 + vars1))
+                to_reduce = 0.5 * erfc(to_reduce)
+
+                zeros_mask = (np.abs(means0).sum(0) == 0) | (np.abs(means1).sum(0) == 0)
+
+            p_h0 = np.mean(to_reduce, axis=0)
             p_h1 = 1.0 - p_h0
             epsilon = 1e-12
             bf = np.log(p_h0 + epsilon) - np.log(p_h1 + epsilon)
@@ -308,6 +338,47 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             scores[cat] = dict(p_h0=p_h0, p_h1=p_h1, bf=bf)
 
         adata.uns[key_added] = scores
+
+    @classmethod
+    def load_query_data(
+        cls,
+        adata: AnnData,
+        reference_model: Union[str, 'TRVAE'],
+        freeze: bool = True,
+        freeze_expression: bool = True,
+        unfreeze_ext: bool = True,
+        remove_dropout: bool = True,
+        new_n_ext: Optional[int] = None,
+        new_n_ext_m: Optional[int] = None,
+        new_ext_mask: Optional[Union[np.ndarray, list]] = None,
+        new_soft_ext_mask: bool = False
+    ):
+        params = {}
+        params['adata'] = adata
+        params['reference_model'] = reference_model
+        params['freeze'] = freeze
+        params['freeze_expression'] = freeze_expression
+        params['remove_dropout'] = remove_dropout
+
+        if new_n_ext is not None:
+            params['n_ext'] = new_n_ext
+        if new_n_ext_m is not None:
+            params['n_ext_m'] = new_n_ext_m
+            if new_ext_mask is None:
+                raise ValueError('Provide new ext_mask')
+            params['ext_mask'] = new_ext_mask
+            params['soft_ext_mask'] = new_soft_ext_mask
+
+        new_model = super().load_query_data(**params)
+
+        if freeze and unfreeze_ext:
+            for name, p in new_model.model.named_parameters():
+                if 'ext_L.weight' in name or 'ext_L_m.weight' in name:
+                    p.requires_grad = True
+                if 'expand_mean_encoder' in name or 'expand_var_encoder' in name:
+                    p.requires_grad = True
+
+        return new_model
 
     @classmethod
     def _get_init_params_from_dict(cls, dct):

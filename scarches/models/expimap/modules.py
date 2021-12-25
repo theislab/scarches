@@ -176,10 +176,10 @@ class ExtEncoder(nn.Module):
             for i, (in_size, out_size) in enumerate(zip(layer_sizes[:-1], layer_sizes[1:])):
                 if i == 0:
                     print("\tInput Layer in, out and cond:", in_size, out_size, self.n_classes)
-                    self.FC.add_module(name="L{:d}".format(i), module=CondLayers(in_size,
-                                                                                 out_size,
-                                                                                 self.n_classes,
-                                                                                 bias=True))
+                    self.FC.add_module(name="L{:d}".format(i), module=MaskedCondLayers(in_size,
+                                                                                       out_size,
+                                                                                       self.n_classes,
+                                                                                       bias=True))
                 else:
                     print("\tHidden Layer", i, "in/out:", in_size, out_size)
                     self.FC.add_module(name="L{:d}".format(i), module=nn.Linear(in_size, out_size, bias=True))

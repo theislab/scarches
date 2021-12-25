@@ -101,9 +101,22 @@ class BaseMixin:
             # new categoricals changed size
             else:
                 load_ten = load_ten.to(device)
-                dim_diff = new_ten.size()[-1] - load_ten.size()[-1]
-                fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
+                # only one dim diff
+                new_shape = new_ten.shape
+                n_dims = len(new_shape)
+                sel = [slice(None)] * n_dims
+                for i in range(n_dims):
+                    dim_diff = new_shape[i] - load_ten.shape[i]
+                    axs = i
+                    sel[i] = slice(-dim_diff, None)
+                    if dim_diff > 0:
+                        break
+                fixed_ten = torch.cat([load_ten, new_ten[tuple(sel)]], dim=axs)
                 load_state_dict[key] = fixed_ten
+
+        for key, ten in new_state_dict.items():
+            if key not in load_state_dict:
+                load_state_dict[key] = ten
 
         self.model.load_state_dict(load_state_dict)
 
@@ -175,6 +188,7 @@ class SurgeryMixin:
         freeze: bool = True,
         freeze_expression: bool = True,
         remove_dropout: bool = True,
+        **kwargs
     ):
         """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
 
@@ -221,6 +235,8 @@ class SurgeryMixin:
         if remove_dropout:
             init_params['dr_rate'] = 0.0
 
+        init_params.update(kwargs)
+
         new_model = cls(adata, **init_params)
         new_model._load_expand_params_from_dict(model_state_dict)
 
@@ -245,7 +261,8 @@ class CVAELatentsMixin:
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
-        mean: bool = False
+        mean: bool = False,
+        mean_var: bool = False
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
@@ -283,10 +300,14 @@ class CVAELatentsMixin:
         indices = torch.arange(x.size(0))
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean)
-            latents += [latent.cpu().detach()]
+            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean, mean_var)
+            latent = (latent,) if not isinstance(latent, tuple) else latent
+            latents += [tuple(l.cpu().detach() for l in latent)]
 
-        return np.array(torch.cat(latents))
+        result = tuple(np.array(torch.cat(l)) for l in zip(*latents))
+        result = result[0] if len(result) == 1 else result
+
+        return result
 
     def get_y(
         self,
@@ -353,10 +374,9 @@ class CVAELatentsModelMixin:
         var = torch.exp(log_var) + 1e-4
         return Normal(mu, var.sqrt()).rsample()
 
-    def get_latent(self, x, c=None, mean=False):
+    def get_latent(self, x, c=None, mean=False, mean_var=False):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
-
            Parameters
            ----------
            x:  torch.Tensor
@@ -364,7 +384,6 @@ class CVAELatentsModelMixin:
            c: torch.Tensor
                 Torch Tensor of condition labels for each sample.
            mean: boolean
-
            Returns
            -------
            Returns Torch Tensor containing latent space encoding of 'x'.
@@ -376,6 +395,8 @@ class CVAELatentsModelMixin:
         latent = self.sampling(z_mean, z_log_var)
         if mean:
             return z_mean
+        elif mean_var:
+            return (z_mean, torch.exp(z_log_var) + 1e-4)
         return latent
 
     def get_y(self, x, c=None):
