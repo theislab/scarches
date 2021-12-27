@@ -351,7 +351,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         new_n_ext: Optional[int] = None,
         new_n_ext_m: Optional[int] = None,
         new_ext_mask: Optional[Union[np.ndarray, list]] = None,
-        new_soft_ext_mask: bool = False
+        new_soft_ext_mask: bool = False,
+        **kwargs
     ):
         params = {}
         params['adata'] = adata
@@ -368,6 +369,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 raise ValueError('Provide new ext_mask')
             params['ext_mask'] = new_ext_mask
             params['soft_ext_mask'] = new_soft_ext_mask
+
+        params.update(kwargs)
 
         new_model = super().load_query_data(**params)
 

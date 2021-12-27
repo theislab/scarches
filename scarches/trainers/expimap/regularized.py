@@ -28,6 +28,33 @@ class ProxGroupLasso:
 
         return W
 
+
+class ProxOperL1:
+    def __init__(self, alpha, I=None, inplace=True):
+        self._I = ~I.bool() if I is not None else None
+        self._alpha=alpha
+        self._inplace=inplace
+
+    def __call__(self, W):
+        if not self._inplace:
+            W = W.clone()
+
+        W_geq_alpha = W>=self._alpha
+        W_leq_neg_alpha = W<=-self._alpha
+        W_cond_joint = ~W_geq_alpha&~W_leq_neg_alpha
+
+        if self._I is not None:
+            W_geq_alpha &= self._I
+            W_leq_neg_alpha &= self._I
+            W_cond_joint &= self._I
+
+        W -= W_geq_alpha.float()*self._alpha
+        W += W_leq_neg_alpha.float()*self._alpha
+        W -= W_cond_joint.float()*W
+
+        return W
+
+
 class VIATrainer(trVAETrainer):
     """ScArches Unsupervised Trainer class. This class contains the implementation of the unsupervised CVAE/TRVAE
        Trainer.
@@ -131,3 +158,21 @@ class VIATrainer(trVAETrainer):
                     msg = '\n' + msg
                 print(msg)
         super().on_epoch_end()
+
+    def loss(self, total_batch=None):
+        recon_loss, kl_loss, hsic_loss = self.model(**total_batch)
+
+        if self.beta is not None and self.model.use_hsic:
+            weighted_hsic = self.beta * hsic_loss
+            self.iter_logs["hsic_loss"].append(hsic_loss)
+        else:
+            weighted_hsic = 0.
+
+        loss = recon_loss + self.calc_alpha_coeff()*kl_loss + weighted_hsic
+
+        self.iter_logs["loss"].append(loss)
+        self.iter_logs["unweighted_loss"].append(recon_loss + kl_loss + hsic_loss)
+        self.iter_logs["recon_loss"].append(recon_loss)
+        self.iter_logs["kl_loss"].append(kl_loss)
+
+        return loss

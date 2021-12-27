@@ -216,5 +216,7 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                     rest = z1[:, sel_cols]
                     term = z1[:, ~sel_cols]
                     hsic_loss = hsic_loss + hsic(term, rest)
+        else:
+            hsic_loss = torch.tensor(0.0, device=z1.device)
 
-        return (recon_loss, kl_div) if not self.use_hsic else (recon_loss, kl_div, hsic_loss)
+        return recon_loss, kl_div, hsic_loss
