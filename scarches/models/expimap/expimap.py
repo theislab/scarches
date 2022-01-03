@@ -162,13 +162,13 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                            self.n_ext_m_decoder)
 
         if self.use_l_encoder:
-            self.l_encoder = Encoder([self.input_dim, 128],
-                                     1,
-                                     self.use_bn,
-                                     self.use_ln,
-                                     self.use_dr,
-                                     self.dr_rate,
-                                     self.n_conditions)
+            self.l_encoder = ExtEncoder([self.input_dim, 128],
+                                        1,
+                                        self.use_bn,
+                                        self.use_ln,
+                                        self.use_dr,
+                                        self.dr_rate,
+                                        self.n_conditions)
 
     def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
         x_log = torch.log(1 + x)
