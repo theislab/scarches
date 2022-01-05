@@ -163,7 +163,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
            kwargs
                 kwargs for the TrVAE trainer.
         """
-        self.trainer = VIATrainer(
+        self.trainer = expiMapTrainer(
             self.model,
             self.adata,
             alpha=alpha,
