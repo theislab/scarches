@@ -197,7 +197,7 @@ class expiMapTrainer(trVAETrainer):
     def anneal(self):
         any_change = False
 
-        if corr_coeffs['gamma_ext'] < 1.:
+        if self.corr_coeffs['gamma_ext'] < 1.:
             any_change = True
             time_to_anneal = self.epoch > 0 and self.epoch % self.gamma_anneal_each == 0
             if time_to_anneal:
@@ -205,7 +205,7 @@ class expiMapTrainer(trVAETrainer):
                 if self.print_stats:
                     print('New gamma_ext anneal coefficient:', self.corr_coeffs['gamma_ext'])
 
-        if corr_coeffs['alpha_l1'] < 1.:
+        if self.corr_coeffs['alpha_l1'] < 1.:
             any_change = True
             time_to_anneal = self.epoch > 0 and self.epoch % self.self.alpha_l1_anneal_each == 0
             if time_to_anneal:
@@ -296,12 +296,14 @@ class expiMapTrainer(trVAETrainer):
                 print(msg)
                 print('-------------------')
             if self.use_prox_ops['main_soft_mask']:
-                share_deact_genes = (self.model.decoder.L0.expr_L.weight.data.abs()==0)&~self.model.mask.bool()
+                main_mask = self.prox_ops['main_soft_mask']._I
+                share_deact_genes = (self.model.decoder.L0.expr_L.weight.data.abs()==0) & main_mask
                 share_deact_genes = share_deact_genes.float().sum().cpu().numpy() / self.model.n_inact_genes
                 print('Share of deactivated inactive genes: %.4f' % share_deact_genes)
                 print('-------------------')
             if self.use_prox_ops['ext_soft_mask']:
-                share_deact_ext_genes = (self.model.decoder.L0.ext_L_m.weight.data.abs()==0)&~self.model.ext_mask.bool()
+                ext_mask = self.prox_ops['ext_soft_mask']._I
+                share_deact_ext_genes = (self.model.decoder.L0.ext_L_m.weight.data.abs()==0) & ext_mask
                 share_deact_ext_genes = share_deact_ext_genes.float().sum().cpu().numpy() / self.model.n_inact_ext_genes
                 print('Share of deactivated inactive genes in extension terms: %.4f' % share_deact_ext_genes)
                 print('-------------------')
@@ -323,15 +325,15 @@ class expiMapTrainer(trVAETrainer):
 
         if self.beta is not None and self.model.use_hsic:
             weighted_hsic = self.beta * hsic_loss
-            self.iter_logs["hsic_loss"].append(hsic_loss)
+            self.iter_logs["hsic_loss"].append(hsic_loss.item())
         else:
             weighted_hsic = 0.
 
         loss = recon_loss + self.calc_alpha_coeff()*kl_loss + weighted_hsic
 
-        self.iter_logs["loss"].append(loss)
-        self.iter_logs["unweighted_loss"].append(recon_loss + kl_loss + hsic_loss)
-        self.iter_logs["recon_loss"].append(recon_loss)
-        self.iter_logs["kl_loss"].append(kl_loss)
+        self.iter_logs["loss"].append(loss.item())
+        self.iter_logs["unweighted_loss"].append((recon_loss + kl_loss + hsic_loss).item())
+        self.iter_logs["recon_loss"].append(recon_loss.item())
+        self.iter_logs["kl_loss"].append(kl_loss.item())
 
         return loss
