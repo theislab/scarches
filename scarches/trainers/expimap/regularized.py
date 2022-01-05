@@ -244,19 +244,19 @@ class expiMapTrainer(trVAETrainer):
     def update_prox_ops(self):
         if 'main_group_lasso' in self.prox_ops:
             alpha_corr = self.alpha * self.watch_lr
-            if self.prox_ops['main_group_lasso']._aplha != alpha_corr:
+            if self.prox_ops['main_group_lasso']._alpha != alpha_corr:
                 self.prox_ops['main_group_lasso'] = ProxGroupLasso(alpha_corr, self.omega)
 
         if 'ext_unannot_l1' in self.prox_ops:
             gamma_ext_corr = self.gamma_ext * self.watch_lr * self.corr_coeffs['gamma_ext']
-            if self.prox_ops['ext_unannot_l1']._aplha != gamma_ext_corr:
-                self.prox_ops['ext_unannot_l1']._aplha = gamma_ext_corr
+            if self.prox_ops['ext_unannot_l1']._alpha != gamma_ext_corr:
+                self.prox_ops['ext_unannot_l1']._alpha = gamma_ext_corr
 
         for mask_key in ('main_soft_mask', 'ext_soft_mask'):
             if mask_key in self.prox_ops:
                 alpha_l1_corr = self.alpha_l1 * self.watch_lr * self.corr_coeffs['alpha_l1']
-                if self.prox_ops[mask_key]._aplha != alpha_l1_corr:
-                    self.prox_ops[mask_key]._aplha = alpha_l1_corr
+                if self.prox_ops[mask_key]._alpha != alpha_l1_corr:
+                    self.prox_ops[mask_key]._alpha = alpha_l1_corr
 
     def apply_prox_ops(self):
         if 'main_soft_mask' in self.prox_ops:
