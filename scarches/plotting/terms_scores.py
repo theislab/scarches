@@ -47,6 +47,8 @@ def plot_abs_bfs(adata, scores_key="bf_scores", terms: Union[str, list]="terms",
 
     if isinstance(terms, str):
         terms = np.asarray(adata.uns[terms])
+    else:
+        terms = np.asarray(terms)
 
     if len(terms) != len(next(iter(scores.values()))["bf"]):
         raise ValueError('Incorrect length of terms.')
