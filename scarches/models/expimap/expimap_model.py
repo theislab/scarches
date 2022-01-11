@@ -47,6 +47,28 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
        decoder_last_layer: String or None
             The last layer of the decoder. Must be 'softmax' (default for 'nb' loss), identity(default for 'mse' loss),
             'softplus', 'exp' or 'relu'.
+       soft_mask: Boolean
+            Use soft mask option. If True, the model will enforce mask with L1 regularization
+            instead of multipling weight of the linear decoder by the binary mask.
+       n_ext: Integer
+            Number of unannotated extension terms.
+            Used for query mapping.
+       n_ext_m: Integer
+            Number of annotated extension terms.
+            Used for query mapping.
+       use_hsic: Boolean
+            If True, add HSIC regularization for unannotated extension terms.
+            Used for query mapping.
+       hsic_one_vs_all: Boolean
+            If True, calculates the sum of HSIC losses for each unannotated term vs the other terms.
+            If False, calculates HSIC for all unannotated terms vs the other terms.
+            Used for query mapping.
+       ext_mask: Array or List
+            Mask (similar to the mask argument) for annotated extension terms.
+            Used for query mapping.
+       soft_ext_mask: Boolean
+            Use the soft mask mode for training with annotated extension terms.
+            Used for query mapping.
     """
     def __init__(
         self,
@@ -67,7 +89,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         n_ext_m: int = 0,
         use_hsic: bool = False,
         hsic_one_vs_all: bool = False,
-        ext_mask: Optional[torch.Tensor] = None,
+        ext_mask: Optional[Union[np.ndarray, list]] = None,
         soft_ext_mask: bool = False
     ):
         self.adata = adata
@@ -160,8 +182,12 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 Learning rate for training the model.
            eps
                 torch.optim.Adam eps parameter
+           alpha: Float
+                Group Lasso regularization coefficient
+           omega: Tensor or None
+                If not 'None', vector of coefficients for each group
            kwargs
-                kwargs for the TrVAE trainer.
+                kwargs for the expiMap trainer.
         """
         self.trainer = expiMapTrainer(
             self.model,
