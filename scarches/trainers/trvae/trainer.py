@@ -27,8 +27,10 @@ class Trainer:
        batch_size: Integer
             Defines the batch size that is used during each Iteration
        alpha_epoch_anneal: Integer or None
-            If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every epoch until the input
+            If not 'None', the KL Loss scaling factor (alpha_kl) will be annealed from 0 to 1 every epoch until the input
             integer is reached.
+       alpha_kl: Float
+            Multiplies the KL divergence part of the loss.
        alpha_iter_anneal: Integer or None
             If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every iteration until the input
             integer is reached.

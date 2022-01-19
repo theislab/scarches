@@ -204,6 +204,8 @@ class SurgeryMixin:
                 If 'True' freeze every weight in first layers except the condition weights.
            remove_dropout: Boolean
                 If 'True' remove Dropout for Transfer Learning.
+           kwargs
+                kwargs for the initialization of the query model.
 
            Returns
            -------
