@@ -111,6 +111,28 @@ class expiMapTrainer(trVAETrainer):
                 Passes the 'n_workers' parameter for the torch.utils.data.DataLoader class.
            seed: Integer
                 Define a specific random seed to get reproducable results.
+           alpha_l1: Float
+                L1 regularization coefficient for the soft mask of reference (old) and new constrained terms.
+                Specifies the strength for deactivating the genes which are not in the corresponding annotations \ groups
+                in the mask.
+           alpha_l1_epoch_anneal: Integer
+                If not 'None', the alpha_l1 scaling factor will be annealed from 0 to 1 every 'alpha_l1_anneal_each' epochs
+                until the input integer is reached.
+           alpha_l1_anneal_each: Integer
+                Anneal alpha_l1 every alpha_l1_anneal_each'th epoch, i.e. for 5 (default)
+                do annealing every 5th epoch.
+           gamma_ext: Float
+                L1 regularization coefficient for the new unconstrained terms. Specifies the strength of
+                sparcity enforcement.
+           gamma_epoch_anneal: Integer
+                If not 'None', the gamma_ext scaling factor will be annealed from 0 to 1 every 'gamma_anneal_each' epochs
+                until the input integer is reached.
+           gamma_anneal_each: Integer
+                Anneal gamma_ext every gamma_anneal_each'th epoch, i.e. for 5 (default)
+                do annealing every 5th epoch.
+           beta: Float
+                HSIC regularization coefficient for the unconstrained terms.
+                Multiplies the HSIC loss terms if not 'None'.
         """
     def __init__(
             self,

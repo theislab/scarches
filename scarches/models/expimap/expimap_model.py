@@ -51,23 +51,23 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             Use soft mask option. If True, the model will enforce mask with L1 regularization
             instead of multipling weight of the linear decoder by the binary mask.
        n_ext: Integer
-            Number of unannotated extension terms.
+            Number of unconstarined extension terms.
             Used for query mapping.
        n_ext_m: Integer
-            Number of annotated extension terms.
+            Number of constrained extension terms.
             Used for query mapping.
        use_hsic: Boolean
-            If True, add HSIC regularization for unannotated extension terms.
+            If True, add HSIC regularization for unconstarined extension terms.
             Used for query mapping.
        hsic_one_vs_all: Boolean
-            If True, calculates the sum of HSIC losses for each unannotated term vs the other terms.
-            If False, calculates HSIC for all unannotated terms vs the other terms.
+            If True, calculates the sum of HSIC losses for each unconstarined term vs the other terms.
+            If False, calculates HSIC for all unconstarined terms vs the other terms.
             Used for query mapping.
        ext_mask: Array or List
-            Mask (similar to the mask argument) for annotated extension terms.
+            Mask (similar to the mask argument) for unconstarined extension terms.
             Used for query mapping.
        soft_ext_mask: Boolean
-            Use the soft mask mode for training with annotated extension terms.
+            Use the soft mask mode for training with the constarined extension terms.
             Used for query mapping.
     """
     def __init__(
@@ -182,10 +182,34 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 Learning rate for training the model.
            eps
                 torch.optim.Adam eps parameter
+           alpha_kl: Float
+                Multiplies the KL divergence part of the loss.
            alpha: Float
                 Group Lasso regularization coefficient
            omega: Tensor or None
                 If not 'None', vector of coefficients for each group
+           alpha_l1: Float
+                L1 regularization coefficient for the soft mask of reference (old) and new constrained terms.
+                Specifies the strength for deactivating the genes which are not in the corresponding annotations \ groups
+                in the mask.
+           alpha_l1_epoch_anneal: Integer
+                If not 'None', the alpha_l1 scaling factor will be annealed from 0 to 1 every 'alpha_l1_anneal_each' epochs
+                until the input integer is reached.
+           alpha_l1_anneal_each: Integer
+                Anneal alpha_l1 every alpha_l1_anneal_each'th epoch, i.e. for 5 (default)
+                do annealing every 5th epoch.
+           gamma_ext: Float
+                L1 regularization coefficient for the new unconstrained terms. Specifies the strength of
+                sparcity enforcement.
+           gamma_epoch_anneal: Integer
+                If not 'None', the gamma_ext scaling factor will be annealed from 0 to 1 every 'gamma_anneal_each' epochs
+                until the input integer is reached.
+           gamma_anneal_each: Integer
+                Anneal gamma_ext every gamma_anneal_each'th epoch, i.e. for 5 (default)
+                do annealing every 5th epoch.
+           beta: Float
+                HSIC regularization coefficient for the unconstrained terms.
+                Multiplies the HSIC loss terms if not 'None'.
            kwargs
                 kwargs for the expiMap trainer.
         """
@@ -380,6 +404,40 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         new_soft_ext_mask: bool = False,
         **kwargs
     ):
+        """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
+
+           Parameters
+           ----------
+           adata
+                Query anndata object.
+           reference_model
+                A model to expand or a path to a model folder.
+           freeze: Boolean
+                If 'True' freezes every part of the network except the first layers of encoder/decoder.
+           freeze_expression: Boolean
+                If 'True' freeze every weight in first layers except the condition weights.
+           remove_dropout: Boolean
+                If 'True' remove Dropout for Transfer Learning.
+           unfreeze_ext: Boolean
+                If 'True' do not freeze weights for new constrained and unconstrained extension terms.
+           new_n_ext: Integer
+                Number of new unconstarined extension terms to add to the reference model.
+                Used for query mapping.
+           new_n_ext_m: Integer
+                Number of new constrained extension terms to add to the reference model.
+                Used for query mapping.
+           new_ext_mask: Array or List
+                Mask (similar to the mask argument) for new unconstarined extension terms.
+           new_soft_ext_mask: Boolean
+                Use the soft mask mode for training with the constarined extension terms.
+           kwargs
+                kwargs for the initialization of the EXPIMAP class for the query model.
+
+           Returns
+           -------
+           new_model
+                New (query) model to train on query data.
+        """
         params = {}
         params['adata'] = adata
         params['reference_model'] = reference_model
