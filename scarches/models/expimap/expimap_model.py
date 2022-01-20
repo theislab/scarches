@@ -17,6 +17,7 @@ from scarches.models.base._base import BaseMixin, SurgeryMixin, CVAELatentsMixin
 
 class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
     """Model for scArches class. This class contains the implementation of Conditional Variational Auto-encoder.
+
        Parameters
        ----------
        adata: : `~anndata.AnnData`
@@ -174,13 +175,14 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         **kwargs
     ):
         """Train the model.
+
            Parameters
            ----------
-           n_epochs
+           n_epochs: Integer
                 Number of epochs for training the model.
-           lr
+           lr: Float
                 Learning rate for training the model.
-           eps
+           eps: Float
                 torch.optim.Adam eps parameter
            alpha_kl: Float
                 Multiplies the KL divergence part of the loss.
@@ -238,6 +240,21 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
     def latent_directions(self, method="sum", get_confidence=False,
                           adata=None, key_added='directions'):
+        """Get directions of upregulation for each latent dimension.
+           Multipling this by raw latent scores ensures positive latent scores correspond to upregulation.
+
+           Parameters
+           ----------
+           method: String
+                Method of calculation, it should be 'sum' or 'counts'.
+           get_confidence: Boolean
+                Only for method='counts'. If 'True', also calculate confidence
+                of the directions.
+           adata: AnnData
+                An AnnData object to store dimensions. If 'None', self.adata is used.
+           key_added: String
+                key of adata.uns where to put the dimensions.
+        """
         if adata is None:
             adata = self.adata
 
