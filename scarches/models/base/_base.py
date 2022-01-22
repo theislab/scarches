@@ -266,7 +266,7 @@ class CVAELatentsMixin:
         mean: bool = False,
         mean_var: bool = False
     ):
-        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
+        """Map `x` in to the latent space. This function will feed data in encoder and return z for each sample in
            data.
            Parameters
            ----------
@@ -277,6 +277,9 @@ class CVAELatentsMixin:
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
            mean
                 return mean instead of random sample from the latent space
+           mean_var
+                return mean and variance instead of random sample from the latent space
+                if `mean=False`.
            Returns
            -------
                 Returns array containing latent space encoding of 'x'.
