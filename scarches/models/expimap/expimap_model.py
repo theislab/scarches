@@ -227,9 +227,57 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self.is_trained_ = True
 
     def nonzero_terms(self):
+        """Return indices of active terms.
+           Active terms are the terms which were not deactivated by the group lasso regularization.
+        """
         return self.model.decoder.nonzero_terms()
 
+    def get_latent(
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+        only_active: bool = False,
+        mean: bool = False,
+        mean_var: bool = False
+    ):
+        """Map `x` in to the latent space. This function will feed data in encoder
+           and return z for each sample in data.
+
+           Parameters
+           ----------
+           x
+                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+                If None, then `self.adata.X` is used.
+           c
+                `numpy nd-array` of original (unencoded) desired labels for each sample.
+           only_active
+                Return only the latent variables which correspond to active terms, i.e terms that
+                were not deactivated by the group lasso regularization.
+           mean
+                return mean instead of random sample from the latent space
+           mean_var
+                return mean and variance instead of random sample from the latent space
+                if `mean=False`.
+
+           Returns
+           -------
+                Returns array containing latent space encoding of 'x'.
+        """
+        result = super().get_latent(x, c, mean, mean_var)
+
+        if not only_active:
+            return result
+        else:
+            active_idx = self.nonzero_terms()
+            if isinstance(result, tuple):
+                result = tuple(r[:, active_idx] for r in result)
+            else:
+                result = result[:, active_idx]
+            return result
+
     def terms_genes(self, terms: Union[str, list]='terms'):
+        """Return lists of genes belonging to the terms.
+        """
         if isinstance(terms, str):
             terms = self.adata.uns[terms]
         else:
@@ -259,6 +307,10 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             adata = self.adata
 
         terms_weights = self.model.decoder.L0.expr_L.weight.data
+        if self.n_ext_m_ > 0:
+            terms_weights = torch.cat([terms_weights, self.model.decoder.L0.ext_L_m.weight.data], dim=1)
+        if self.n_ext_ > 0:
+            terms_weights = torch.cat([terms_weights, self.model.decoder.L0.ext_L.weight.data], dim=1)
 
         if method == "sum":
             signs = terms_weights.sum(0).cpu().numpy()
