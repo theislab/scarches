@@ -275,15 +275,57 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 result = result[:, active_idx]
             return result
 
-    def terms_genes(self, terms: Union[str, list]='terms'):
-        """Return lists of genes belonging to the terms.
+    def term_genes(self, term: Union[str, int], terms: Union[str, list]='terms'):
+        """Return the dataframe with genes belonging to the term after training sorted by absolute weights in the decoder.
         """
         if isinstance(terms, str):
-            terms = self.adata.uns[terms]
+            terms = list(self.adata.uns[terms])
         else:
             if len(terms) != len(self.mask_):
                 raise ValueError('The list of terms should have the same length as the mask.')
-        I = np.array(self.mask_, dtype=bool)
+            terms = list(terms)
+
+        if self.n_ext_m_ > 0:
+            terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+
+        term = terms.index(term) if isinstance(term, str) else term
+
+        if term >= self.latent_dim_:
+            term -= self.latent_dim_
+            weights = self.model.decoder.L0.ext_L_m.weight[:, term].data.cpu().numpy()
+            mask_idx = self.ext_mask_[term]
+        else:
+            weights = self.model.decoder.L0.expr_L.weight[:, term].data.cpu().numpy()
+            mask_idx = self.mask_[term]
+
+        abs_weights = np.abs(weights)
+        srt_idx = np.argsort(abs_weights)[::-1][:(abs_weights > 0).sum()]
+        in_mask = np.isin(srt_idx, np.where(mask_idx)[0])
+
+        result = pd.DataFrame()
+        result['genes'] = self.adata.var_names[srt_idx].tolist()
+        result['weights'] = weights[srt_idx]
+        result['in_mask'] = False
+        result['in_mask'][in_mask] = True
+
+        return result
+
+    def mask_genes(self, terms: Union[str, list]='terms'):
+        """Return lists of genes belonging to the terms in the mask.
+        """
+        if isinstance(terms, str):
+            terms = list(self.adata.uns[terms])
+        else:
+            if len(terms) != len(self.mask_):
+                raise ValueError('The list of terms should have the same length as the mask.')
+            terms = list(terms)
+
+        I = np.array(self.mask_)
+        if self.n_ext_m_ > 0:
+            I = np.concatenate((I, self.ext_mask_))
+            terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+        I = I.astype(bool)
+
         return {term: self.adata.var_names[I[i]].tolist() for i, term in enumerate(terms)}
 
     def latent_directions(self, method="sum", get_confidence=False,
