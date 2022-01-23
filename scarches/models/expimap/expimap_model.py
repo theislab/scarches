@@ -281,32 +281,42 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         if isinstance(terms, str):
             terms = list(self.adata.uns[terms])
         else:
-            if len(terms) != len(self.mask_):
+            if len(terms) != self.latent_dim_:
                 raise ValueError('The list of terms should have the same length as the mask.')
             terms = list(terms)
 
         if self.n_ext_m_ > 0:
             terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+        if self.n_ext_ > 0:
+            terms += ['unconstrained_' + str(i) for i in range(self.n_ext_)]
 
         term = terms.index(term) if isinstance(term, str) else term
 
-        if term >= self.latent_dim_:
+        lat_mask_dim = self.latent_dim_ + self.n_ext_m_
+
+        if term < self.latent_dim_:
+            weights = self.model.decoder.L0.expr_L.weight[:, term].data.cpu().numpy()
+            mask_idx = self.mask_[term]
+        elif term >= lat_mask_dim:
+            term -= lat_mask_dim
+            weights = self.model.decoder.L0.ext_L.weight[:, term].data.cpu().numpy()
+            mask_idx = None
+        else:
             term -= self.latent_dim_
             weights = self.model.decoder.L0.ext_L_m.weight[:, term].data.cpu().numpy()
             mask_idx = self.ext_mask_[term]
-        else:
-            weights = self.model.decoder.L0.expr_L.weight[:, term].data.cpu().numpy()
-            mask_idx = self.mask_[term]
 
         abs_weights = np.abs(weights)
         srt_idx = np.argsort(abs_weights)[::-1][:(abs_weights > 0).sum()]
-        in_mask = np.isin(srt_idx, np.where(mask_idx)[0])
 
         result = pd.DataFrame()
         result['genes'] = self.adata.var_names[srt_idx].tolist()
         result['weights'] = weights[srt_idx]
         result['in_mask'] = False
-        result['in_mask'][in_mask] = True
+
+        if mask_idx is not None:
+            in_mask = np.isin(srt_idx, np.where(mask_idx)[0])
+            result['in_mask'][in_mask] = True
 
         return result
 
@@ -316,7 +326,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         if isinstance(terms, str):
             terms = list(self.adata.uns[terms])
         else:
-            if len(terms) != len(self.mask_):
+            if len(terms) != self.latent_dim_:
                 raise ValueError('The list of terms should have the same length as the mask.')
             terms = list(terms)
 
