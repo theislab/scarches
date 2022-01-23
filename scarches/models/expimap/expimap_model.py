@@ -275,24 +275,53 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 result = result[:, active_idx]
             return result
 
+    def update_terms(self, terms: Union[str, list]='terms', adata=None):
+        """Add extension terms' names to the terms.
+        """
+        if isinstance(terms, str):
+            adata = self.adata if adata is None else adata
+            key = terms
+            terms = list(adata.uns[terms])
+        else:
+            adata = None
+            key = None
+            terms = list(terms)
+
+        lat_mask_dim = self.latent_dim_ + self.n_ext_m_
+        if len(terms) != self.latent_dim_ and len(terms) != lat_mask_dim + self.n_ext_:
+            raise ValueError('The list of terms should have the same length as the mask.')
+
+        if len(terms) == self.latent_dim_:
+            if self.n_ext_m_ > 0:
+                terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+            if self.n_ext_ > 0:
+                terms += ['unconstrained_' + str(i) for i in range(self.n_ext_)]
+
+        if adata is not None:
+            adata.uns[key] = terms
+        else:
+            return terms
+
     def term_genes(self, term: Union[str, int], terms: Union[str, list]='terms'):
         """Return the dataframe with genes belonging to the term after training sorted by absolute weights in the decoder.
         """
         if isinstance(terms, str):
             terms = list(self.adata.uns[terms])
         else:
-            if len(terms) != self.latent_dim_:
-                raise ValueError('The list of terms should have the same length as the mask.')
             terms = list(terms)
 
-        if self.n_ext_m_ > 0:
-            terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
-        if self.n_ext_ > 0:
-            terms += ['unconstrained_' + str(i) for i in range(self.n_ext_)]
-
-        term = terms.index(term) if isinstance(term, str) else term
+        if len(terms) == self.latent_dim_:
+            if self.n_ext_m_ > 0:
+                terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+            if self.n_ext_ > 0:
+                terms += ['unconstrained_' + str(i) for i in range(self.n_ext_)]
 
         lat_mask_dim = self.latent_dim_ + self.n_ext_m_
+
+        if len(terms) != self.latent_dim_ and len(terms) != lat_mask_dim + self.n_ext_:
+            raise ValueError('The list of terms should have the same length as the mask.')
+
+        term = terms.index(term) if isinstance(term, str) else term
 
         if term < self.latent_dim_:
             weights = self.model.decoder.L0.expr_L.weight[:, term].data.cpu().numpy()
@@ -326,14 +355,20 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         if isinstance(terms, str):
             terms = list(self.adata.uns[terms])
         else:
-            if len(terms) != self.latent_dim_:
-                raise ValueError('The list of terms should have the same length as the mask.')
             terms = list(terms)
 
         I = np.array(self.mask_)
+
         if self.n_ext_m_ > 0:
             I = np.concatenate((I, self.ext_mask_))
-            terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+
+            if len(terms) == self.latent_dim_:
+                terms += ['constrained_' + str(i) for i in range(self.n_ext_m_)]
+            elif len(terms) == self.latent_dim_ + self.n_ext_m_ + self.n_ext_:
+                terms = terms[:(self.latent_dim_ + self.n_ext_m_)]
+            else:
+                raise ValueError('The list of terms should have the same length as the mask.')
+
         I = I.astype(bool)
 
         return {term: self.adata.var_names[I[i]].tolist() for i, term in enumerate(terms)}
@@ -403,6 +438,35 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         exact=True,
         key_added='bf_scores'
     ):
+        """Gene set enrichment test for the latent space. Test the hypothesis that latent scores
+           for each term in one group (z_1) is bigger than in the other group (z_2).
+
+           Puts results to `adata.uns[key_added]`. Results are a dictionary with
+           `p_h0` - probability that z_1 > z_2, `p_h1 = 1-p_h0` and `bf` - bayes factors equal to `log(p_h0/p_h1)`.
+
+           Parameters
+           ----------
+           groups: String or Dict
+                A string with the key in `adata.obs` to look for categories or a dictionary
+                with categories as keys and lists of cell names as values.
+           comparison: String
+                The category name to compare against. If 'rest', then compares each category against all others.
+           n_sample: Integer
+                Number of random samples to draw for each category.
+           use_directions: Boolean
+                If 'True', multiplies the latent scores by directions in `adata`.
+           directions_key: String
+                The key in `adata.uns` for directions.
+           select_terms: Array
+                If not 'None', then an index of terms to select for the test. Only does the test
+                for these terms.
+           adata: AnnData
+                An AnnData object to use. If 'None', uses `self.adata`.
+           exact: Boolean
+                Use exact probabilities for comparisons.
+           key_added: String
+                key of adata.uns where to put the results of the test.
+        """
         if adata is None:
             adata = self.adata
 

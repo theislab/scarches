@@ -112,7 +112,7 @@ class expiMapTrainer(trVAETrainer):
            seed: Integer
                 Define a specific random seed to get reproducable results.
            alpha_l1: Float
-                L1 regularization coefficient for the soft mask of reference (old) and new constrained terms.
+                L1 regularization coefficient for the soft mask of reference and new constrained terms.
                 Specifies the strength for deactivating the genes which are not in the corresponding annotations \ groups
                 in the mask.
            alpha_l1_epoch_anneal: Integer
