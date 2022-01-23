@@ -100,7 +100,7 @@ class MaskedLinearDecoder(nn.Module):
             raise ValueError("Unrecognized loss.")
 
         print("Decoder Architecture:")
-        print("\tMasked linear layer in, ext, ext_m, cond, out: ", in_dim, n_ext, n_ext_m, n_cond, out_dim)
+        print("\tMasked linear layer in, ext_m, ext, cond, out: ", in_dim, n_ext_m, n_ext, n_cond, out_dim)
         if mask is not None:
             print('\twith hard mask.')
         else:
