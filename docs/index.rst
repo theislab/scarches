@@ -38,8 +38,8 @@ Supervised and Semi-supervised
  these methods.
 
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
-  
- - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
+
+ - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning.
 
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
@@ -51,7 +51,7 @@ Multi-modal
 Which model to choose?
 ---------------
 
-- If your reference data is labeled (cell-type labels) and you have unlabeled or labeled query then use **scArches scANVI**.  
+- If your reference data is labeled (cell-type labels) and you have unlabeled or labeled query then use **scArches scANVI**.
 
 - If your reference data is labeled (cell-type labels) and you have labeled query then use **scGen**.
 
@@ -64,7 +64,7 @@ Which model to choose?
 Where to start?
 ---------------
 To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/trvae_surgery_pipeline.html>`__ tutorial.
-To find out how to construct and share or use pre-trained models example sections. 
+To find out how to construct and share or use pre-trained models example sections.
 
 Reference
 -------------------------------
@@ -108,3 +108,5 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    reference_building_from_scratch
    pbmc_pipeline_trvae_scvi_scanvi
    scgen_map_query
+   expimap_surgery_pipeline_basic
+   expimap_surgery_pipeline_advanced
