@@ -40,7 +40,9 @@ notebooks = [
     'trvae_surgery_pipeline.ipynb',
     'trVAE_zenodo_pipeline.ipynb',
     'reference_building_from_scratch.ipynb',
-     'scgen_map_query.ipynb'
+    'scgen_map_query.ipynb',
+    'expimap_surgery_pipeline_basic.ipynb',
+    'expimap_surgery_pipeline_advanced.ipynb'
 ]
 
 for nb in notebooks:
