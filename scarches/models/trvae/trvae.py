@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from .modules import Encoder, Decoder
 from .losses import mse, mmd, zinb, nb
 from ._utils import one_hot_encoder
-from scarches.models.base._base import CVAELatentsModelMixin
+from ..base._base import CVAELatentsModelMixin
 
 
 class trVAE(nn.Module, CVAELatentsModelMixin):

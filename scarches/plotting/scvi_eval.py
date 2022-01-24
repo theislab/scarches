@@ -1,7 +1,7 @@
 from scvi.data import get_from_registry
 
-from scarches.metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
-from scarches.models import SCVI, SCANVI, TOTALVI
+from ..metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
+from ..models import SCVI, SCANVI, TOTALVI
 
 from scipy.sparse import issparse
 import numpy as np

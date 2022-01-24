@@ -9,7 +9,7 @@ from anndata import AnnData, read
 from typing import Optional, Union
 from torch.distributions import Normal
 
-from scarches.models.base._utils import _validate_var_names
+from ._utils import _validate_var_names
 
 
 class BaseMixin:

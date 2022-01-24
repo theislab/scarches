@@ -6,7 +6,7 @@ import time
 from torch.utils.data import DataLoader
 from torch.utils.data import WeightedRandomSampler
 
-from scarches.utils.monitor import EarlyStopping
+from ...utils.monitor import EarlyStopping
 from ._utils import make_dataset, custom_collate, print_progress
 
 
