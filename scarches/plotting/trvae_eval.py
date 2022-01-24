@@ -5,10 +5,10 @@ import anndata
 import matplotlib.pyplot as plt
 from typing import Union
 
-from scarches.dataset.trvae._utils import label_encoder
-from scarches.metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
-from scarches.models import trVAE, TRVAE
-from scarches.trainers import trVAETrainer
+from ..dataset.trvae._utils import label_encoder
+from ..metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
+from ..models import trVAE, TRVAE
+from ..trainers import trVAETrainer
 
 sc.settings.set_figure_params(dpi=200, frameon=False)
 sc.set_figure_params(dpi=200)

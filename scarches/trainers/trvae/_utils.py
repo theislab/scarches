@@ -5,7 +5,7 @@ import torch
 import collections.abc as container_abcs
 from torch.utils.data import DataLoader
 
-from scarches.dataset import trVAEDataset
+from ...dataset import trVAEDataset
 
 
 def print_progress(epoch, logs, n_epochs=10000, only_val_losses=True):
