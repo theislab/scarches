@@ -1,6 +1,11 @@
 from scipy.special import gamma
 import torch
 
+# Adapted from
+# Title: Information Constraints on Auto-Encoding Variational Bayes
+# Authors: Romain Lopez, Jeffrey Regier, Nir Yosef, Michael I. Jordan
+# Code: https://github.com/romain-lopez/HCV/blob/master/hcv.py
+
 def kernel_matrix(x: torch.Tensor, sigma):
     x1  = torch.unsqueeze(x, 0)
     x2  = torch.unsqueeze(x, 1)
