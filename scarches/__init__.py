@@ -1,4 +1,4 @@
-from . import dataset, metrics, trainers, models, zenodo, plotting
+from . import dataset, metrics, trainers, models, zenodo, plotting, utils
 
 __author__ = ', '.join([
     'Marco Wagenstetter',
