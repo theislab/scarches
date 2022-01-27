@@ -5,7 +5,9 @@ from typing import Union
 
 def plot_abs_bfs_key(scores, terms, key, n_points=30, lim_val=2.3, fontsize=8, scale_y=2, yt_step=0.3,
                      title=None, ax=None):
-
+    """\
+    Plot the absolute bayes scores rankings.
+    """
     txt_args = dict(
         rotation='vertical',
         verticalalignment='bottom',
