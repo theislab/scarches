@@ -6,6 +6,7 @@ def add_annotations(adata, files, min_genes=0, max_genes=None, varm_key='I', uns
                     clean=True, genes_use_upper=True):
     """\
     Add annotations to an AnnData object from files.
+
     Parameters
     ----------
     adata
