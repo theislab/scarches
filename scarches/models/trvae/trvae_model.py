@@ -249,7 +249,8 @@ class TRVAE(BaseMixin):
         soft_mask: bool = False,
         soft_ext_mask: bool = False,
         hsic_one_vs_all: bool = False,
-        ext_mask: Optional[Union[np.ndarray, list]] = None
+        ext_mask: Optional[Union[np.ndarray, list]] = None,
+        mmd_instead_kl: bool = False # for backwards compatibility only
     ):
         self.adata = adata
 
