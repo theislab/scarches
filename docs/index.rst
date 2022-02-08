@@ -10,7 +10,7 @@ scArches is a package to integrate newly produced single-cell datasets into inte
 
 .. note::
 
-   **(6.02.2022)** We have added **expiMap** (`Lotfollahi*, Rybakov( et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_) to scArches code base. expiMap alows inerpetable reference mapping. Try it in toturials sections.
+   **(6.02.2022)** We have added **expiMap** (`Lotfollahi, Rybakov et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_) to scArches code base. expiMap allows interpretable reference mapping. Try it in the tutorials section.
 
 What can you do with scArches?
 -------------------------------
