@@ -9,6 +9,14 @@ scArches - single-cell architecture surgery
 
 scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of several conditional generative models for single-cell data.
 
+
+
+
+Updates
+-------------------------------
+
+- **(6.02.2022)** We have added **expiMap** (`Lotfollahi*, Rybakov( et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_) to scArches code base. expiMap alows inerpetable reference mapping. See toturials here `here <https://scarches.readthedocs.io/>`_ .
+
 What can you do with scArches?
 -------------------------------
 - Construct single or multi-modal (CITE-seq) reference atlases and share the trained model and the data (if possible).
