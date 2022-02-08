@@ -10,7 +10,7 @@ scArches is a package to integrate newly produced single-cell datasets into inte
 
 .. note::
 
-   From version `0.3.0` we moved to PyTorch, however, you can still install the latest Tensorflow version by installing `0.2.4`.
+  expiMap has been added to scArches code base. It allows interpretable representation learning from scRNA-seq data and also reference mapping. Try it in the tutorial section. 
 
 What can you do with scArches?
 -------------------------------
