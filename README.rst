@@ -37,7 +37,13 @@ Supervised and Semi-supervised
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
  
  - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
- 
+
+
+Bioligically informed
+ - **expiMap** (`Lotfollahi*, Rybakov et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from databases or users allowing users to analyze your query data in the context of known gene programs.  
+
+
+
  
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
