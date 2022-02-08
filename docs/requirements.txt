@@ -3,4 +3,4 @@ sphinx>=3.0.3
 nbconvert==5.6.1
 nbsphinx>=0.7
 numpydoc
-scikit-learn~=0.24.1
+cython
