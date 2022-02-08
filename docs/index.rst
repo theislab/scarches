@@ -31,7 +31,7 @@ Unsupervised
  - **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes
  count distribution on the data (NB, ZINB, Poisson).
 
- - **trVAE** (`Lotfollahi et al.,2019 <https://arxiv.org/abs/1910.01791>`_): It supports both normalized log transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
+ - **trVAE** (`Lotfollahi et al.,2020 <https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5>`_): It supports both normalized log transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
 
 Supervised and Semi-supervised
  This class of algorithms assumes the user has access to `cell type` labels when creating the reference data and usually perform better integration compared to. unsupervised methods. However, query data still can be unlabeled. In addition to integration, you can classify your query cells using
@@ -40,6 +40,9 @@ Supervised and Semi-supervised
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
 
  - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning.
+
+Bioligically informed
+ - **expiMap** (`Lotfollahi, Rybakov et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.
 
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
@@ -57,9 +60,7 @@ Which model to choose?
 
 - If your reference and query are both unlabeled our preferred model is **scArches scVI** and if it did not work for you try **scArches trVAE**.
 
-
 - If you have CITE-seq data and you want to integrate RNA-seq as query and denoise the proteins in the RNA-seq then use **scArches totalVI**.
-
 
 Where to start?
 ---------------
