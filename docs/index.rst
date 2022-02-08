@@ -10,7 +10,7 @@ scArches is a package to integrate newly produced single-cell datasets into inte
 
 .. note::
 
-   From version `0.3.0` we moved to PyTorch, however, you can still install the latest Tensoflow version by installing `0.2.4`.
+   **(6.02.2022)** We have added **expiMap** (`Lotfollahi*, Rybakov( et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_) to scArches code base. expiMap alows inerpetable reference mapping. Try it in toturials sections.
 
 What can you do with scArches?
 -------------------------------
