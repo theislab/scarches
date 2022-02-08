@@ -8,7 +8,7 @@ try:
     from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
-    __version__ = '0.4.1'
+    __version__ = '0.5.0'
 
 setup(name='scArches',
       version=__version__,
@@ -39,6 +39,7 @@ setup(name='scArches',
       classifiers=[
           "Programming Language :: Python :: 3.6",
           "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
           'Environment :: Console',
           'Framework :: Jupyter',
           'Intended Audience :: Developers',
