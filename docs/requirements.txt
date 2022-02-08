@@ -5,3 +5,4 @@ nbsphinx>=0.7
 numpydoc
 cython
 pkgconfig
+pyDeprecate==0.3.0
