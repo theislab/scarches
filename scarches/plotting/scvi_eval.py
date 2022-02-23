@@ -1,5 +1,3 @@
-from scvi.data import get_from_registry
-
 from ..metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
 from ..models import SCVI, SCANVI, TOTALVI
 
@@ -26,6 +24,8 @@ class SCVI_EVAL:
             cell_type_key: str = None,
             batch_key: str = None,
     ):
+        from scvi.data import get_from_registry
+        
         self.outer_model = model
         self.model = model.model
         self.model.eval()
