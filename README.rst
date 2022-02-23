@@ -7,7 +7,8 @@ scArches - single-cell architecture surgery
 
  <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="700px" align="center">
 
-scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of several conditional generative models for single-cell data.
+scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases.
+Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups.
 
 
 
