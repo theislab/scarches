@@ -6,3 +6,4 @@ numpydoc
 cython
 pkgconfig
 pyDeprecate==0.3.0
+scvi-tools ~= 0.14.3
