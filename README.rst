@@ -16,7 +16,7 @@ Our method can facilitate large collaborative projects with decentralized traini
 Updates
 -------------------------------
 
-- **(6.02.2022)** We have added `expiMap <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_ to scArches code base. expiMap alows inerpetable reference mapping. See toturials here `here <https://scarches.readthedocs.io/>`_ .
+- **(6.02.2022)** We have added `expiMap <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_ to scArches code base. expiMap alows interpretable reference mapping. See tutorials here `here <https://scarches.readthedocs.io/>`_ .
 
 What can you do with scArches?
 -------------------------------
