@@ -1,3 +1,5 @@
+from collections import Counter
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -106,16 +108,7 @@ class AnnotatedDataset(Dataset):
     @property
     def stratifier_weights(self):
         conditions = self.conditions.detach().cpu().numpy()
-        condition_coeff = 1 / len(conditions)
-        weights_per_condition = list()
-        for i in range(len(self.conditions)):
-            samples_per_condition = np.count_nonzero(conditions == i)
-            if samples_per_condition == 0:
-                weights_per_condition.append(0)
-            else:
-                weights_per_condition.append((1 / samples_per_condition) * condition_coeff)
-        strat_weights = np.copy(conditions)
-        for i in range(len(conditions)):
-            strat_weights = np.where(strat_weights == i, weights_per_condition[i], strat_weights)
-
-        return strat_weights.astype(float)
+        condition2count = Counter(conditions)
+        counts = np.array([condition2count[cond] for cond in conditions])
+        weights = len(conditions) / counts
+        return weights.astype(float)
