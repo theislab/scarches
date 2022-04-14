@@ -4,7 +4,7 @@ from anndata import AnnData
 from collections import defaultdict
 
 from ._utils import shuffle_adata, print_progress
-from scarches.utils.monitor import EarlyStopping
+from ...utils.monitor import EarlyStopping
 
 
 class vaeArithTrainer:

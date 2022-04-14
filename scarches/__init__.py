@@ -1,4 +1,4 @@
-from . import dataset, metrics, trainers, models, zenodo, plotting, classifiers
+from . import dataset, metrics, trainers, models, zenodo, plotting, utils
 
 __author__ = ', '.join([
     'Marco Wagenstetter',
@@ -13,3 +13,5 @@ __email__ = ', '.join([
     'mohammad.lotfollahi@helmholtz-muenchen.de',
     'sergei.rybakov@helmholtz-muenchen.de'
 ])
+
+__version__ = '0.5.1'

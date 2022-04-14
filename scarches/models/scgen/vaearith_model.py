@@ -5,9 +5,9 @@ from anndata import AnnData
 from typing import Optional, Union
 
 from .vaearith import vaeArith
-from scarches.trainers import vaeArithTrainer
-from scarches.models.base._utils import _validate_var_names
-from scarches.models.base._base import BaseMixin
+from ...trainers import vaeArithTrainer
+from ..base._utils import _validate_var_names
+from ..base._base import BaseMixin
 
 
 class scgen(BaseMixin):
@@ -190,12 +190,12 @@ class scgen(BaseMixin):
         query_adata_by_batches = [query[query.obs[batch_key].isin([batch])].copy() for batch in query_batches_labels]
 
         reference_query_adata = AnnData.concatenate(*[corrected_reference, query_adata_by_batches],
-                                                    batch_key="reference_map", 
+                                                    batch_key="reference_map",
                                                     batch_categories= ['reference'] + query_batches_labels,
                                                     index_unique=None)
-        reference_query_adata.obs['original_batch'] = reference_query_adata.obs[batch_key].tolist() 
+        reference_query_adata.obs['original_batch'] = reference_query_adata.obs[batch_key].tolist()
 
-        # passed model as file 
+        # passed model as file
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
             _validate_var_names(query, var_names)
@@ -208,7 +208,7 @@ class scgen(BaseMixin):
 
             return integrated_query
 
-        #passed model as model object 
+        #passed model as model object
         else:
             # when corrected_reference is already in the passed model
             if np.all(reference_model._get_user_attributes()[0][1].X == corrected_reference.X):
@@ -224,4 +224,3 @@ class scgen(BaseMixin):
                 integrated_query = new_model.batch_removal(reference_query_adata, batch_key = "reference_map", cell_label_key = "cell_type", return_latent = True)
 
             return integrated_query
-

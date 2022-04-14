@@ -4,7 +4,7 @@ import scarches as sca
 from scarches.dataset.trvae.data_handling import remove_sparsity
 import matplotlib.pyplot as plt
 
-n_epochs_vae = 500
+n_epochs_vae = 100
 batch_key = "study"
 cell_type_key = "cell_type"
 

@@ -6,7 +6,7 @@ import time
 from torch.utils.data import DataLoader
 from torch.utils.data import WeightedRandomSampler
 
-from scarches.utils.monitor import EarlyStopping
+from ...utils.monitor import EarlyStopping
 from ._utils import make_dataset, custom_collate, print_progress
 
 
@@ -22,13 +22,15 @@ class Trainer:
             for 'mse' loss.
        condition_key: String
             column name of conditions in `adata.obs` data frame.
-       cell_type_key: String
-            column name of celltypes in `adata.obs` data frame.
+       cell_type_keys: List
+            List of column names of different celltype levels in `adata.obs` data frame.
        batch_size: Integer
             Defines the batch size that is used during each Iteration
        alpha_epoch_anneal: Integer or None
-            If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every epoch until the input
+            If not 'None', the KL Loss scaling factor (alpha_kl) will be annealed from 0 to 1 every epoch until the input
             integer is reached.
+       alpha_kl: Float
+            Multiplies the KL divergence part of the loss.
        alpha_iter_anneal: Integer or None
             If not 'None', the KL Loss scaling factor will be annealed from 0 to 1 every iteration until the input
             integer is reached.
@@ -47,9 +49,6 @@ class Trainer:
        use_stratified_sampling: Boolean
             If 'True', the sampler tries to load equally distributed batches concerning the conditions in every
             iteration.
-       use_stratified_split: Boolean
-            If `True`, the train and validation data will be constructed in such a way that both have same distribution
-            of conditions in the data.
        monitor: Boolean
             If `True', the progress of the training will be printed after each epoch.
        monitor_only_val: Boolean
@@ -67,9 +66,10 @@ class Trainer:
                  model,
                  adata,
                  condition_key: str = None,
-                 cell_type_key: str = None,
+                 cell_type_keys: str = None,
                  batch_size: int = 128,
                  alpha_epoch_anneal: int = None,
+                 alpha_kl: float = 1.,
                  use_early_stopping: bool = True,
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
@@ -78,19 +78,21 @@ class Trainer:
         self.adata = adata
         self.model = model
         self.condition_key = condition_key
-        self.cell_type_key = cell_type_key
+        self.cell_type_keys = cell_type_keys
 
         self.batch_size = batch_size
         self.alpha_epoch_anneal = alpha_epoch_anneal
         self.alpha_iter_anneal = kwargs.pop("alpha_iter_anneal", None)
         self.use_early_stopping = use_early_stopping
         self.reload_best = reload_best
+
+        self.alpha_kl = alpha_kl
+
         early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
 
         self.n_samples = kwargs.pop("n_samples", None)
         self.train_frac = kwargs.pop("train_frac", 0.9)
         self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
-        self.use_stratified_split = kwargs.pop("use_stratified_split", False)
 
         self.weight_decay = kwargs.pop("weight_decay", 0.04)
         self.clip_value = kwargs.pop("clip_value", 0.0)
@@ -134,9 +136,8 @@ class Trainer:
         self.train_data, self.valid_data = make_dataset(
             self.adata,
             train_frac=self.train_frac,
-            use_stratified_split=self.use_stratified_split,
             condition_key=self.condition_key,
-            cell_type_key=self.cell_type_key,
+            cell_type_keys=self.cell_type_keys,
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
         )
@@ -191,11 +192,11 @@ class Trainer:
            Current annealed alpha value
         """
         if self.alpha_epoch_anneal is not None:
-            alpha_coeff = min(self.epoch / self.alpha_epoch_anneal, 1)
+            alpha_coeff = min(self.alpha_kl * self.epoch / self.alpha_epoch_anneal, self.alpha_kl)
         elif self.alpha_iter_anneal is not None:
-            alpha_coeff = min(((self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), 1)
+            alpha_coeff = min((self.alpha_kl * (self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), self.alpha_kl)
         else:
-            alpha_coeff = 1
+            alpha_coeff = self.alpha_kl
         return alpha_coeff
 
     def train(self,

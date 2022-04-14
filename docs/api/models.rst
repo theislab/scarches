@@ -2,6 +2,7 @@ Models
 ======
 
 * `trVAE`_
+* `expiMap`_
 * `scVI`_
 * `scANVI`_
 * `TotalVI`_
@@ -10,6 +11,14 @@ trVAE
 -----
 
 .. autoclass:: scarches.models.TRVAE
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+expiMap
+-----
+
+.. autoclass:: scarches.models.EXPIMAP
     :members:
     :undoc-members:
     :show-inheritance:

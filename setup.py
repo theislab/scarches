@@ -5,12 +5,13 @@ from setuptools import setup, find_packages
 long_description = Path('README.rst').read_text('utf-8')
 
 try:
-    from scarches import __author__, __email__
+    from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
+    __version__ = '0.5.1'
 
 setup(name='scArches',
-      version='0.3.5',
+      version=__version__,
       description='Transfer learning with Architecture Surgery on Single-cell data',
       long_description=long_description,
       long_description_content_type="text/markdown",
@@ -21,11 +22,24 @@ setup(name='scArches',
       packages=find_packages(),
       zip_safe=False,
       install_requires=[
-          l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
+        "scanpy>=1.6.0",
+    	"anndata>=0.7.4",
+    	"h5py>=2.10.0",
+    	"torch>=1.8.0",
+    	"numpy>=1.19.2",
+    	"scipy>=1.5.2",
+    	"scikit-learn>=0.23.2",
+    	"matplotlib>=3.3.1",
+    	"pandas>=1.1.2",
+    	"scvi-tools>=0.12.1",
+    	"tqdm>=4.56.0",
+    	"requests",
+    	"gdown",
       ],
       classifiers=[
           "Programming Language :: Python :: 3.6",
           "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
           'Environment :: Console',
           'Framework :: Jupyter',
           'Intended Audience :: Developers',

@@ -2,17 +2,12 @@ Installation
 ============
 
 .. note::
-  **1.3.21**
-  
-  scArches requires scvi-tools as the backbone, to be on the safe side please install `scvi-tools-0.8.1`.
-  Newer versions might produce errors on compatibility with scArches
-.. note::
 
    From version `0.3.0` we moved to PyTorch, however you can still install latest
    Tensoflow version by installing `0.2.4`.
 
-   
-scArches requires Python 3.6 or 3.7. We recommend to use Miniconda.
+
+scArches requires Python 3.7 or 3.8. We recommend to use Miniconda.
 
 PyPI
 --------

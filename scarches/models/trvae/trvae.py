@@ -8,9 +8,10 @@ import torch.nn.functional as F
 from .modules import Encoder, Decoder
 from .losses import mse, mmd, zinb, nb
 from ._utils import one_hot_encoder
+from ..base._base import CVAELatentsModelMixin
 
 
-class trVAE(nn.Module):
+class trVAE(nn.Module, CVAELatentsModelMixin):
     """ScArches model class. This class contains the implementation of Conditional Variational Auto-encoder.
 
        Parameters
@@ -36,7 +37,7 @@ class trVAE(nn.Module):
        recon_loss: String
             Definition of Reconstruction-Loss-Method, 'mse', 'nb' or 'zinb'.
        beta: Float
-            Scaling Factor for MMD loss. Higher beta values result in stronger batch-correction at a cost of worse biological variation. 
+            Scaling Factor for MMD loss. Higher beta values result in stronger batch-correction at a cost of worse biological variation.
        use_bn: Boolean
             If `True` batch normalization will be applied to layers.
        use_ln: Boolean
@@ -111,72 +112,6 @@ class trVAE(nn.Module):
                                self.use_dr,
                                self.dr_rate,
                                self.n_conditions)
-
-    def sampling(self, mu, log_var):
-        """Samples from standard Normal distribution and applies re-parametrization trick.
-           It is actually sampling from latent space distributions with N(mu, var), computed by encoder.
-
-           Parameters
-           ----------
-           mu: torch.Tensor
-                Torch Tensor of Means.
-           log_var: torch.Tensor
-                Torch Tensor of log. variances.
-
-           Returns
-           -------
-           Torch Tensor of sampled data.
-        """
-        var = torch.exp(log_var) + 1e-4
-        return Normal(mu, var.sqrt()).rsample()
-
-    def get_latent(self, x, c=None, mean=False):
-        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
-           data.
-
-           Parameters
-           ----------
-           x:  torch.Tensor
-                Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-           c: torch.Tensor
-                Torch Tensor of condition labels for each sample.
-           mean: boolean
-
-           Returns
-           -------
-           Returns Torch Tensor containing latent space encoding of 'x'.
-        """
-        x_ = torch.log(1 + x)
-        if self.recon_loss == 'mse':
-            x_ = x
-        z_mean, z_log_var = self.encoder(x_, c)
-        latent = self.sampling(z_mean, z_log_var)
-        if mean:
-            return z_mean
-        return latent
-
-    def get_y(self, x, c=None):
-        """Map `x` in to the y dimension (First Layer of Decoder). This function will feed data in encoder  and return
-           y for each sample in data.
-
-           Parameters
-           ----------
-           x:  torch.Tensor
-                Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-           c: torch.Tensor
-                Torch Tensor of condition labels for each sample.
-
-           Returns
-           -------
-           Returns Torch Tensor containing output of first decoder layer.
-        """
-        x_ = torch.log(1 + x)
-        if self.recon_loss == 'mse':
-            x_ = x
-        z_mean, z_log_var = self.encoder(x_, c)
-        latent = self.sampling(z_mean, z_log_var)
-        output = self.decoder(latent, c)
-        return output[-1]
 
     def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
         x_log = torch.log(1 + x)

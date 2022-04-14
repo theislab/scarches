@@ -4,10 +4,12 @@ import torch
 import pickle
 import numpy as np
 
+from copy import deepcopy
 from anndata import AnnData, read
-from typing import Optional
+from typing import Optional, Union
+from torch.distributions import Normal
 
-from scarches.models.base._utils import _validate_var_names
+from ._utils import _validate_var_names
 
 
 class BaseMixin:
@@ -99,9 +101,22 @@ class BaseMixin:
             # new categoricals changed size
             else:
                 load_ten = load_ten.to(device)
-                dim_diff = new_ten.size()[-1] - load_ten.size()[-1]
-                fixed_ten = torch.cat([load_ten, new_ten[..., -dim_diff:]], dim=-1)
+                # only one dim diff
+                new_shape = new_ten.shape
+                n_dims = len(new_shape)
+                sel = [slice(None)] * n_dims
+                for i in range(n_dims):
+                    dim_diff = new_shape[i] - load_ten.shape[i]
+                    axs = i
+                    sel[i] = slice(-dim_diff, None)
+                    if dim_diff > 0:
+                        break
+                fixed_ten = torch.cat([load_ten, new_ten[tuple(sel)]], dim=axs)
                 load_state_dict[key] = fixed_ten
+
+        for key, ten in new_state_dict.items():
+            if key not in load_state_dict:
+                load_state_dict[key] = ten
 
         self.model.load_state_dict(load_state_dict)
 
@@ -162,3 +177,252 @@ class BaseMixin:
         model.is_trained_ = attr_dict['is_trained_']
 
         return model
+
+
+class SurgeryMixin:
+    @classmethod
+    def load_query_data(
+        cls,
+        adata: AnnData,
+        reference_model: Union[str, 'Model'],
+        freeze: bool = True,
+        freeze_expression: bool = True,
+        remove_dropout: bool = True,
+        **kwargs
+    ):
+        """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
+
+           Parameters
+           ----------
+           adata
+                Query anndata object.
+           reference_model
+                A model to expand or a path to a model folder.
+           freeze: Boolean
+                If 'True' freezes every part of the network except the first layers of encoder/decoder.
+           freeze_expression: Boolean
+                If 'True' freeze every weight in first layers except the condition weights.
+           remove_dropout: Boolean
+                If 'True' remove Dropout for Transfer Learning.
+           kwargs
+                kwargs for the initialization of the query model.
+
+           Returns
+           -------
+           new_model
+                New model to train on query data.
+        """
+        if isinstance(reference_model, str):
+            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
+            adata = _validate_var_names(adata, var_names)
+        else:
+            attr_dict = reference_model._get_public_attributes()
+            model_state_dict = reference_model.model.state_dict()
+        init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
+
+        conditions = init_params['conditions']
+        condition_key = init_params['condition_key']
+
+        new_conditions = []
+        adata_conditions = adata.obs[condition_key].unique().tolist()
+        # Check if new conditions are already known
+        for item in adata_conditions:
+            if item not in conditions:
+                new_conditions.append(item)
+
+        # Add new conditions to overall conditions
+        for condition in new_conditions:
+            conditions.append(condition)
+
+        if remove_dropout:
+            init_params['dr_rate'] = 0.0
+
+        init_params.update(kwargs)
+
+        new_model = cls(adata, **init_params)
+        new_model._load_expand_params_from_dict(model_state_dict)
+
+        if freeze:
+            new_model.model.freeze = True
+            for name, p in new_model.model.named_parameters():
+                p.requires_grad = False
+                if 'theta' in name:
+                    p.requires_grad = True
+                if freeze_expression:
+                    if 'cond_L.weight' in name:
+                        p.requires_grad = True
+                else:
+                    if "L0" in name or "N0" in name:
+                        p.requires_grad = True
+
+        return new_model
+
+
+class CVAELatentsMixin:
+    def get_latent(
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+        mean: bool = False,
+        mean_var: bool = False
+    ):
+        """Map `x` in to the latent space. This function will feed data in encoder and return z for each sample in
+           data.
+           Parameters
+           ----------
+           x
+                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+                If None, then `self.adata.X` is used.
+           c
+                `numpy nd-array` of original (unencoded) desired labels for each sample.
+           mean
+                return mean instead of random sample from the latent space
+           mean_var
+                return mean and variance instead of random sample from the latent space
+                if `mean=False`.
+           Returns
+           -------
+                Returns array containing latent space encoding of 'x'.
+        """
+        device = next(self.model.parameters()).device
+        if x is None and c is None:
+            x = self.adata.X
+            if self.conditions_ is not None:
+                c = self.adata.obs[self.condition_key_]
+
+        if c is not None:
+            c = np.asarray(c)
+            if not set(c).issubset(self.conditions_):
+                raise ValueError("Incorrect conditions")
+            labels = np.zeros(c.shape[0])
+            for condition, label in self.model.condition_encoder.items():
+                labels[c == condition] = label
+            c = torch.tensor(labels, device=device)
+
+        x = torch.tensor(x)
+
+        latents = []
+        indices = torch.arange(x.size(0))
+        subsampled_indices = indices.split(512)
+        for batch in subsampled_indices:
+            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean, mean_var)
+            latent = (latent,) if not isinstance(latent, tuple) else latent
+            latents += [tuple(l.cpu().detach() for l in latent)]
+
+        result = tuple(np.array(torch.cat(l)) for l in zip(*latents))
+        result = result[0] if len(result) == 1 else result
+
+        return result
+
+    def get_y(
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+    ):
+        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
+           data.
+
+           Parameters
+           ----------
+           x
+                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+                If None, then `self.adata.X` is used.
+           c
+                `numpy nd-array` of original (unencoded) desired labels for each sample.
+           Returns
+           -------
+                Returns array containing output of first decoder layer.
+        """
+        device = next(self.model.parameters()).device
+        if x is None and c is None:
+            x = self.adata.X
+            if self.conditions_ is not None:
+                c = self.adata.obs[self.condition_key_]
+
+        if c is not None:
+            c = np.asarray(c)
+            if not set(c).issubset(self.conditions_):
+                raise ValueError("Incorrect conditions")
+            labels = np.zeros(c.shape[0])
+            for condition, label in self.model.condition_encoder.items():
+                labels[c == condition] = label
+            c = torch.tensor(labels, device=device)
+
+        x = torch.tensor(x)
+
+        latents = []
+        indices = torch.arange(x.size(0))
+        subsampled_indices = indices.split(512)
+        for batch in subsampled_indices:
+            latent = self.model.get_y(x[batch,:].to(device), c[batch])
+            latents += [latent.cpu().detach()]
+
+        return np.array(torch.cat(latents))
+
+
+class CVAELatentsModelMixin:
+    def sampling(self, mu, log_var):
+        """Samples from standard Normal distribution and applies re-parametrization trick.
+           It is actually sampling from latent space distributions with N(mu, var), computed by encoder.
+
+           Parameters
+           ----------
+           mu: torch.Tensor
+                Torch Tensor of Means.
+           log_var: torch.Tensor
+                Torch Tensor of log. variances.
+
+           Returns
+           -------
+           Torch Tensor of sampled data.
+        """
+        var = torch.exp(log_var) + 1e-4
+        return Normal(mu, var.sqrt()).rsample()
+
+    def get_latent(self, x, c=None, mean=False, mean_var=False):
+        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
+           data.
+           Parameters
+           ----------
+           x:  torch.Tensor
+                Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+           c: torch.Tensor
+                Torch Tensor of condition labels for each sample.
+           mean: boolean
+           Returns
+           -------
+           Returns Torch Tensor containing latent space encoding of 'x'.
+        """
+        x_ = torch.log(1 + x)
+        if self.recon_loss == 'mse':
+            x_ = x
+        z_mean, z_log_var = self.encoder(x_, c)
+        latent = self.sampling(z_mean, z_log_var)
+        if mean:
+            return z_mean
+        elif mean_var:
+            return (z_mean, torch.exp(z_log_var) + 1e-4)
+        return latent
+
+    def get_y(self, x, c=None):
+        """Map `x` in to the y dimension (First Layer of Decoder). This function will feed data in encoder  and return
+           y for each sample in data.
+
+           Parameters
+           ----------
+           x:  torch.Tensor
+                Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+           c: torch.Tensor
+                Torch Tensor of condition labels for each sample.
+
+           Returns
+           -------
+           Returns Torch Tensor containing output of first decoder layer.
+        """
+        x_ = torch.log(1 + x)
+        if self.recon_loss == 'mse':
+            x_ = x
+        z_mean, z_log_var = self.encoder(x_, c)
+        latent = self.sampling(z_mean, z_log_var)
+        output = self.decoder(latent, c)
+        return output[-1]

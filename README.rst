@@ -7,7 +7,16 @@ scArches - single-cell architecture surgery
 
  <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="700px" align="center">
 
-scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases. Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups. scArches is compatible with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_. and hosts efficient implementations of several conditional generative models for single-cell data.
+scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases.
+Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups.
+
+
+
+
+Updates
+-------------------------------
+
+- **(6.02.2022)** We have added `expiMap <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_ to scArches code base. expiMap alows interpretable reference mapping. See tutorials here `here <https://scarches.readthedocs.io/>`_ .
 
 What can you do with scArches?
 -------------------------------
@@ -35,17 +44,18 @@ Supervised and Semi-supervised
  these methods.
 
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
- 
- - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
- 
- 
+
+ - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning.
+
+Bioligically informed
+ - **expiMap** (`Lotfollahi, Rybakov et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.  
+
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
 
  - **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
    Query datasets can be either from sc-RNAseq or CITE-seq. In addition to integrating query with reference, one can use this model to impute the Proteins
    in the query datasets.
-
 
 Usage and installation
 -------------------------------
@@ -58,7 +68,21 @@ post an `issue <https://github.com/theislab/scarches/issues/new>`__ or reach us 
 
 Reference
 -------------------------------
-If scArches is useful in your research, please consider citing this `preprint <https://www.biorxiv.org/content/10.1101/2020.07.16.205997v1/>`_.
+If scArches is useful in your research, please consider citing following `paper <https://www.nature.com/articles/s41587-021-01001-7>`_:
+::
+
+
+       @article{lotfollahi2021mapping,
+         title={Mapping single-cell data to reference atlases by transfer learning},
+         author={Lotfollahi, Mohammad and Naghipourfar, Mohsen and Luecken, Malte D and Khajavi,
+         Matin and B{\"u}ttner, Maren and Wagenstetter, Marco and Avsec, {\v{Z}}iga and Gayoso,
+         Adam and Yosef, Nir and Interlandi, Marta and others},
+         journal={Nature Biotechnology},
+         pages={1--10},
+         year={2021},
+         publisher={Nature Publishing Group}}
+
+
 
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
