@@ -108,7 +108,9 @@ class AnnotatedDataset(Dataset):
     @property
     def stratifier_weights(self):
         conditions = self.conditions.detach().cpu().numpy()
+        condition_coeff = 1. / len(conditions)
+
         condition2count = Counter(conditions)
         counts = np.array([condition2count[cond] for cond in conditions])
-        weights = len(conditions) / counts
+        weights = condition_coeff / counts
         return weights.astype(float)
