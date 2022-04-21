@@ -8,7 +8,7 @@ try:
     from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
-    __version__ = '0.5.1'
+    __version__ = '0.5.2'
 
 setup(name='scArches',
       version=__version__,
