@@ -24,6 +24,7 @@ setup(name='scArches',
       install_requires=[
         "scanpy>=1.6.0",
     	"anndata>=0.7.4",
+        "scHPL>=1.0.0",
     	"h5py>=2.10.0",
     	"torch>=1.8.0",
     	"numpy>=1.19.2",
