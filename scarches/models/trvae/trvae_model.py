@@ -505,13 +505,13 @@ class TRVAE(BaseMixin):
         else:
             raise ValueError("groups should be a string or a dict.")
 
-        if comparison != "rest" and set(comparison).issubset(cats):
+        if comparison != "rest" and isinstance(comparison, str):
+            comparison = [comparison]
+
+        if comparison != "rest" and not set(comparison).issubset(cats):
             raise ValueError("comparison should be 'rest' or among the passed groups")
 
         scores = {}
-
-        if comparison != "rest" and isinstance(comparison, str):
-            comparison = [comparison]
 
         for cat in cats:
             if cat in comparison:
