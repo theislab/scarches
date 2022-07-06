@@ -111,3 +111,4 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    scgen_map_query
    expimap_surgery_pipeline_basic
    expimap_surgery_pipeline_advanced
+   treeArches_pbmc

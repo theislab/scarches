@@ -42,7 +42,8 @@ notebooks = [
     'reference_building_from_scratch.ipynb',
     'scgen_map_query.ipynb',
     'expimap_surgery_pipeline_basic.ipynb',
-    'expimap_surgery_pipeline_advanced.ipynb'
+    'expimap_surgery_pipeline_advanced.ipynb',
+    'treeArches_pbmc.ipynb'
 ]
 
 for nb in notebooks:
