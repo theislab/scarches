@@ -16,6 +16,8 @@ Our method can facilitate large collaborative projects with decentralized traini
 Updates
 -------------------------------
 
+ **(7.07.2022)** We have added `treeArches <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_ to scArches code base. treeArches enables building cell-type hirachies to idnetify novel states (e.g. disease, sobpopulations) in the query data when mapped to the reference. See tutorials here `here <https://scarches.readthedocs.io/>`_ .
+
 - **(6.02.2022)** We have added `expiMap <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_ to scArches code base. expiMap alows interpretable reference mapping. See tutorials here `here <https://scarches.readthedocs.io/>`_ .
 
 What can you do with scArches?
