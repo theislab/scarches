@@ -112,3 +112,4 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    expimap_surgery_pipeline_basic
    expimap_surgery_pipeline_advanced
    treeArches_pbmc
+   treeArches_identifying_new_ct

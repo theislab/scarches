@@ -43,7 +43,8 @@ notebooks = [
     'scgen_map_query.ipynb',
     'expimap_surgery_pipeline_basic.ipynb',
     'expimap_surgery_pipeline_advanced.ipynb',
-    'treeArches_pbmc.ipynb'
+    'treeArches_pbmc.ipynb',
+    'treeArches_identifying_new_ct.ipynb'
 ]
 
 for nb in notebooks:
