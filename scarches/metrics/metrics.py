@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import itemfreq, entropy
+from scipy.stats import entropy
 from sklearn.metrics import silhouette_score, normalized_mutual_info_score, silhouette_samples
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
@@ -103,7 +103,7 @@ def knn_purity(adata, label_key, n_neighbors=30):
 
 
 def __entropy_from_indices(indices, n_cat):
-    return entropy(np.array(itemfreq(indices)[:, 1].astype(np.int32)), base=n_cat)
+    return entropy(np.unique(indices, return_counts=True)[1], base=n_cat)
 
 
 def nmi_helper(adata, group1, group2, method="arithmetic"):
