@@ -1,14 +1,11 @@
+.. raw:: html
+
+ <img src="https://user-images.githubusercontent.com/33202701/187203672-e0415eec-1278-4b2a-a097-5bb8b6ab694f.svg" width="300px" height="200px" align="center">
+
 |PyPI| |PyPIDownloads| |Docs| |travis|
 
 
-scArches - single-cell architecture surgery
-=========================================================================
-.. raw:: html
-
- <img src="https://user-images.githubusercontent.com/33202701/89729020-15f7c200-da32-11ea-989b-1b9a3283f642.png" width="700px" align="center">
-
-scArches is a package to integrate newly produced single-cell datasets into integrated reference atlases.
-Our method can facilitate large collaborative projects with decentralized training and integration of multiple datasets by different groups.
+Single-cell architecutre surgery scArches (scArches) is a package to for reference-based analysis of single-cell data.
 
 
 
@@ -22,9 +19,9 @@ Updates
 
 What can you do with scArches?
 -------------------------------
-- Construct single or multi-modal (CITE-seq) reference atlases and share the trained model and the data (if possible).
+- Construct single or multi-modal reference atlases and share the trained model and the data (if possible).
 - Download a pre-trained model for your atlas of interest, update it with new datasets and share with your collaborators.
-- Project and integrate query datasets on the top of a reference and use latent representation for downstream tasks, e.g.:diff testing, clustering, classification
+- Project and integrate query datasets into the reference and use latent representation for downstream tasks such as differential testing, clustering, annotation and imputation of missing modalties.
 
 What are the different models?
 ---------------
