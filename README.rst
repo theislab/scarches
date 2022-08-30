@@ -16,8 +16,9 @@ Updates
 
 What is scArches?
 -------------------------------
-- scArches is a method for single-cell reference mapping that allows analysis of your query data by integrating it into a reference atlas.
-- To map your data into the reference, you need an already integrated atlas using one of the reference building methods that are supported by scArches, inlcuding:
+scArches allows analysis of your single-cell query data by integrating it into a reference atlas. To map your data you need an integrated atlas using one of the reference building methods for deifferent applications that are supported by scArches whcih are , inlcuding:
+
+
   
 - **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes count distribution on the data (NB, ZINB, Poisson).
 
