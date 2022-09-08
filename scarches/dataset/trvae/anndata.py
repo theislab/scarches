@@ -30,6 +30,7 @@ class AnnotatedDataset(Dataset):
                  condition_encoder=None,
                  cell_type_keys=None,
                  cell_type_encoder=None,
+                 labeled_array=None
                  ):
 
         self.X_norm = None
@@ -40,11 +41,19 @@ class AnnotatedDataset(Dataset):
         self.cell_type_encoder = cell_type_encoder
 
         if sparse.issparse(adata.X):
-            adata = remove_sparsity(adata)
-        self.data = torch.tensor(adata.X)
+            X = adata.X.toarray()
+        else:
+            X = adata.X
+        self.data = torch.tensor(X)
 
-        self.size_factors = torch.tensor(adata.obs['trvae_size_factors'])
-        self.labeled_vector = torch.tensor(adata.obs['trvae_labeled'])
+        size_factors = adata.X.sum(1)
+        if len(size_factors.shape) < 2:
+            size_factors = np.expand_dims(size_factors, axis=1)
+
+        self.size_factors = torch.tensor(size_factors)
+
+        labeled_array = np.zeros((len(adata), 1)) if labeled_array is None else labeled_array
+        self.labeled_vector = torch.tensor(labeled_array)
 
         # Encode condition strings to integer
         if self.condition_key is not None:
