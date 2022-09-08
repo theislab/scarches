@@ -8,6 +8,7 @@ from copy import deepcopy
 from anndata import AnnData, read
 from typing import Optional, Union
 from torch.distributions import Normal
+from scipy.sparse import issparse
 
 from ._utils import _validate_var_names
 
@@ -299,13 +300,15 @@ class CVAELatentsMixin:
                 labels[c == condition] = label
             c = torch.tensor(labels, device=device)
 
-        x = torch.tensor(x)
-
         latents = []
-        indices = torch.arange(x.size(0))
+        indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_latent(x[batch,:].to(device), c[batch], mean, mean_var)
+            x_batch = x[batch, :]
+            if issparse(x_batch):
+                x_batch = x_batch.toarray()
+            x_batch = torch.tensor(x_batch, device=device)
+            latent = self.model.get_latent(x_batch, c[batch], mean, mean_var)
             latent = (latent,) if not isinstance(latent, tuple) else latent
             latents += [tuple(l.cpu().detach() for l in latent)]
 
@@ -348,13 +351,15 @@ class CVAELatentsMixin:
                 labels[c == condition] = label
             c = torch.tensor(labels, device=device)
 
-        x = torch.tensor(x)
-
         latents = []
-        indices = torch.arange(x.size(0))
+        indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_y(x[batch,:].to(device), c[batch])
+            x_batch = x[batch, :]
+            if issparse(x_batch):
+                x_batch = x_batch.toarray()
+            x_batch = torch.tensor(x_batch, device=device)
+            latent = self.model.get_y(x_batch, c[batch])
             latents += [latent.cpu().detach()]
 
         return np.array(torch.cat(latents))
