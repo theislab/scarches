@@ -46,9 +46,10 @@ class AnnotatedDataset(Dataset):
             X = adata.X
         self.data = torch.tensor(X)
 
-        size_factors = adata.X.sum(1)
-        if len(size_factors.shape) < 2:
-            size_factors = np.expand_dims(size_factors, axis=1)
+#        size_factors = adata.X.sum(1)
+#        if len(size_factors.shape) < 2:
+#            size_factors = np.expand_dims(size_factors, axis=1)
+        size_factors = X.sum(1)
 
         self.size_factors = torch.tensor(size_factors)
 
