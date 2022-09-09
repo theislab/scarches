@@ -1,7 +1,12 @@
+import warnings 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch_geometric.nn as pyg_nn
+try:
+    import torch_geometric.nn as pyg_nn
+except:
+    warnings.warn('In order to use sagenet models, please install pytorch geometric (see https://pytorch-geometric.readthedocs.io).')
+    # warnings.warn('Reommended: .')
 
 
 
