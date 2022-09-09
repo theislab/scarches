@@ -4,7 +4,7 @@ from .trvae.anndata import AnnotatedDataset as trVAEDataset
 # from .DDH_data import *
 from .MGA_data import *
 
-import .MGA_data
+# import .MGA_data
 
 __all__ = ('label_encoder', 'remove_sparsity', 'trVAEDataset'
 )
