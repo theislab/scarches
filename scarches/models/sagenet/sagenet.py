@@ -6,7 +6,7 @@ import numpy as np
 import anndata
 import re
 
-class sage():
+class sagenet():
     """
         A `sagenet` object.
         
