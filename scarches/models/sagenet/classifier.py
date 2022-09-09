@@ -8,7 +8,7 @@ from .model import *
 
 try:
     from captum import *
-from captum.attr import IntegratedGradients
+    from captum.attr import IntegratedGradients
 except:
     warnings.warn('In order to use sagenet models, please install captum (see https://github.com/pytorch/captum).')
     # warnings.warn('Reommended: .')
