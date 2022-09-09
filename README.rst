@@ -32,7 +32,7 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
 
-- **treeArches** (`Lieke*, Lotfollahi* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model builds a hierarchical tree for cell-types in the reference atlas and when mapping the query data can annotate and also identify novel cell-states and populations present in the query data.
+- **treeArches** (`Michielsen*, Lotfollahi* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model builds a hierarchical tree for cell-types in the reference atlas and when mapping the query data can annotate and also identify novel cell-states and populations present in the query data.
 
 Usage and installation
 -------------------------------
