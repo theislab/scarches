@@ -1,6 +1,11 @@
 
 from copy import copy
-from squidpy.datasets._utils import AMetadata
+try:
+    from squidpy.datasets._utils import AMetadata
+except:
+    warnings.warn('In order to use mouse gastrulation seqFISH datsets, please install squidpy (see https://github.com/scverse/squidpy).')
+    # warnings.warn('Reommended: .')
+
 
 
 
