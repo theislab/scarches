@@ -6,13 +6,8 @@ from torch.utils.data import TensorDataset, DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from .utils import compute_metrics
 from .model import *
-
-try:
-    from captum import *
-    from captum.attr import IntegratedGradients
-except:
-    warnings.warn('In order to use sagenet models, please install captum (see https://github.com/pytorch/captum).')
-    # warnings.warn('Reommended: .')
+from captum import *
+from captum.attr import IntegratedGradients
 import numpy as np
 from sklearn.preprocessing import normalize
 
