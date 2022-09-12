@@ -7,7 +7,7 @@ try:
   from .sagenet.sagenet import sagenet
   from .sagenet.utils import *
 except:
-    warnings.warn('In order to use sagenet models, please install pytorch geometric (see https://pytorch-geometric.readthedocs.io) and \n captum (see https://github.com/pytorch/captum).')
+  warnings.warn('In order to use sagenet models, please install pytorch geometric (see https://pytorch-geometric.readthedocs.io) and \n captum (see https://github.com/pytorch/captum).')
 from .expimap.expimap import expiMap
 from .expimap.expimap_model import EXPIMAP
 from scvi.model import SCVI, SCANVI, TOTALVI
