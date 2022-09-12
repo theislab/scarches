@@ -6,12 +6,8 @@ from sklearn.metrics import *
 from sklearn.covariance import GraphicalLassoCV, graphical_lasso, LedoitWolf
 from sklearn.preprocessing import StandardScaler
 import torch
-try:
-    import torch_geometric.nn as pyg_nn
-    import torch_geometric.data as geo_dt 
-except:
-    warnings.warn('In order to use sagenet models, please install pytorch geometric (see https://pytorch-geometric.readthedocs.io).')
-    # warnings.warn('Reommended: .')
+import torch_geometric.nn as pyg_nn
+import torch_geometric.data as geo_dt 
 from sklearn.utils.extmath import fast_logdet
 import numpy as np
 from scipy import sparse
