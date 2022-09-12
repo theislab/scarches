@@ -1,14 +1,13 @@
 from .trvae.trvae import trVAE
 from .trvae.trvae_model import TRVAE
 from .trvae.adaptors import Adaptor, attach_adaptors
-
 from .scgen.vaearith import vaeArith
 from .scgen.vaearith_model import scgen
-from .sagenet.sagenet import sagenet
-from .sagenet.utils import *
-# from .sagenet.DDH_data._DHH_data import *
-# from .sagenet.MGA_data import *
+try:
+  from .sagenet.sagenet import sagenet
+  from .sagenet.utils import *
+except:
+    warnings.warn('In order to use sagenet models, please install pytorch geometric (see https://pytorch-geometric.readthedocs.io) and \n captum (see https://github.com/pytorch/captum).')
 from .expimap.expimap import expiMap
 from .expimap.expimap_model import EXPIMAP
-
 from scvi.model import SCVI, SCANVI, TOTALVI
