@@ -33,23 +33,15 @@ class AnnotatedDataset(Dataset):
                  labeled_array=None
                  ):
 
-        self.X_norm = None
-
         self.condition_key = condition_key
         self.condition_encoder = condition_encoder
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
 
-        if sparse.issparse(adata.X):
-            X = adata.X.toarray()
-        else:
-            X = adata.X
-        self.data = torch.tensor(X)
+        self._is_sparse = sparse.issparse(adata.X)
+        self.data = adata.X if self._is_sparse else torch.tensor(adata.X)
 
-#        size_factors = adata.X.sum(1)
-#        if len(size_factors.shape) < 2:
-#            size_factors = np.expand_dims(size_factors, axis=1)
-        size_factors = X.sum(1)
+        size_factors = np.ravel(adata.X.sum(1))
 
         self.size_factors = torch.tensor(size_factors)
 
@@ -82,7 +74,9 @@ class AnnotatedDataset(Dataset):
     def __getitem__(self, index):
         outputs = dict()
 
-        outputs["x"] = self.data[index, :]
+        x = torch.tensor(self.data[index].toarray()) if self._is_sparse else self.data[index]
+        outputs["x"] = x
+
         outputs["labeled"] = self.labeled_vector[index]
         outputs["sizefactor"] = self.size_factors[index]
 
@@ -95,7 +89,7 @@ class AnnotatedDataset(Dataset):
         return outputs
 
     def __len__(self):
-        return self.data.size(0)
+        return self.data.shape[0]
 
     @property
     def condition_label_encoder(self) -> dict:
