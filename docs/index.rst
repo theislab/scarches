@@ -32,6 +32,8 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **treeArches** (`Michielsen*, Lotfollahi* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model builds a hierarchical tree for cell-types in the reference atlas and when mapping the query data can annotate and also identify novel cell-states and populations present in the query data.
 
+- **SageNet** (`Heidari et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model allows constrcution of a spatial atlas by mapping query dissociated single cells/spots (e.g., from  scRNAseq or visium datasets) into a common coordinate framework using one or more spatially resolved reference datasets.
+
 Which model to choose?
 ---------------
 
@@ -48,6 +50,7 @@ Which model to choose?
 
 - If you want to build a cellular hierarchy and continuously update the hierarchy using new query datasets, see how your query populations compare to the original hierarchy to identify new subpopulations or disease states in your query, then use **treeArches**.
 
+- If you have scRNA seq data and want to map it to a reference spatial atlas to infer the spatial location and perform cell-cell interaction analysis then use **SageNet**.
 
 
 
