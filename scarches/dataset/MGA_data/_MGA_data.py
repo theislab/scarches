@@ -1,12 +1,5 @@
-import warnings
 from copy import copy
-try:
-    from squidpy.datasets._utils import AMetadata
-except:
-    warnings.warn('In order to use the mouse gastrulation seqFISH datsets, please install squidpy (see https://github.com/scverse/squidpy).')
-    # warnings.warn('Reommended: .')
-
-
+from squidpy.datasets._utils import AMetadata
 
 
 _scRNAseq = AMetadata(
@@ -75,5 +68,4 @@ __all__ = [  # noqa: F822
     "seqFISH1_2",
     "seqFISH2_2",
     "seqFISH3_2",
-    
 ]
