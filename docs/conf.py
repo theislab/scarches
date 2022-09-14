@@ -45,6 +45,7 @@ notebooks = [
     'expimap_surgery_pipeline_advanced.ipynb',
     'treeArches_pbmc.ipynb',
     'treeArches_identifying_new_ct.ipynb'
+    'SageNet_mouse_embryo.ipynb'
 ]
 
 for nb in notebooks:
