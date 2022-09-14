@@ -1,5 +1,5 @@
 from .utils import *
-from .classifier import *
+from .classifier import Classifier
 from .model import *
 from os import listdir
 import numpy as np
