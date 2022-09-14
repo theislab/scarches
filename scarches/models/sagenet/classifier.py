@@ -5,8 +5,8 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from .utils import compute_metrics
-from .model import *
-from captum import *
+from .model import GraphSAGE, ChebNet, NNConvNet,  GATConvNet, GENConvNet, MFConv, TransformerConv, ConvNet
+# from captum import *
 from captum.attr import IntegratedGradients
 import numpy as np
 from sklearn.preprocessing import normalize
