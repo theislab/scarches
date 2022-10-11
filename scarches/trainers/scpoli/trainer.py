@@ -123,8 +123,8 @@ class SCPoliTrainer(Trainer):
             )
 
     def train(self, n_epochs=400, lr=1e-3, eps=0.01):
-        begin_loader = time.time()
         self.initialize_loaders()
+        begin = time.time()
         self.model.train()
         self.n_epochs = n_epochs
 
