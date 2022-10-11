@@ -124,11 +124,7 @@ class SCPoliTrainer(Trainer):
 
     def train(self, n_epochs=400, lr=1e-3, eps=0.01):
         begin_loader = time.time()
-        print("loaders init")
         self.initialize_loaders()
-        print("loaders init done")
-        print(time.time() - begin_loader)
-        begin = time.time()
         self.model.train()
         self.n_epochs = n_epochs
 
