@@ -30,21 +30,23 @@ class AnnotatedDataset(Dataset):
                  condition_encoder=None,
                  cell_type_keys=None,
                  cell_type_encoder=None,
+                 labeled_array=None
                  ):
-
-        self.X_norm = None
 
         self.condition_key = condition_key
         self.condition_encoder = condition_encoder
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
 
-        if sparse.issparse(adata.X):
-            adata = remove_sparsity(adata)
-        self.data = torch.tensor(adata.X)
+        self._is_sparse = sparse.issparse(adata.X)
+        self.data = adata.X if self._is_sparse else torch.tensor(adata.X)
 
-        self.size_factors = torch.tensor(adata.obs['trvae_size_factors'])
-        self.labeled_vector = torch.tensor(adata.obs['trvae_labeled'])
+        size_factors = np.ravel(adata.X.sum(1))
+
+        self.size_factors = torch.tensor(size_factors)
+
+        labeled_array = np.zeros((len(adata), 1)) if labeled_array is None else labeled_array
+        self.labeled_vector = torch.tensor(labeled_array)
 
         # Encode condition strings to integer
         if self.condition_key is not None:
@@ -72,7 +74,9 @@ class AnnotatedDataset(Dataset):
     def __getitem__(self, index):
         outputs = dict()
 
-        outputs["x"] = self.data[index, :]
+        x = torch.tensor(self.data[index].toarray()) if self._is_sparse else self.data[index]
+        outputs["x"] = x
+
         outputs["labeled"] = self.labeled_vector[index]
         outputs["sizefactor"] = self.size_factors[index]
 
@@ -85,7 +89,7 @@ class AnnotatedDataset(Dataset):
         return outputs
 
     def __len__(self):
-        return self.data.size(0)
+        return self.data.shape[0]
 
     @property
     def condition_label_encoder(self) -> dict:

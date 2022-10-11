@@ -8,7 +8,7 @@ try:
     from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
-    __version__ = '0.5.3'
+    __version__ = '0.5.4'
 
 setup(name='scArches',
       version=__version__,
@@ -22,21 +22,21 @@ setup(name='scArches',
       packages=find_packages(),
       zip_safe=False,
       install_requires=[
-          "scanpy>=1.6.0",
-          "anndata>=0.7.4",
-          "scHPL>=1.0.0",
-          "h5py>=2.10.0",
-          "torch>=1.8.0",
-          "numpy>=1.19.2",
-          "scipy>=1.5.2",
-          "scikit-learn>=0.23.2",
-          "matplotlib>=3.3.1",
-          "pandas>=1.1.2",
-          "scvi-tools>=0.12.1",
-          "tqdm>=4.56.0",
-          "requests",
-          "gdown",
-          "leidenalg",  # TODO: set version criteria
+        "scanpy>=1.6.0",
+    	"anndata>=0.7.4",
+        "scHPL>=1.0.0",
+    	"h5py>=2.10.0",
+    	"torch>=1.8.0",
+    	"numpy>=1.19.2",
+    	"scipy>=1.5.2",
+    	"scikit-learn>=0.23.2",
+    	"matplotlib>=3.3.1",
+    	"pandas>=1.1.2",
+    	"scvi-tools>=0.12.1",
+    	"tqdm>=4.56.0",
+    	"requests",
+        "gdown"
+        "leidenalg",  # TODO: set version criteria
       ],
       classifiers=[
           "Programming Language :: Python :: 3.6",
