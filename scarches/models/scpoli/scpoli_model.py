@@ -279,7 +279,6 @@ class scPoli(BaseMixin):
             c: Optional[np.ndarray] = None,
             landmark=False,
             get_prob=True,
-            threshold=0,
     ):
         """
         Classifies unlabeled cells using the landmarks obtained during training.
@@ -293,10 +292,6 @@ class scPoli(BaseMixin):
         landmark:
             Boolean whether to classify the gene features or landmarks stored
             stored in the model.
-        threshold:
-            Threshold to use on the class probabilities to detect novel cell types,
-            or mark unknown cells.
-
 
         """
         device = next(self.model.parameters()).device
@@ -362,10 +357,7 @@ class scPoli(BaseMixin):
             full_pred_names = []
 
             for idx, pred in enumerate(full_pred):
-                if full_prob[idx] > threshold:
-                    full_pred_names.append(inv_ct_encoder[pred])
-                else:
-                    full_pred_names.append(f"nan")
+                full_pred_names.append(inv_ct_encoder[pred])
 
             results[cell_type_key] = {
                 "preds": np.array(full_pred_names),
@@ -452,7 +444,7 @@ class scPoli(BaseMixin):
         self.cell_types_[cell_type_name] = [obs_key]
 
     def get_landmarks_info(
-            self, landmark_set="labeled", threshold=0,
+            self, landmark_set="labeled",
     ):
         """
         Generates anndata file with landmark features and annotations.
@@ -486,7 +478,7 @@ class scPoli(BaseMixin):
         )
 
         results = self.classify(
-            landmarks, landmark=True, threshold=threshold
+            landmarks, landmark=True,
         )
         for cell_type_key in self.cell_type_keys_:
             if landmark_set == "l":
