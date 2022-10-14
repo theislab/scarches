@@ -13,13 +13,13 @@ from scarches.trainers.trvae.trainer import Trainer
 from scarches.trainers.scpoli._utils import cov, euclidean_dist
 
 
-class SCPoliTrainer(Trainer):
+class scPoliTrainer(Trainer):
     """
-    scPoli Trainer class. This class contains the implementation of the training routine for scPli models
+    scPoli Trainer class. This class contains the implementation of the training routine for scPoli models
 
     Parameters
     ----------
-    model: TRANVAE, EMBEDCVAE
+    model: SCPoli
         PyTorch model to train
     adata: : `~anndata.AnnData`
         Annotated data matrix.

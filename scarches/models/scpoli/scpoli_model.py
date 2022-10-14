@@ -7,11 +7,11 @@ from anndata import AnnData
 
 from scarches.models.base._base import BaseMixin
 from scarches.models.base._utils import _validate_var_names
-from scarches.models.scpoli.scpoli import EmbedCVAE
-from scarches.trainers.scpoli import SCPoliTrainer
+from scarches.models.scpoli.scpoli import scpoli
+from scarches.trainers.scpoli import scPoliTrainer
 
 
-class SCPoli(BaseMixin):
+class scPoli(BaseMixin):
     """Model for scPoli class. This class contains the methods and functionalities for label transfer and landmark training.
 
     Parameters
@@ -163,7 +163,7 @@ class SCPoli(BaseMixin):
         self.is_trained_ = False
         self.trainer = None
 
-        self.model = EmbedCVAE(
+        self.model = scpoli(
             input_dim=self.input_dim_,
             conditions=self.conditions_,
             cell_types=self.model_cell_types,
@@ -207,7 +207,7 @@ class SCPoli(BaseMixin):
         kwargs
              kwargs for the TranVAE trainer.
         """
-        self.trainer = SCPoliTrainer(
+        self.trainer = scPoliTrainer(
             self.model,
             self.adata,
             labeled_indices=self.labeled_indices_,

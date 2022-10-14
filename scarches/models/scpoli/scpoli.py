@@ -8,7 +8,7 @@ from scarches.models.trvae.losses import mse, nb, zinb
 from scarches.trainers.scpoli._utils import cov, euclidean_dist
 
 
-class EmbedCVAE(nn.Module):
+class scpoli(nn.Module):
     def __init__(
         self,
         input_dim,
