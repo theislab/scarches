@@ -13,13 +13,13 @@ from scarches.trainers.trvae.trainer import Trainer
 from scarches.trainers.scpoli._utils import cov, euclidean_dist
 
 
-class SCPoliTrainer(Trainer):
+class scPoliTrainer(Trainer):
     """
-    scPoli Trainer class. This class contains the implementation of the training routine for scPli models
+    scPoli Trainer class. This class contains the implementation of the training routine for scPoli models
 
     Parameters
     ----------
-    model: TRANVAE, EMBEDCVAE
+    model: SCPoli
         PyTorch model to train
     adata: : `~anndata.AnnData`
         Annotated data matrix.
@@ -252,9 +252,9 @@ class SCPoliTrainer(Trainer):
 
         # Init labeled Landmarks if labeled data existent
         if 1 in self.train_data.labeled_vector.unique().tolist():
-            labeled_latent = latent[self.train_data.labeled_vector == 1]
+            labeled_latent = latent[torch.where(self.train_data.labeled_vector == 1)[0]]
             labeled_cell_types = self.train_data.cell_types[
-                                 self.train_data.labeled_vector == 1, :
+                                 torch.where(self.train_data.labeled_vector == 1)[0], :
                                  ]  # get cell type annot
             if (
                     self.landmarks_labeled is not None
@@ -278,8 +278,8 @@ class SCPoliTrainer(Trainer):
                     self.landmarks_labeled,
                     self.landmarks_labeled_cov,
                 ) = self.update_labeled_landmarks(
-                    latent[self.train_data.labeled_vector == 1],
-                    self.train_data.cell_types[self.train_data.labeled_vector == 1, :],
+                    latent[torch.where(self.train_data.labeled_vector == 1)[0]],
+                    self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
                     None,
                     None,
                 )
@@ -409,9 +409,9 @@ class SCPoliTrainer(Trainer):
             # Calculate landmark loss for labeled data
             if 1 in label_categories:
                 labeled_loss = self.landmark_labeled_loss(
-                    latent[total_batch["labeled"] == 1],
+                    latent[torch.where(total_batch["labeled"] == 1)[0], :],
                     self.landmarks_labeled,
-                    total_batch["celltypes"][total_batch["labeled"] == 1, :],
+                    total_batch["celltypes"][torch.where(total_batch["labeled"] == 1)[0], :],
                 )
                 unweighted_landmark_loss = unweighted_landmark_loss + labeled_loss
 
@@ -451,8 +451,8 @@ class SCPoliTrainer(Trainer):
                     self.landmarks_labeled,
                     self.landmarks_labeled_cov,
                 ) = self.update_labeled_landmarks(
-                    latent[self.train_data.labeled_vector == 1],
-                    self.train_data.cell_types[self.train_data.labeled_vector == 1, :],
+                    latent[torch.where(self.train_data.labeled_vector == 1)[0]],
+                    self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
                     self.landmarks_labeled,
                     self.landmarks_labeled_cov,
                     self.model.new_landmarks,
