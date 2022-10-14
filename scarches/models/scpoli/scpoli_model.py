@@ -278,7 +278,8 @@ class scPoli(BaseMixin):
             x: Optional[np.ndarray] = None,
             c: Optional[np.ndarray] = None,
             landmark=False,
-            get_prob=True,
+            get_prob=False,
+            log_distance=True, 
     ):
         """
         Classifies unlabeled cells using the landmarks obtained during training.
@@ -295,7 +296,7 @@ class scPoli(BaseMixin):
 
         """
         device = next(self.model.parameters()).device
-
+        self.model.eval()
         if not landmark:
             # get the gene features from stored adata
             if x is None:
@@ -326,7 +327,7 @@ class scPoli(BaseMixin):
             landmarks_idx = torch.tensor(landmarks_idx, device=device)
 
             preds = []
-            probs = []
+            uncert = []
             weighted_distances = []
             indices = torch.arange(x.size(0), device=device)
             subsampled_indices = indices.split(512)
@@ -337,6 +338,7 @@ class scPoli(BaseMixin):
                         landmark=landmark,
                         classes_list=landmarks_idx,
                         get_prob=get_prob,
+                        log_distance=log_distance,
                     )
                 else:  # default routine, classify cell by cell
                     pred, prob, weighted_distance = self.model.classify(
@@ -345,13 +347,14 @@ class scPoli(BaseMixin):
                         landmark=landmark,
                         classes_list=landmarks_idx,
                         get_prob=get_prob,
+                        log_distance=log_distance,
                     )
                 preds += [pred.cpu().detach()]
-                probs += [prob.cpu().detach()]
+                uncert += [prob.cpu().detach()]
                 weighted_distances += [weighted_distance.cpu().detach()]
 
             full_pred = np.array(torch.cat(preds))
-            full_prob = np.array(torch.cat(probs))
+            full_uncert = np.array(torch.cat(uncert))
             full_weighted_distances = np.array(torch.cat(weighted_distances))
             inv_ct_encoder = {v: k for k, v in self.model.cell_type_encoder.items()}
             full_pred_names = []
@@ -361,7 +364,7 @@ class scPoli(BaseMixin):
 
             results[cell_type_key] = {
                 "preds": np.array(full_pred_names),
-                "probs": full_prob,
+                "uncert": full_uncert,
                 "weighted_distances": full_weighted_distances,
             }
 

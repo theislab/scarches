@@ -8,7 +8,7 @@ from anndata import AnnData
 from scarches.models.base._base import BaseMixin
 from scarches.models.base._utils import _validate_var_names
 from scarches.models.scpoli.scpoli import scpoli
-from scarches.trainers.scpoli import SCPoliTrainer
+from scarches.trainers.scpoli import scPoliTrainer
 
 
 class scPoli(BaseMixin):
@@ -207,7 +207,7 @@ class scPoli(BaseMixin):
         kwargs
              kwargs for the TranVAE trainer.
         """
-        self.trainer = SCPoliTrainer(
+        self.trainer = scPoliTrainer(
             self.model,
             self.adata,
             labeled_indices=self.labeled_indices_,
@@ -278,8 +278,8 @@ class scPoli(BaseMixin):
             x: Optional[np.ndarray] = None,
             c: Optional[np.ndarray] = None,
             landmark=False,
-            get_prob=True,
-            threshold=0,
+            get_prob=False,
+            log_distance=True, 
     ):
         """
         Classifies unlabeled cells using the landmarks obtained during training.
@@ -293,14 +293,10 @@ class scPoli(BaseMixin):
         landmark:
             Boolean whether to classify the gene features or landmarks stored
             stored in the model.
-        threshold:
-            Threshold to use on the class probabilities to detect novel cell types,
-            or mark unknown cells.
-
 
         """
         device = next(self.model.parameters()).device
-
+        self.model.eval()
         if not landmark:
             # get the gene features from stored adata
             if x is None:
@@ -331,7 +327,7 @@ class scPoli(BaseMixin):
             landmarks_idx = torch.tensor(landmarks_idx, device=device)
 
             preds = []
-            probs = []
+            uncert = []
             weighted_distances = []
             indices = torch.arange(x.size(0), device=device)
             subsampled_indices = indices.split(512)
@@ -342,6 +338,7 @@ class scPoli(BaseMixin):
                         landmark=landmark,
                         classes_list=landmarks_idx,
                         get_prob=get_prob,
+                        log_distance=log_distance,
                     )
                 else:  # default routine, classify cell by cell
                     pred, prob, weighted_distance = self.model.classify(
@@ -350,26 +347,24 @@ class scPoli(BaseMixin):
                         landmark=landmark,
                         classes_list=landmarks_idx,
                         get_prob=get_prob,
+                        log_distance=log_distance,
                     )
                 preds += [pred.cpu().detach()]
-                probs += [prob.cpu().detach()]
+                uncert += [prob.cpu().detach()]
                 weighted_distances += [weighted_distance.cpu().detach()]
 
             full_pred = np.array(torch.cat(preds))
-            full_prob = np.array(torch.cat(probs))
+            full_uncert = np.array(torch.cat(uncert))
             full_weighted_distances = np.array(torch.cat(weighted_distances))
             inv_ct_encoder = {v: k for k, v in self.model.cell_type_encoder.items()}
             full_pred_names = []
 
             for idx, pred in enumerate(full_pred):
-                if full_prob[idx] > threshold:
-                    full_pred_names.append(inv_ct_encoder[pred])
-                else:
-                    full_pred_names.append(f"nan")
+                full_pred_names.append(inv_ct_encoder[pred])
 
             results[cell_type_key] = {
                 "preds": np.array(full_pred_names),
-                "probs": full_prob,
+                "uncert": full_uncert,
                 "weighted_distances": full_weighted_distances,
             }
 
@@ -452,7 +447,7 @@ class scPoli(BaseMixin):
         self.cell_types_[cell_type_name] = [obs_key]
 
     def get_landmarks_info(
-            self, landmark_set="labeled", threshold=0,
+            self, landmark_set="labeled",
     ):
         """
         Generates anndata file with landmark features and annotations.
@@ -486,7 +481,7 @@ class scPoli(BaseMixin):
         )
 
         results = self.classify(
-            landmarks, landmark=True, threshold=threshold
+            landmarks, landmark=True,
         )
         for cell_type_key in self.cell_type_keys_:
             if landmark_set == "l":

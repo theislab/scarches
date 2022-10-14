@@ -245,7 +245,8 @@ class scpoli(nn.Module):
         c=None,
         landmark=False,
         classes_list=None,
-        get_prob=True,
+        get_prob=False,
+        log_distance=True,
     ):
         """
         Classifies unlabeled cells using the landmarks obtained during training.
@@ -273,13 +274,15 @@ class scpoli(nn.Module):
         # Idea of using euclidean distances for classification
         if get_prob == True:
             dists = F.softmax(-dists, dim=1)
-            probs, preds = torch.max(dists, dim=1)
+            uncert, preds = torch.max(dists, dim=1)
             preds = classes_list[preds]
         else:
-            probs, preds = torch.min(dists, dim=1)
+            uncert, preds = torch.min(dists, dim=1)
             preds = classes_list[preds]
+            if log_distance == True:
+                probs = torch.log1p(uncert)
 
-        return preds, probs, dists
+        return preds, uncert, dists
 
     def sampling(self, mu, log_var):
         """Samples from standard Normal distribution and applies re-parametrization trick.
