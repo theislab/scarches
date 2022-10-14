@@ -1,4 +1,4 @@
-from .scpoli_model import SCPoli
+from .scpoli_model import scPoli
 
 __author__ = ", ".join(
     [

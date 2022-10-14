@@ -1,4 +1,4 @@
-from .trainer import SCPoliTrainer
+from .trainer import scPoliTrainer
 
 __author__ = ", ".join(
     [
