@@ -74,7 +74,10 @@ class AnnotatedDataset(Dataset):
     def __getitem__(self, index):
         outputs = dict()
 
-        x = torch.tensor(self.data[index].toarray()) if self._is_sparse else self.data[index]
+        if self._is_sparse:
+            x = torch.tensor(np.squeeze(self.data[index].toarray()))
+        else:
+            x = self.data[index]
         outputs["x"] = x
 
         outputs["labeled"] = self.labeled_vector[index]
