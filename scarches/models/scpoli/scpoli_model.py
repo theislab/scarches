@@ -279,6 +279,14 @@ class scPoli(BaseMixin):
 
         latents = torch.cat(latents)
         return np.array(latents)
+    
+    def get_conditional_embeddings(self):
+        """
+        Returns anndata object of the conditional embeddings
+        """
+        embeddings = self.model.embedding.weight.cpu().detach().numpy()
+        adata_emb = sc.AnnData(X=embeddings, obs=pd.DataFrame(self.conditions_))
+        return adata_emb
 
     def classify(
             self,
@@ -542,7 +550,7 @@ class scPoli(BaseMixin):
             "use_bn": dct["use_bn_"],
             "use_ln": dct["use_ln_"],
             "embedding_dim": dct["embedding_dim_"],
-            "embedding_max_norm": dct["embedding_max_norm_"]
+            "embedding_max_norm": dct["embedding_max_norm_"],
             "inject_condition": dct["inject_condition_"],
         }
 
