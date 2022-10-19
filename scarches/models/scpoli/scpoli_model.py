@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import numpy as np
+import pandas as pd
 import scanpy as sc
 import torch
 from anndata import AnnData
@@ -285,7 +286,7 @@ class scPoli(BaseMixin):
         Returns anndata object of the conditional embeddings
         """
         embeddings = self.model.embedding.weight.cpu().detach().numpy()
-        adata_emb = sc.AnnData(X=embeddings, obs=pd.DataFrame(self.conditions_))
+        adata_emb = sc.AnnData(X=embeddings, obs=pd.DataFrame(index=self.conditions_))
         return adata_emb
 
     def classify(
