@@ -81,9 +81,9 @@ class scPoliTrainer(Trainer):
             labeled_indices: list = None,
             pretraining_epochs: int = 0,
             clustering: str = "leiden",
-            clustering_res: float = 1,
+            clustering_res: float = 2,
             n_clusters: int = None,
-            unlabeled_weight: float = 0.001,
+            unlabeled_weight: float = 0.0,
             eta: float = 1,
             **kwargs,
     ):

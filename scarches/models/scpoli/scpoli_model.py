@@ -38,6 +38,10 @@ class scPoli(BaseMixin):
         A list of hidden layer sizes for encoder network. Decoder network will be the reversed order.
     latent_dim: Integer
         Bottleneck layer (z)  size.
+    embedding_dim: Integer
+        Conditional embedding size.
+    embedding_max_norm:
+        Max norm allowed for conditional embeddings.
     dr_rate: Float
         Dropput rate applied to all layers, if `dr_rate`==0 no dropout will be applied.
     use_mmd: Boolean
