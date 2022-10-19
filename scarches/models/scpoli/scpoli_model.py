@@ -19,6 +19,9 @@ class scPoli(BaseMixin):
     ----------
     adata: : `~anndata.AnnData`
         Annotated data matrix.
+    share_metadata : Bool
+        Whether or not to share metadata associated with samples. The metadata is aggregated using the condition_key. First element is
+        taken. Consider manually adding an .obs_metadata attribute if you need more flexibility.
     condition_key: String
         column name of conditions in `adata.obs` data frame.
     conditions: List
@@ -66,6 +69,7 @@ class scPoli(BaseMixin):
     def __init__(
             self,
             adata: AnnData,
+            share_metadata: bool = True,
             condition_key: str = None,
             conditions: Optional[list] = None,
             inject_condition: Optional[list] = ['encoder', 'decoder'],
@@ -91,6 +95,7 @@ class scPoli(BaseMixin):
 
         # gather data information
         self.adata = adata
+        self.share_metadata_ = share_metadata
         self.condition_key_ = condition_key
         self.cell_type_keys_ = cell_type_keys
         if unknown_ct_names is not None and type(unknown_ct_names) is not list:
@@ -111,6 +116,11 @@ class scPoli(BaseMixin):
                 self.conditions_ = []
         else:
             self.conditions_ = conditions
+            
+        if self.share_metadata_:
+            self.obs_metadata_ = adata.obs.groupby(condition_key).first()
+        else:
+            self.obs_metadata_ = []
 
         # Gather all cell type information
         if cell_types is None:
@@ -287,6 +297,8 @@ class scPoli(BaseMixin):
         """
         embeddings = self.model.embedding.weight.cpu().detach().numpy()
         adata_emb = sc.AnnData(X=embeddings, obs=pd.DataFrame(index=self.conditions_))
+        if self.share_metadata_:
+            adata_emb.obs = self.obs_metadata_
         return adata_emb
 
     def classify(
@@ -533,6 +545,7 @@ class scPoli(BaseMixin):
     @classmethod
     def _get_init_params_from_dict(cls, dct):
         init_params = {
+            "share_metadata": dct["share_metadata_"],
             "condition_key": dct["condition_key_"],
             "conditions": dct["conditions_"],
             "cell_type_keys": dct["cell_type_keys_"],
@@ -610,7 +623,9 @@ class scPoli(BaseMixin):
         # Add new conditions to overall conditions
         for condition in new_conditions:
             conditions.append(condition)
-
+        obs_metadata = attr_dict["obs_metadata_"]
+        new_obs_metadata = adata.obs.groupby(condition_key).first()
+        obs_metadata = pd.concat([obs_metadata, new_obs_metadata])
         cell_types = init_params["cell_types"]
         cell_type_keys = init_params["cell_type_keys"]
 
@@ -641,7 +656,7 @@ class scPoli(BaseMixin):
         init_params["unknown_ct_names"] = unknown_ct_names
         new_model = cls(adata, **init_params)
         new_model.model.n_reference_conditions = n_reference_conditions
-        print(new_model.model.n_reference_conditions)
+        new_model.obs_metadata_ = obs_metadata
         new_model._load_expand_params_from_dict(model_state_dict)
 
         if freeze:
