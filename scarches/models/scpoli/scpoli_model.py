@@ -542,6 +542,7 @@ class scPoli(BaseMixin):
             "use_bn": dct["use_bn_"],
             "use_ln": dct["use_ln_"],
             "embedding_dim": dct["embedding_dim_"],
+            "embedding_max_norm": dct["embedding_max_norm_"]
             "inject_condition": dct["inject_condition_"],
         }
 
