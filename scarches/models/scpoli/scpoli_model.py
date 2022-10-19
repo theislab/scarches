@@ -73,6 +73,7 @@ class scPoli(BaseMixin):
             hidden_layer_sizes: list = [256, 64],
             latent_dim: int = 10,
             embedding_dim: int = 10,
+            embedding_max_norm: float = 1.0,
             dr_rate: float = 0.05,
             use_mmd: bool = False,
             mmd_on: str = "z",
@@ -144,6 +145,7 @@ class scPoli(BaseMixin):
         self.use_ln_ = use_ln
         self.inject_condition_ = inject_condition
         self.embedding_dim_ = embedding_dim
+        self.embedding_max_norm_ = embedding_max_norm
 
         self.input_dim_ = adata.n_vars
         self.landmarks_labeled_ = (
@@ -169,6 +171,7 @@ class scPoli(BaseMixin):
             cell_types=self.model_cell_types,
             inject_condition=self.inject_condition_,
             embedding_dim=self.embedding_dim_,
+            embedding_max_norm=self.embedding_max_norm_,
             unknown_ct_names=self.unknown_ct_names_,
             landmarks_labeled=self.landmarks_labeled_,
             landmarks_unlabeled=self.landmarks_unlabeled_,

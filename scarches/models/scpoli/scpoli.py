@@ -19,6 +19,7 @@ class scpoli(nn.Module):
         inject_condition,
         latent_dim,
         embedding_dim,
+        embedding_max_norm,
         recon_loss,
         dr_rate,
         beta,
@@ -32,6 +33,7 @@ class scpoli(nn.Module):
         self.input_dim = input_dim
         self.latent_dim = latent_dim
         self.embedding_dim = embedding_dim
+        self.embedding_max_norm = embedding_max_norm
         self.cell_types = cell_types
         self.n_cell_types = len(cell_types)
         self.cell_type_encoder = {
@@ -89,7 +91,7 @@ class scpoli(nn.Module):
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
 
-        self.embedding = nn.Embedding(self.n_conditions, self.embedding_dim, max_norm=1)
+        self.embedding = nn.Embedding(self.n_conditions, self.embedding_dim, max_norm=self.embedding_max_norm)
 
         print(
             "Embedding dictionary:\n",
