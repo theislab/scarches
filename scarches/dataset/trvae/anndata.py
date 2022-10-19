@@ -30,7 +30,8 @@ class AnnotatedDataset(Dataset):
                  condition_encoder=None,
                  cell_type_keys=None,
                  cell_type_encoder=None,
-                 labeled_array=None
+                 labeled_array=None,
+                 cont_cov_key=None
                  ):
 
         self.condition_key = condition_key
@@ -71,6 +72,13 @@ class AnnotatedDataset(Dataset):
             self.cell_types = np.stack(self.cell_types).T
             self.cell_types = torch.tensor(self.cell_types, dtype=torch.long)
 
+        if cont_cov_key is not None:
+            self.cont_cov = torch.tensor(adata.obs[cont_cov_key])
+            if len(self.cont_cov.shape) < 2:
+                self.cont_cov = self.cont_cov[:, None]
+        else:
+            self.cont_cov = None
+
     def __getitem__(self, index):
         outputs = dict()
 
@@ -88,6 +96,9 @@ class AnnotatedDataset(Dataset):
 
         if self.cell_type_keys:
             outputs["celltypes"] = self.cell_types[index, :]
+
+        if self.cont_cov is not None:
+            outputs["cont_cov"] = self.cont_cov[index]
 
         return outputs
 

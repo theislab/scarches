@@ -91,7 +91,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_hsic: bool = False,
         hsic_one_vs_all: bool = False,
         ext_mask: Optional[Union[np.ndarray, list]] = None,
-        soft_ext_mask: bool = False
+        soft_ext_mask: bool = False,
+        cont_cov_key: Optional[str] = None
     ):
         self.adata = adata
 
@@ -99,6 +100,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             raise ValueError('Please provide mask.')
 
         self.condition_key_ = condition_key
+
+        self.cont_cov_key_ = cont_cov_key
 
         if conditions is None:
             if condition_key is not None:
@@ -158,7 +161,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             self.use_hsic_,
             self.hsic_one_vs_all_,
             ext_mask,
-            self.soft_ext_mask_
+            self.soft_ext_mask_,
+            has_cont_cov = self.cont_cov_key_ is not None
         )
 
         self.is_trained_ = False
@@ -221,6 +225,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             alpha=alpha,
             omega=omega,
             condition_key=self.condition_key_,
+            cont_cov_key=self.cont_cov_key_,
             **kwargs
         )
         self.trainer.train(n_epochs, lr, eps)
@@ -671,7 +676,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             'soft_ext_mask': dct['soft_ext_mask_'] if 'soft_ext_mask_' in dct else False,
             'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False,
             'use_hsic': dct['use_hsic_'] if 'use_hsic_' in dct else False,
-            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None
+            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None,
+            'cont_cov_key': dct['cont_cov_key_'] if 'cont_cov_key_' in dct else None
         }
 
         return init_params

@@ -59,8 +59,9 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                  use_hsic: bool = False,
                  hsic_one_vs_all: bool = False,
                  ext_mask: Optional[torch.Tensor] = None,
-                 soft_ext_mask: bool = False
-                 ):
+                 soft_ext_mask: bool = False,
+                 has_cont_cov: bool = False
+    ):
         super().__init__()
         assert isinstance(hidden_layer_sizes, list)
         assert isinstance(latent_dim, int)
@@ -127,7 +128,8 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                   self.use_dr,
                                   self.dr_rate,
                                   self.n_conditions,
-                                  self.n_ext_encoder)
+                                  self.n_ext_encoder,
+                                  has_cont_cov=has_cont_cov)
 
         if self.soft_mask:
             self.n_inact_genes = (1-mask).sum().item()
@@ -159,7 +161,8 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                            self.recon_loss,
                                            self.decoder_last_layer,
                                            self.n_ext_decoder,
-                                           self.n_ext_m_decoder)
+                                           self.n_ext_m_decoder,
+                                           has_cont_cov=has_cont_cov)
 
         if self.use_l_encoder:
             self.l_encoder = ExtEncoder([self.input_dim, 128],
@@ -168,23 +171,24 @@ class expiMap(nn.Module, CVAELatentsModelMixin):
                                         self.use_ln,
                                         self.use_dr,
                                         self.dr_rate,
-                                        self.n_conditions)
+                                        self.n_conditions,
+                                        has_cont_cov=has_cont_cov)
 
-    def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
+    def forward(self, x=None, batch=None, sizefactor=None, labeled=None, cont_cov=None):
         x_log = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_log = x
 
-        z1_mean, z1_log_var = self.encoder(x_log, batch)
+        z1_mean, z1_log_var = self.encoder(x_log, batch, cont_cov)
         z1 = self.sampling(z1_mean, z1_log_var)
-        outputs = self.decoder(z1, batch)
+        outputs = self.decoder(z1, batch, cont_cov)
 
         if self.recon_loss == "mse":
             recon_x, y1 = outputs
             recon_loss = mse(recon_x, x_log).sum(dim=-1).mean()
         elif self.recon_loss == "nb":
             if self.use_l_encoder and self.decoder_last_layer == "softmax":
-                sizefactor = torch.exp(self.sampling(*self.l_encoder(x_log, batch))).flatten()
+                sizefactor = torch.exp(self.sampling(*self.l_encoder(x_log, batch, cont_cov))).flatten()
             dec_mean_gamma, y1 = outputs
             size_factor_view = sizefactor.unsqueeze(1).expand(dec_mean_gamma.size(0), dec_mean_gamma.size(1))
             if self.decoder_last_layer == "softmax":

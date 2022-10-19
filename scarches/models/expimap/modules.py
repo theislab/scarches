@@ -35,12 +35,14 @@ class MaskedCondLayers(nn.Module):
         n_ext: int = 0,
         n_ext_m: int = 0,
         mask: Optional[torch.Tensor] = None,
-        ext_mask: Optional[torch.Tensor] = None
+        ext_mask: Optional[torch.Tensor] = None,
+        has_cont_cov: bool = False
     ):
         super().__init__()
         self.n_cond = n_cond
         self.n_ext = n_ext
         self.n_ext_m = n_ext_m
+        self.has_cont_cov = has_cont_cov
 
         if mask is None:
             self.expr_L = nn.Linear(n_in, n_out, bias=bias)
@@ -59,7 +61,10 @@ class MaskedCondLayers(nn.Module):
             else:
                 self.ext_L_m = nn.Linear(self.n_ext_m, n_out, bias=False)
 
-    def forward(self, x: torch.Tensor):
+        if self.has_cont_cov:
+            self.cont_cov_w = nn.Linear(1, n_out, bias=False)
+
+    def forward(self, x: torch.Tensor, cont_cov: Optional[torch.Tensor] = None):
         if self.n_cond == 0:
             expr, cond = x, None
         else:
@@ -82,12 +87,16 @@ class MaskedCondLayers(nn.Module):
             out = out + self.ext_L_m(ext_m)
         if cond is not None:
             out = out + self.cond_L(cond)
+
+        if self.has_cont_cov:
+            out = out + self.cont_cov_w(cont_cov)
+
         return out
 
 
 class MaskedLinearDecoder(nn.Module):
     def __init__(self, in_dim, out_dim, n_cond, mask, ext_mask, recon_loss,
-                 last_layer=None, n_ext=0, n_ext_m=0):
+                 last_layer=None, n_ext=0, n_ext_m=0, has_cont_cov=False):
         super().__init__()
 
         if recon_loss == "mse":
@@ -114,7 +123,7 @@ class MaskedLinearDecoder(nn.Module):
             self.n_cond = n_cond
 
         self.L0 = MaskedCondLayers(in_dim, out_dim, n_cond, bias=False, n_ext=n_ext, n_ext_m=n_ext_m,
-                                   mask=mask, ext_mask=ext_mask)
+                                   mask=mask, ext_mask=ext_mask, has_cont_cov=has_cont_cov)
 
         if last_layer == "softmax":
             self.mean_decoder = nn.Softmax(dim=-1)
@@ -131,13 +140,13 @@ class MaskedLinearDecoder(nn.Module):
 
         print("Last Decoder layer:", last_layer)
 
-    def forward(self, z, batch=None):
+    def forward(self, z, batch=None, cont_cov=None):
         if batch is not None:
             batch = one_hot_encoder(batch, n_cls=self.n_cond)
             z_cat = torch.cat((z, batch), dim=-1)
-            dec_latent = self.L0(z_cat)
+            dec_latent = self.L0(z_cat, cont_cov)
         else:
-            dec_latent = self.L0(z)
+            dec_latent = self.L0(z, cont_cov)
 
         recon_x = self.mean_decoder(dec_latent)
 
@@ -164,7 +173,9 @@ class ExtEncoder(nn.Module):
                  use_dr: bool,
                  dr_rate: float,
                  num_classes: Optional[int] = None,
-                 n_expand: int = 0):
+                 n_expand: int = 0,
+                 has_cont_cov: bool = False
+    ):
         super().__init__()
         self.n_classes = 0
         self.n_expand = n_expand
@@ -180,7 +191,8 @@ class ExtEncoder(nn.Module):
                     self.FC.add_module(name="L{:d}".format(i), module=MaskedCondLayers(in_size,
                                                                                        out_size,
                                                                                        self.n_classes,
-                                                                                       bias=True))
+                                                                                       bias=True,
+                                                                                       has_cont_cov=has_cont_cov))
                 else:
                     print("\tHidden Layer", i, "in/out:", in_size, out_size)
                     self.FC.add_module(name="L{:d}".format(i), module=nn.Linear(in_size, out_size, bias=True))
@@ -200,12 +212,18 @@ class ExtEncoder(nn.Module):
             self.expand_mean_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
             self.expand_var_encoder = nn.Linear(layer_sizes[-1], self.n_expand)
 
-    def forward(self, x, batch=None):
+    def forward(self, x, batch=None, cont_cov=None):
         if batch is not None:
             batch = one_hot_encoder(batch, n_cls=self.n_classes)
             x = torch.cat((x, batch), dim=-1)
         if self.FC is not None:
-            x = self.FC(x)
+            if cont_cov is None:
+                x = self.FC(x)
+            else:
+                x = self.FC[0](x, cont_cov)
+                FC_rest = self.FC[1:]
+                if len(FC_rest) > 0:
+                    x = FC_rest(x)
         means = self.mean_encoder(x)
         log_vars = self.log_var_encoder(x)
 

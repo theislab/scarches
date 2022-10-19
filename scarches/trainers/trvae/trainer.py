@@ -73,12 +73,15 @@ class Trainer:
                  use_early_stopping: bool = True,
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
+                 cont_cov_key: str = None,
                  **kwargs):
 
         self.adata = adata
         self.model = model
         self.condition_key = condition_key
         self.cell_type_keys = cell_type_keys
+
+        self.cont_cov_key = cont_cov_key
 
         self.batch_size = batch_size
         self.alpha_epoch_anneal = alpha_epoch_anneal
@@ -140,6 +143,7 @@ class Trainer:
             cell_type_keys=self.cell_type_keys,
             condition_encoder=self.model.condition_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
+            cont_cov_key=self.cont_cov_key
         )
 
     def initialize_loaders(self):
