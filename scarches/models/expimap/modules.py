@@ -163,6 +163,15 @@ class MaskedLinearDecoder(nn.Module):
         n = (~self.nonzero_terms()).sum()
         return int(n)
 
+    def norms(self):
+        norms = self.L0.expr_L.weight.data.norm(p=2, dim=0).cpu().numpy()
+        if self.n_ext_m > 0:
+            norms = np.append(norms, self.L0.ext_L_m.weight.data.norm(p=2, dim=0).cpu().numpy())
+        if self.n_ext > 0:
+            norms = np.append(norms, self.L0.ext_L.weight.data.norm(p=2, dim=0).cpu().numpy())
+
+        return norms
+
 
 class ExtEncoder(nn.Module):
     def __init__(self,

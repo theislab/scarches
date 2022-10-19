@@ -579,6 +579,9 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         adata.uns[key_added] = scores
 
+    def decoder_norms(self):
+        return self.model.decoder.norms()
+
     @classmethod
     def load_query_data(
         cls,

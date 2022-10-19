@@ -303,7 +303,6 @@ class CVAELatentsMixin:
 
         if cont_cov is not None:
             cont_cov = torch.tensor(cont_cov)
-            if len()
         else:
             cont_cov_key = getattr(self, "cont_cov_key_", None)
             if cont_cov_key is not None:
@@ -369,7 +368,6 @@ class CVAELatentsMixin:
 
         if cont_cov is not None:
             cont_cov = torch.tensor(cont_cov)
-            if len()
         else:
             cont_cov_key = getattr(self, "cont_cov_key_", None)
             if cont_cov_key is not None:
