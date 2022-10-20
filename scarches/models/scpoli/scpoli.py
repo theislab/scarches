@@ -25,8 +25,8 @@ class scpoli(nn.Module):
         beta,
         use_bn,
         use_ln,
-        landmarks_labeled,
-        landmarks_unlabeled,
+        prototypes_labeled,
+        prototypes_unlabeled,
     ):
         super().__init__()
 
@@ -56,21 +56,21 @@ class scpoli(nn.Module):
         if self.unknown_ct_names is not None:
             for unknown_ct in self.unknown_ct_names:
                 self.cell_type_encoder[unknown_ct] = -1
-        self.landmarks_labeled = (
+        self.prototypes_labeled = (
             {"mean": None, "cov": None}
-            if landmarks_labeled is None
-            else landmarks_labeled
+            if prototypes_labeled is None
+            else prototypes_labeled
         )
-        self.landmarks_unlabeled = (
-            {"mean": None} if landmarks_unlabeled is None else landmarks_unlabeled
+        self.prototypes_unlabeled = (
+            {"mean": None} if prototypes_unlabeled is None else prototypes_unlabeled
         )
-        self.new_landmarks = None
+        self.new_prototypes = None
         self.num_reference_conditions = None
-        if self.landmarks_labeled["mean"] is not None:
-            # Save indices of possible new landmarks to train
-            self.new_landmarks = []
-            for idx in range(self.n_cell_types - len(self.landmarks_labeled["mean"])):
-                self.new_landmarks.append(len(self.landmarks_labeled["mean"]) + idx)
+        if self.prototypes_labeled["mean"] is not None:
+            # Save indices of possible new prototypes to train
+            self.new_prototypes = []
+            for idx in range(self.n_cell_types - len(self.prototypes_labeled["mean"])):
+                self.new_prototypes.append(len(self.prototypes_labeled["mean"]) + idx)
 
         self.dr_rate = dr_rate
         if self.dr_rate > 0:
@@ -188,7 +188,7 @@ class scpoli(nn.Module):
 
         return z1, recon_loss, kl_div, mmd_loss
 
-    def add_new_cell_type(self, latent, cell_type_name, landmarks, classes_list=None):
+    def add_new_cell_type(self, latent, cell_type_name, prototypes, classes_list=None):
         """
         Function used to add new annotation for a novel cell type.
 
@@ -198,10 +198,10 @@ class scpoli(nn.Module):
             Latent representation of adata.
         cell_type_name: str
             Name of the new cell type
-        landmarks: list
-            List of indices of the unlabeled landmarks that correspond to the new cell type
+        prototypes: list
+            List of indices of the unlabeled prototypes that correspond to the new cell type
         classes_list: torch.Tensor
-            Tensor of landmark indices corresponding to current hierarchy
+            Tensor of prototype indices corresponding to current hierarchy
 
         Returns
         -------
@@ -213,7 +213,7 @@ class scpoli(nn.Module):
             k: v for k, v in zip(self.cell_types, range(len(self.cell_types)))
         }
 
-        # Add new celltype index to hierarchy index list of landmarks
+        # Add new celltype index to hierarchy index list of prototypes
         classes_list = torch.cat(
             (
                 classes_list,
@@ -221,57 +221,57 @@ class scpoli(nn.Module):
             )
         )
 
-        # Add new landmark mean to labeled landmark means
-        new_landmark = self.landmarks_unlabeled["mean"][landmarks].mean(0).unsqueeze(0)
-        self.landmarks_labeled["mean"] = torch.cat(
-            (self.landmarks_labeled["mean"], new_landmark), dim=0
+        # Add new prototype mean to labeled prototype means
+        new_prototype = self.prototypes_unlabeled["mean"][prototypes].mean(0).unsqueeze(0)
+        self.prototypes_labeled["mean"] = torch.cat(
+            (self.prototypes_labeled["mean"], new_prototype), dim=0
         )
 
-        # Get latent indices which correspond to new landmark
-        latent = latent.to(self.landmarks_labeled["mean"].device)
-        dists = euclidean_dist(latent, self.landmarks_labeled["mean"][classes_list, :])
+        # Get latent indices which correspond to new prototype
+        latent = latent.to(self.prototypes_labeled["mean"].device)
+        dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
         min_dist, y_hat = torch.min(dists, 1)
         y_hat = classes_list[y_hat]
         indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
 
-        # Add new landmark cov to labeled landmark covs
-        new_landmark_cov = cov(latent[indices, :]).unsqueeze(0)
-        new_landmark_cov = new_landmark_cov.to(self.landmarks_labeled["cov"].device)
-        self.landmarks_labeled["cov"] = torch.cat(
-            (self.landmarks_labeled["cov"], new_landmark_cov), dim=0
+        # Add new prototype cov to labeled prototype covs
+        new_prototype_cov = cov(latent[indices, :]).unsqueeze(0)
+        new_prototype_cov = new_prototype_cov.to(self.prototypes_labeled["cov"].device)
+        self.prototypes_labeled["cov"] = torch.cat(
+            (self.prototypes_labeled["cov"], new_prototype_cov), dim=0
         )
 
     def classify(
         self,
         x,
         c=None,
-        landmark=False,
+        prototype=False,
         classes_list=None,
         get_prob=False,
         log_distance=True,
     ):
         """
-        Classifies unlabeled cells using the landmarks obtained during training.
+        Classifies unlabeled cells using the prototypes obtained during training.
         Data handling before call to model's classify method.
 
         x: torch.Tensor
             Features to be classified. If None the stored model's adata is used.
         c: torch.Tensor
             Condition vector.
-        landmark: Boolean
-            Boolean whether to classify the gene features or landmarks stored
+        prototype: Boolean
+            Boolean whether to classify the gene features or prototypes stored
             stored in the model.
         classes_list: torch.Tensor
-            Tensor of landmark indices corresponding to current hierarchy
+            Tensor of prototype indices corresponding to current hierarchy
         get_prob: Str
             Method to use for scaling euclidean distances to pseudo-probabilities
         """
-        if landmark:
+        if prototype:
             latent = x
         else:
             latent = self.get_latent(x, c)
 
-        dists = euclidean_dist(latent, self.landmarks_labeled["mean"][classes_list, :])
+        dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
 
         # Idea of using euclidean distances for classification
         if get_prob == True:

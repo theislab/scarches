@@ -69,7 +69,7 @@ class scPoliTrainer(Trainer):
     unlabeled_weight: Float
         Weight for loss computed including unlabeled samples
     eta: Float
-        Weight for the landmark loss
+        Weight for the prototype loss
     seed: Integer
         Define a specific random seed to get reproducable results.
     """
@@ -98,13 +98,13 @@ class scPoliTrainer(Trainer):
         self.pretraining_epochs = pretraining_epochs
         self.use_early_stopping_orig = self.use_early_stopping
 
-        self.landmarks_labeled = None  # landmarks labeled cells (means)
-        self.landmarks_labeled_cov = None  # landmarks labeled cells (cov)
-        self.landmarks_unlabeled = None  # landmarks all cells (means)
-        self.best_landmarks_labeled = None  # cache for ES, to use best state
-        self.best_landmarks_labeled_cov = None  # cache for ES
-        self.best_landmarks_unlabeled = None  # cache for ES
-        self.landmark_optim = None  # landmark optimizer
+        self.prototypes_labeled = None  # prototypes labeled cells (means)
+        self.prototypes_labeled_cov = None  # prototypes labeled cells (cov)
+        self.prototypes_unlabeled = None  # prototypes all cells (means)
+        self.best_prototypes_labeled = None  # cache for ES, to use best state
+        self.best_prototypes_labeled_cov = None  # cache for ES
+        self.best_prototypes_unlabeled = None  # cache for ES
+        self.prototype_optim = None  # prototype optimizer
         # Set indices for labeled data
         if labeled_indices is None:
             self.labeled_indices = range(len(adata))
@@ -112,13 +112,13 @@ class scPoliTrainer(Trainer):
             self.labeled_indices = labeled_indices
         self.update_labeled_indices(self.labeled_indices)
 
-        # Parse landmarks from model into right format
-        if self.model.landmarks_labeled["mean"] is not None:
-            self.landmarks_labeled = self.model.landmarks_labeled["mean"]
-            self.landmarks_labeled_cov = self.model.landmarks_labeled["cov"]
-        if self.landmarks_labeled is not None:
-            self.landmarks_labeled = self.landmarks_labeled.to(device=self.device)
-            self.landmarks_labeled_cov = self.landmarks_labeled_cov.to(
+        # Parse prototypes from model into right format
+        if self.model.prototypes_labeled["mean"] is not None:
+            self.prototypes_labeled = self.model.prototypes_labeled["mean"]
+            self.prototypes_labeled_cov = self.model.prototypes_labeled["cov"]
+        if self.prototypes_labeled is not None:
+            self.prototypes_labeled = self.prototypes_labeled.to(device=self.device)
+            self.prototypes_labeled_cov = self.prototypes_labeled_cov.to(
                 device=self.device
             )
 
@@ -243,48 +243,48 @@ class scPoliTrainer(Trainer):
         latent = torch.cat(latents)
         return latent.to(self.device)
 
-    def initialize_landmarks(self):
+    def initialize_prototypes(self):
         """
-        Function that initializes landmarks
+        Function that initializes prototypes
         """
         # Compute Latent of whole train data
         latent = self.get_latent_train()
 
-        # Init labeled Landmarks if labeled data existent
+        # Init labeled prototypes if labeled data existent
         if 1 in self.train_data.labeled_vector.unique().tolist():
             labeled_latent = latent[torch.where(self.train_data.labeled_vector == 1)[0]]
             labeled_cell_types = self.train_data.cell_types[
                                  torch.where(self.train_data.labeled_vector == 1)[0], :
                                  ]  # get cell type annot
             if (
-                    self.landmarks_labeled is not None
-            ):  # checks if model already has initialized landmarks and then initialize new landmarks for new or unseen cell types in query
+                    self.prototypes_labeled is not None
+            ):  # checks if model already has initialized prototypes and then initialize new prototypes for new or unseen cell types in query
                 with torch.no_grad():
-                    if len(self.model.new_landmarks) > 0:
-                        for value in self.model.new_landmarks:
+                    if len(self.model.new_prototypes) > 0:
+                        for value in self.model.new_prototypes:
                             indices = labeled_cell_types.eq(value).nonzero(
                                 as_tuple=False
                             )[:, 0]
-                            landmark = labeled_latent[indices].mean(0)
-                            landmark_cov = cov(labeled_latent[indices]).unsqueeze(0)
-                            self.landmarks_labeled = torch.cat(
-                                [self.landmarks_labeled, landmark]
+                            prototype = labeled_latent[indices].mean(0)
+                            prototype_cov = cov(labeled_latent[indices]).unsqueeze(0)
+                            self.prototypes_labeled = torch.cat(
+                                [self.prototypes_labeled, prototype]
                             )
-                            self.landmarks_labeled_cov = torch.cat(
-                                [self.landmarks_labeled_cov, landmark_cov]
+                            self.prototypes_labeled_cov = torch.cat(
+                                [self.prototypes_labeled_cov, prototype_cov]
                             )
-            else:  # compute labeled landmarks
+            else:  # compute labeled prototypes
                 (
-                    self.landmarks_labeled,
-                    self.landmarks_labeled_cov,
-                ) = self.update_labeled_landmarks(
+                    self.prototypes_labeled,
+                    self.prototypes_labeled_cov,
+                ) = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
                     self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
                     None,
                     None,
                 )
 
-        # Init unlabeled Landmarks if unlabeled data existent
+        # Init unlabeled prototypes if unlabeled data existent
         # Unknown ct names: list of strings that identify cells to ignore during training
         if (
                 0 in self.train_data.labeled_vector.unique().tolist()
@@ -294,15 +294,15 @@ class scPoliTrainer(Trainer):
 
             if self.clustering == "kmeans" and self.n_clusters is not None:
                 print(
-                    f"\nInitializing unlabeled landmarks with KMeans-Clustering with a given number of"
+                    f"\nInitializing unlabeled prototypes with KMeans-Clustering with a given number of"
                     f"{self.n_clusters} clusters."
                 )
                 k_means = KMeans(n_clusters=self.n_clusters).fit(lat_array)
-                k_means_landmarks = torch.tensor(
+                k_means_prototypes = torch.tensor(
                     k_means.cluster_centers_, device=self.device
                 )
 
-                self.landmarks_unlabeled = [
+                self.prototypes_unlabeled = [
                     torch.zeros(
                         size=(1, self.model.latent_dim),
                         requires_grad=False,
@@ -313,19 +313,19 @@ class scPoliTrainer(Trainer):
 
                 with torch.no_grad():
                     [
-                        self.landmarks_unlabeled[i].copy_(k_means_landmarks[i, :])
-                        for i in range(k_means_landmarks.shape[0])
+                        self.prototypes_unlabeled[i].copy_(k_means_prototypes[i, :])
+                        for i in range(k_means_prototypes.shape[0])
                     ]
                     # replace zeros with the kmeans centroids
             else:
                 if self.clustering == "kmeans" and self.n_clusters is None:
                     print(
-                        f"\nInitializing unlabeled landmarks with Leiden-Clustering because no value for the"
+                        f"\nInitializing unlabeled prototypes with Leiden-Clustering because no value for the"
                         f"number of clusters was given."
                     )
                 else:
                     print(
-                        f"\nInitializing unlabeled landmarks with Leiden-Clustering with an unknown number of "
+                        f"\nInitializing unlabeled prototypes with Leiden-Clustering with an unknown number of "
                         f"clusters."
                     )
                 lat_adata = sc.AnnData(lat_array)
@@ -345,9 +345,9 @@ class scPoliTrainer(Trainer):
 
                 self.n_clusters = cluster_centers.shape[0]
                 print(f"Leiden Clustering succesful. Found {self.n_clusters} clusters.")
-                leiden_landmarks = torch.tensor(cluster_centers, device=self.device)
+                leiden_prototypes = torch.tensor(cluster_centers, device=self.device)
 
-                self.landmarks_unlabeled = [
+                self.prototypes_unlabeled = [
                     torch.zeros(
                         size=(1, self.model.latent_dim),
                         requires_grad=False,
@@ -358,8 +358,8 @@ class scPoliTrainer(Trainer):
 
                 with torch.no_grad():
                     [
-                        self.landmarks_unlabeled[i].copy_(leiden_landmarks[i, :])
-                        for i in range(leiden_landmarks.shape[0])
+                        self.prototypes_unlabeled[i].copy_(leiden_prototypes[i, :])
+                        for i in range(leiden_prototypes.shape[0])
                     ]
 
     def on_epoch_begin(self, lr, eps):
@@ -367,13 +367,13 @@ class scPoliTrainer(Trainer):
         Routine that happens at the beginning of every epoch. Model update step.
         """
         if self.epoch == self.pretraining_epochs:
-            self.initialize_landmarks()
+            self.initialize_prototypes()
             if (
                     0 in self.train_data.labeled_vector.unique().tolist()
                     or self.model.unknown_ct_names is not None
             ):
-                self.landmark_optim = torch.optim.Adam(
-                    params=self.landmarks_unlabeled,
+                self.prototype_optim = torch.optim.Adam(
+                    params=self.prototypes_unlabeled,
                     lr=lr,
                     eps=eps,
                     weight_decay=self.weight_decay,
@@ -383,52 +383,52 @@ class scPoliTrainer(Trainer):
         if self.use_early_stopping_orig and self.epoch >= self.pretraining_epochs:
             self.use_early_stopping = True
         if self.epoch >= self.pretraining_epochs and self.epoch - 1 == self.best_epoch:
-            self.best_landmarks_labeled = self.landmarks_labeled
-            self.best_landmarks_labeled_cov = self.landmarks_labeled_cov
-            self.best_landmarks_unlabeled = self.landmarks_unlabeled
+            self.best_prototypes_labeled = self.prototypes_labeled
+            self.best_prototypes_labeled_cov = self.prototypes_labeled_cov
+            self.best_prototypes_unlabeled = self.prototypes_unlabeled
 
     def loss(self, total_batch=None):
         latent, recon_loss, kl_loss, mmd_loss = self.model(**total_batch)
 
         # Calculate classifier loss for labeled/unlabeled data
         label_categories = total_batch["labeled"].unique().tolist()
-        unweighted_landmark_loss = torch.tensor(0.0, device=self.device)
+        unweighted_prototype_loss = torch.tensor(0.0, device=self.device)
         unlabeled_loss = torch.tensor(0.0, device=self.device)
         labeled_loss = torch.tensor(0.0, device=self.device)
         if self.epoch >= self.pretraining_epochs:
-            # Calculate landmark loss for all data
-            if self.landmarks_unlabeled is not None and self.unlabeled_weight > 0:
-                unlabeled_loss, _ = self.landmark_unlabeled_loss(
+            # Calculate prototype loss for all data
+            if self.prototypes_unlabeled is not None and self.unlabeled_weight > 0:
+                unlabeled_loss, _ = self.prototype_unlabeled_loss(
                     latent,
-                    torch.stack(self.landmarks_unlabeled).squeeze(),
+                    torch.stack(self.prototypes_unlabeled).squeeze(),
                 )
-                unweighted_landmark_loss = (
-                        unweighted_landmark_loss + self.unlabeled_weight * unlabeled_loss
+                unweighted_prototype_loss = (
+                        unweighted_prototype_loss + self.unlabeled_weight * unlabeled_loss
                 )
 
-            # Calculate landmark loss for labeled data
+            # Calculate prototype loss for labeled data
             if 1 in label_categories:
-                labeled_loss = self.landmark_labeled_loss(
+                labeled_loss = self.prototype_labeled_loss(
                     latent[torch.where(total_batch["labeled"] == 1)[0], :],
-                    self.landmarks_labeled,
+                    self.prototypes_labeled,
                     total_batch["celltypes"][torch.where(total_batch["labeled"] == 1)[0], :],
                 )
-                unweighted_landmark_loss = unweighted_landmark_loss + labeled_loss
+                unweighted_prototype_loss = unweighted_prototype_loss + labeled_loss
 
         # Loss addition and Logs
-        landmark_loss = self.eta * unweighted_landmark_loss
+        prototype_loss = self.eta * unweighted_prototype_loss
         trvae_loss = recon_loss + self.calc_alpha_coeff() * kl_loss + mmd_loss
-        loss = trvae_loss + landmark_loss
+        loss = trvae_loss + prototype_loss
         self.iter_logs["loss"].append(loss.item())
         self.iter_logs["unweighted_loss"].append(
             recon_loss.item()
             + kl_loss.item()
             + mmd_loss.item()
-            + unweighted_landmark_loss.item()
+            + unweighted_prototype_loss.item()
         )
         self.iter_logs["trvae_loss"].append(trvae_loss.item())
         if self.epoch >= self.pretraining_epochs:
-            self.iter_logs["landmark_loss"].append(landmark_loss.item())
+            self.iter_logs["prototype_loss"].append(prototype_loss.item())
             if 0 in label_categories or self.model.unknown_ct_names is not None:
                 self.iter_logs["unlabeled_loss"].append(unlabeled_loss.item())
             if 1 in label_categories:
@@ -437,7 +437,7 @@ class scPoliTrainer(Trainer):
 
     def on_epoch_end(self):
         """
-        Routine at the end of each epoch. Landmark update step.
+        Routine at the end of each epoch. prototype update step.
         """
         self.model.eval()
 
@@ -445,31 +445,31 @@ class scPoliTrainer(Trainer):
             latent = self.get_latent_train()
             label_categories = self.train_data.labeled_vector.unique().tolist()
 
-            # Update labeled landmark positions
+            # Update labeled prototype positions
             if 1 in label_categories:
                 (
-                    self.landmarks_labeled,
-                    self.landmarks_labeled_cov,
-                ) = self.update_labeled_landmarks(
+                    self.prototypes_labeled,
+                    self.prototypes_labeled_cov,
+                ) = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
                     self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
-                    self.landmarks_labeled,
-                    self.landmarks_labeled_cov,
-                    self.model.new_landmarks,
+                    self.prototypes_labeled,
+                    self.prototypes_labeled_cov,
+                    self.model.new_prototypes,
                 )
 
-            # Update unlabeled landmark positions
+            # Update unlabeled prototype positions
             if 0 in label_categories or self.model.unknown_ct_names is not None:
-                for landmk in self.landmarks_unlabeled:
+                for landmk in self.prototypes_unlabeled:
                     landmk.requires_grad = True
-                self.landmark_optim.zero_grad()
-                update_loss, args_count = self.landmark_unlabeled_loss(
+                self.prototype_optim.zero_grad()
+                update_loss, args_count = self.prototype_unlabeled_loss(
                     latent,
-                    torch.stack(self.landmarks_unlabeled).squeeze(),
+                    torch.stack(self.prototypes_unlabeled).squeeze(),
                 )
                 update_loss.backward()
-                self.landmark_optim.step()
-                for landmk in self.landmarks_unlabeled:
+                self.prototype_optim.step()
+                for landmk in self.prototypes_unlabeled:
                     landmk.requires_grad = False
 
         self.model.train()
@@ -480,28 +480,28 @@ class scPoliTrainer(Trainer):
         Routine at the end of training. Load best state.
         """
         if self.best_state_dict is not None and self.reload_best:
-            self.landmarks_labeled = self.best_landmarks_labeled
-            self.landmarks_labeled_cov = self.best_landmarks_labeled_cov
-            self.landmarks_unlabeled = self.best_landmarks_unlabeled
+            self.prototypes_labeled = self.best_prototypes_labeled
+            self.prototypes_labeled_cov = self.best_prototypes_labeled_cov
+            self.prototypes_unlabeled = self.best_prototypes_unlabeled
 
-        self.model.landmarks_labeled["mean"] = self.landmarks_labeled
-        self.model.landmarks_labeled["cov"] = self.landmarks_labeled_cov
+        self.model.prototypes_labeled["mean"] = self.prototypes_labeled
+        self.model.prototypes_labeled["cov"] = self.prototypes_labeled_cov
 
         if (
                 0 in self.train_data.labeled_vector.unique().tolist()
                 or self.model.unknown_ct_names is not None
         ):
-            self.model.landmarks_unlabeled["mean"] = torch.stack(
-                self.landmarks_unlabeled
+            self.model.prototypes_unlabeled["mean"] = torch.stack(
+                self.prototypes_unlabeled
             ).squeeze()
         else:
-            self.model.landmarks_unlabeled["mean"] = self.landmarks_unlabeled
+            self.model.prototypes_unlabeled["mean"] = self.prototypes_unlabeled
 
-    def update_labeled_landmarks(
-            self, latent, labels, previous_landmarks, previous_landmarks_cov, mask=None
+    def update_labeled_prototypes(
+            self, latent, labels, previous_prototypes, previous_prototypes_cov, mask=None
     ):
         """
-        Function that updates labeled landmarks.
+        Function that updates labeled prototypes.
 
         Parameters
         ==========
@@ -509,63 +509,63 @@ class scPoliTrainer(Trainer):
             Latent representation of labeled batch
         labels: Tensor
             Tensor containing cell type information of the batch
-        previous_landmarks: Tensor
-            Tensor containing the means of the landmarks before update
-        previous_landmarks_cov: Tensor
-            Tensor containing the covariance matrices of the landmarks before udpate.
+        previous_prototypes: Tensor
+            Tensor containing the means of the prototypes before update
+        previous_prototypes_cov: Tensor
+            Tensor containing the covariance matrices of the prototypes before udpate.
 
         """
         with torch.no_grad():
             unique_labels = torch.unique(labels, sorted=True)
-            landmarks_mean = None
-            landmarks_cov = None
+            prototypes_mean = None
+            prototypes_cov = None
             for value in range(self.model.n_cell_types):
                 if (
                         mask is None or value in mask
-                ) and value in unique_labels:  # update the landmark included in mask if there is one
+                ) and value in unique_labels:  # update the prototype included in mask if there is one
                     indices = labels.eq(value).nonzero(as_tuple=False)[:, 0]
-                    landmark = latent[indices, :].mean(0).unsqueeze(0)
-                    landmark_cov = cov(latent[indices, :]).unsqueeze(0)
-                    landmarks_mean = (
-                        torch.cat([landmarks_mean, landmark])
-                        if landmarks_mean is not None
-                        else landmark
+                    prototype = latent[indices, :].mean(0).unsqueeze(0)
+                    prototype_cov = cov(latent[indices, :]).unsqueeze(0)
+                    prototypes_mean = (
+                        torch.cat([prototypes_mean, prototype])
+                        if prototypes_mean is not None
+                        else prototype
                     )
-                    landmarks_cov = (
-                        torch.cat([landmarks_cov, landmark_cov])
-                        if landmarks_cov is not None
-                        else landmark_cov
+                    prototypes_cov = (
+                        torch.cat([prototypes_cov, prototype_cov])
+                        if prototypes_cov is not None
+                        else prototype_cov
                     )
-                else:  # do not update the landmarks (e.g. during surgery landmarks are fixed)
-                    landmark = previous_landmarks[value].unsqueeze(0)
-                    landmark_cov = previous_landmarks_cov[value].unsqueeze(0)
-                    landmarks_mean = (
-                        torch.cat([landmarks_mean, landmark])
-                        if landmarks_mean is not None
-                        else landmark
+                else:  # do not update the prototypes (e.g. during surgery prototypes are fixed)
+                    prototype = previous_prototypes[value].unsqueeze(0)
+                    prototype_cov = previous_prototypes_cov[value].unsqueeze(0)
+                    prototypes_mean = (
+                        torch.cat([prototypes_mean, prototype])
+                        if prototypes_mean is not None
+                        else prototype
                     )
-                    landmarks_cov = (
-                        torch.cat([landmarks_cov, landmark_cov])
-                        if landmarks_cov is not None
-                        else landmark_cov
+                    prototypes_cov = (
+                        torch.cat([prototypes_cov, prototype_cov])
+                        if prototypes_cov is not None
+                        else prototype_cov
                     )
-        return landmarks_mean, landmarks_cov
+        return prototypes_mean, prototypes_cov
 
-    def landmark_labeled_loss(self, latent, landmarks, labels):
+    def prototype_labeled_loss(self, latent, prototypes, labels):
         """
-        Compute the labeled landmark loss. Different losses are included.
+        Compute the labeled prototype loss. Different losses are included.
 
         Parameters
         ==========
         latent: Tensor
             Latent representation of labeled batch
-        landmarks: Tensor
-            Tensor containing the means of the landmarks
+        prototypes: Tensor
+            Tensor containing the means of the prototypes
         labels: Tensor
             Tensor containing cell type information of the batch
         """
         unique_labels = torch.unique(labels, sorted=True)
-        distances = euclidean_dist(latent, landmarks)
+        distances = euclidean_dist(latent, prototypes)
         loss = torch.tensor(0.0, device=self.device)
 
         # If data only contains 'unknown' celltypes
@@ -582,18 +582,18 @@ class scPoliTrainer(Trainer):
 
         return loss
 
-    def landmark_unlabeled_loss(self, latent, landmarks):
+    def prototype_unlabeled_loss(self, latent, prototypes):
         """
-        Compute the unlabeled landmark loss. Different losses are included.
+        Compute the unlabeled prototype loss. Different losses are included.
 
             Parameters
             ==========
             latent: Tensor
                 Latent representation of labeled batch
-            landmarks: Tensor
-                Tensor containing the means of the landmarks
+            prototypes: Tensor
+                Tensor containing the means of the prototypes
         """
-        dists = euclidean_dist(latent, landmarks)
+        dists = euclidean_dist(latent, prototypes)
         min_dist, y_hat = torch.min(dists, 1)
         args_uniq = torch.unique(y_hat, sorted=True)
         args_count = torch.stack([(y_hat == x_u).sum() for x_u in args_uniq])

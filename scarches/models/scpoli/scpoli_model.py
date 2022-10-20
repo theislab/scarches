@@ -13,7 +13,7 @@ from scarches.trainers.scpoli import scPoliTrainer
 
 
 class scPoli(BaseMixin):
-    """Model for scPoli class. This class contains the methods and functionalities for label transfer and landmark training.
+    """Model for scPoli class. This class contains the methods and functionalities for label transfer and prototype training.
 
     Parameters
     ----------
@@ -27,17 +27,17 @@ class scPoli(BaseMixin):
     conditions: List
         List of Condition names that the used data will contain to get the right encoding when used after reloading.
     cell_type_keys: List
-        List of obs columns to use as cell type annotation for landmarks.
+        List of obs columns to use as cell type annotation for prototypes.
     cell_types: Dictionary
         Dictionary of cell types. Keys are cell types and values are cell_type_keys. Needed for surgery.
     unknown_ct_names: List
-        List of strings with the names of cell clusters to be ignored for landmarks computation.
+        List of strings with the names of cell clusters to be ignored for prototypes computation.
     labeled_indices: List
         List of integers with the indices of the labeled cells.
-    landmarks_labeled: Dictionary
-        Dictionary with keys mean, cov and the respective mean or covariate matrices for landmarks.
-    landmarks_unlabeled: Dictionary
-        Dictionary with keys mean and the respective mean for unlabeled landmarks.
+    prototypes_labeled: Dictionary
+        Dictionary with keys mean, cov and the respective mean or covariate matrices for prototypes.
+    prototypes_unlabeled: Dictionary
+        Dictionary with keys mean and the respective mean for unlabeled prototypes.
     hidden_layer_sizes: List
         A list of hidden layer sizes for encoder network. Decoder network will be the reversed order.
     latent_dim: Integer
@@ -77,8 +77,8 @@ class scPoli(BaseMixin):
             cell_types: Optional[dict] = None,
             unknown_ct_names: Optional[list] = None,
             labeled_indices: Optional[list] = None,
-            landmarks_labeled: Optional[dict] = None,
-            landmarks_unlabeled: Optional[dict] = None,
+            prototypes_labeled: Optional[dict] = None,
+            prototypes_unlabeled: Optional[dict] = None,
             hidden_layer_sizes: list = [256, 64],
             latent_dim: int = 10,
             embedding_dim: int = 10,
@@ -163,17 +163,17 @@ class scPoli(BaseMixin):
         self.embedding_max_norm_ = embedding_max_norm
 
         self.input_dim_ = adata.n_vars
-        self.landmarks_labeled_ = (
+        self.prototypes_labeled_ = (
             {"mean": None, "cov": None}
-            if landmarks_labeled is None
-            else landmarks_labeled
+            if prototypes_labeled is None
+            else prototypes_labeled
         )
-        self.landmarks_unlabeled_ = (
+        self.prototypes_unlabeled_ = (
             {
                 "mean": None,
             }
-            if landmarks_unlabeled is None
-            else landmarks_unlabeled
+            if prototypes_unlabeled is None
+            else prototypes_unlabeled
         )
 
         self.model_cell_types = list(self.cell_types_.keys())
@@ -188,8 +188,8 @@ class scPoli(BaseMixin):
             embedding_dim=self.embedding_dim_,
             embedding_max_norm=self.embedding_max_norm_,
             unknown_ct_names=self.unknown_ct_names_,
-            landmarks_labeled=self.landmarks_labeled_,
-            landmarks_unlabeled=self.landmarks_unlabeled_,
+            prototypes_labeled=self.prototypes_labeled_,
+            prototypes_unlabeled=self.prototypes_unlabeled_,
             hidden_layer_sizes=self.hidden_layer_sizes_,
             latent_dim=self.latent_dim_,
             dr_rate=self.dr_rate_,
@@ -199,15 +199,15 @@ class scPoli(BaseMixin):
             use_ln=self.use_ln_,
         )
 
-        if self.landmarks_labeled_["mean"] is not None:
-            self.landmarks_labeled_["mean"] = self.landmarks_labeled_["mean"].to(
+        if self.prototypes_labeled_["mean"] is not None:
+            self.prototypes_labeled_["mean"] = self.prototypes_labeled_["mean"].to(
                 next(self.model.parameters()).device
             )
-            self.landmarks_labeled_["cov"] = self.landmarks_labeled_["cov"].to(
+            self.prototypes_labeled_["cov"] = self.prototypes_labeled_["cov"].to(
                 next(self.model.parameters()).device
             )
-        if self.landmarks_unlabeled_["mean"] is not None:
-            self.landmarks_unlabeled_["mean"] = self.landmarks_unlabeled_["mean"].to(
+        if self.prototypes_unlabeled_["mean"] is not None:
+            self.prototypes_unlabeled_["mean"] = self.prototypes_unlabeled_["mean"].to(
                 next(self.model.parameters()).device
             )
 
@@ -235,8 +235,8 @@ class scPoli(BaseMixin):
         )
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
-        self.landmarks_labeled_ = self.model.landmarks_labeled
-        self.landmarks_unlabeled_ = self.model.landmarks_unlabeled
+        self.prototypes_labeled_ = self.model.prototypes_labeled
+        self.prototypes_unlabeled_ = self.model.prototypes_unlabeled
 
     def get_latent(
             self,
@@ -305,12 +305,12 @@ class scPoli(BaseMixin):
             self,
             x: Optional[np.ndarray] = None,
             c: Optional[np.ndarray] = None,
-            landmark=False,
+            prototype=False,
             get_prob=False,
             log_distance=True, 
     ):
         """
-        Classifies unlabeled cells using the landmarks obtained during training.
+        Classifies unlabeled cells using the prototypes obtained during training.
         Data handling before call to model's classify method.
 
         x:  np.ndarray
@@ -318,14 +318,14 @@ class scPoli(BaseMixin):
             model's adata is used.
         c: np.ndarray
             Condition vector.
-        landmark:
-            Boolean whether to classify the gene features or landmarks stored
+        prototype:
+            Boolean whether to classify the gene features or prototypes stored
             stored in the model.
 
         """
         device = next(self.model.parameters()).device
         self.model.eval()
-        if not landmark:
+        if not prototype:
             # get the gene features from stored adata
             if x is None:
                 x = self.adata.X
@@ -346,13 +346,13 @@ class scPoli(BaseMixin):
         results = dict()
         # loop through hierarchies
         for cell_type_key in self.cell_type_keys_:
-            landmarks_idx = list()
-            # get indices of different landmarks corresponding to current hierarchy
+            prototypes_idx = list()
+            # get indices of different prototypes corresponding to current hierarchy
             for i, key in enumerate(self.cell_types_.keys()):
                 if cell_type_key in self.cell_types_[key]:
-                    landmarks_idx.append(i)
+                    prototypes_idx.append(i)
 
-            landmarks_idx = torch.tensor(landmarks_idx, device=device)
+            prototypes_idx = torch.tensor(prototypes_idx, device=device)
 
             preds = []
             uncert = []
@@ -360,11 +360,11 @@ class scPoli(BaseMixin):
             indices = torch.arange(x.size(0), device=device)
             subsampled_indices = indices.split(512)
             for batch in subsampled_indices:
-                if landmark:  # classify landmarks used for unseen cell type
+                if prototype:  # classify prototypes used for unseen cell type
                     pred, prob, weighted_distance = self.model.classify(
                         x[batch, :].to(device),
-                        landmark=landmark,
-                        classes_list=landmarks_idx,
+                        prototype=prototype,
+                        classes_list=prototypes_idx,
                         get_prob=get_prob,
                         log_distance=log_distance,
                     )
@@ -372,8 +372,8 @@ class scPoli(BaseMixin):
                     pred, prob, weighted_distance = self.model.classify(
                         x[batch, :].to(device),
                         c[batch].to(device),
-                        landmark=landmark,
-                        classes_list=landmarks_idx,
+                        prototype=prototype,
+                        classes_list=prototypes_idx,
                         get_prob=get_prob,
                         log_distance=log_distance,
                     )
@@ -402,7 +402,7 @@ class scPoli(BaseMixin):
             self,
             cell_type_name,
             obs_key,
-            landmarks,
+            prototypes,
             x=None,
             c=None,
     ):
@@ -415,8 +415,8 @@ class scPoli(BaseMixin):
             Name of the new cell type
         obs_key: str
             Obs column key to define the hierarchy level of celltype annotation.
-        landmarks: list
-            List of indices of the unlabeled landmarks that correspond to the new cell type
+        prototypes: list
+            List of indices of the unlabeled prototypes that correspond to the new cell type
         x:  np.ndarray
             Features to be classified. If None the stored
             model's adata is used.
@@ -453,66 +453,66 @@ class scPoli(BaseMixin):
             latents += [latent.cpu().detach()]
         latents = torch.cat(latents)
 
-        # get indices of different landmarks corresponding to current hierarchy
-        landmarks_idx = list()
+        # get indices of different prototypes corresponding to current hierarchy
+        prototypes_idx = list()
         for i, key in enumerate(self.cell_types_.keys()):
             if obs_key in self.cell_types_[key]:
-                landmarks_idx.append(i)
+                prototypes_idx.append(i)
 
-        landmarks_idx = torch.tensor(landmarks_idx, device=device)
+        prototypes_idx = torch.tensor(prototypes_idx, device=device)
 
-        # Calculate mean and Cov of new landmark
+        # Calculate mean and Cov of new prototype
         self.model.add_new_cell_type(
             latents,
             cell_type_name,
-            landmarks,
-            landmarks_idx,
+            prototypes,
+            prototypes_idx,
         )
 
         # Update parameters
-        self.landmarks_labeled_ = self.model.landmarks_labeled
-        self.landmarks_unlabeled_ = self.model.landmarks_unlabeled
+        self.prototypes_labeled_ = self.model.prototypes_labeled
+        self.prototypes_unlabeled_ = self.model.prototypes_unlabeled
         self.cell_types_[cell_type_name] = [obs_key]
 
-    def get_landmarks_info(
-            self, landmark_set="labeled",
+    def get_prototypes_info(
+            self, prototype_set="labeled",
     ):
         """
-        Generates anndata file with landmark features and annotations.
+        Generates anndata file with prototype features and annotations.
 
         Parameters
         ----------
         cell_type_name: str
             Name of the new cell type
-        landmarks: list
-            List of indices of the unlabeled landmarks that correspond to the new cell type
+        prototypes: list
+            List of indices of the unlabeled prototypes that correspond to the new cell type
 
         Returns
         -------
 
         """
-        if landmark_set == "labeled":
-            landmarks = self.landmarks_labeled_["mean"].detach().cpu().numpy()
-            batch_name = "Landmark-Set Labeled"
-        elif landmark_set == "unlabeled":
-            landmarks = self.landmarks_unlabeled_["mean"].detach().cpu().numpy()
-            batch_name = "Landmark-Set Unlabeled"
+        if prototype_set == "labeled":
+            prototypes = self.prototypes_labeled_["mean"].detach().cpu().numpy()
+            batch_name = "prototype-Set Labeled"
+        elif prototype_set == "unlabeled":
+            prototypes = self.prototypes_unlabeled_["mean"].detach().cpu().numpy()
+            batch_name = "prototype-Set Unlabeled"
         else:
             print(
-                f"Parameter 'landmark_set' has either to be 'labeled' for labeled landmark set or 'unlabeled' "
-                f"for the unlabeled landmark set. But given value was {landmark_set}"
+                f"Parameter 'prototype_set' has either to be 'labeled' for labeled prototype set or 'unlabeled' "
+                f"for the unlabeled prototype set. But given value was {prototype_set}"
             )
             return
-        landmarks_info = sc.AnnData(landmarks)
-        landmarks_info.obs[self.condition_key_] = np.array(
-            (landmarks.shape[0] * [batch_name])
+        prototypes_info = sc.AnnData(prototypes)
+        prototypes_info.obs[self.condition_key_] = np.array(
+            (prototypes.shape[0] * [batch_name])
         )
 
         results = self.classify(
-            landmarks, landmark=True,
+            prototypes, prototype=True,
         )
         for cell_type_key in self.cell_type_keys_:
-            if landmark_set == "l":
+            if prototype_set == "l":
                 truth_names = list()
                 for key in self.cell_types_.keys():
                     if cell_type_key in self.cell_types_[key]:
@@ -521,17 +521,17 @@ class scPoli(BaseMixin):
                         truth_names.append("nan")
             else:
                 truth_names = list()
-                for i in range(landmarks.shape[0]):
+                for i in range(prototypes.shape[0]):
                     truth_names.append(f"{i}")
 
-            landmarks_info.obs[cell_type_key] = np.array(truth_names)
-            landmarks_info.obs[cell_type_key + "_pred"] = results[cell_type_key][
+            prototypes_info.obs[cell_type_key] = np.array(truth_names)
+            prototypes_info.obs[cell_type_key + "_pred"] = results[cell_type_key][
                 "preds"
             ]
-            landmarks_info.obs[cell_type_key + "_prob"] = results[cell_type_key][
-                "probs"
+            prototypes_info.obs[cell_type_key + "_uncert"] = results[cell_type_key][
+                "uncert"
             ]
-        return landmarks_info
+        return prototypes_info
 
     @classmethod
     def _validate_adata(cls, adata, dct):
@@ -551,8 +551,8 @@ class scPoli(BaseMixin):
             "cell_type_keys": dct["cell_type_keys_"],
             "cell_types": dct["cell_types_"],
             "labeled_indices": dct["labeled_indices_"],
-            "landmarks_labeled": dct["landmarks_labeled_"],
-            "landmarks_unlabeled": dct["landmarks_unlabeled_"],
+            "prototypes_labeled": dct["prototypes_labeled_"],
+            "prototypes_unlabeled": dct["prototypes_unlabeled_"],
             "hidden_layer_sizes": dct["hidden_layer_sizes_"],
             "latent_dim": dct["latent_dim_"],
             "dr_rate": dct["dr_rate_"],
