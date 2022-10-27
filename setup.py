@@ -35,7 +35,7 @@ setup(name='scArches',
     	"scvi-tools>=0.12.1",
     	"tqdm>=4.56.0",
     	"requests",
-        "gdown"
+        "gdown",
       ],
       classifiers=[
           "Programming Language :: Python :: 3.6",
