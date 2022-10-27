@@ -36,6 +36,11 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **SageNet** (`Heidari et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_): This model allows constrcution of a spatial atlas by mapping query dissociated single cells/spots (e.g., from  scRNAseq or visium datasets) into a common coordinate framework using one or more spatially resolved reference datasets.
 
+
+- **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.  
+
+
+
 Usage and installation
 -------------------------------
 See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
