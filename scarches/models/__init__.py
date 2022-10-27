@@ -12,4 +12,8 @@ except:
 from .expimap.expimap import expiMap
 from .expimap.expimap_model import EXPIMAP
 from scvi.model import SCVI, SCANVI, TOTALVI
-import tcr_embedding as mvTCR
+try:
+    import tcr_embedding as mvTCR
+except:
+    import warnings
+    warnings.warn('mvTCR is not installed. To use mvTCR models, please install it first using "pip install mvtcr"')
