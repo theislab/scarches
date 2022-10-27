@@ -245,7 +245,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         if pretrain > 0:
             query_model.train(n_epochs=pretrain, pretraining_epochs=pretrain)
 
-        return query_model
+        return query_model 
 
 
 
