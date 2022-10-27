@@ -46,7 +46,7 @@ notebooks = [
     'treeArches_pbmc.ipynb',
     'treeArches_identifying_new_ct.ipynb',
     'SageNet_mouse_embryo.ipynb',
-     'mvTCR_borcherding.ipynb'
+    'mvTCR_borcherding.ipynb'
 ]
 
 for nb in notebooks:
