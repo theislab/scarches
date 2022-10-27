@@ -45,7 +45,8 @@ notebooks = [
     'expimap_surgery_pipeline_advanced.ipynb',
     'treeArches_pbmc.ipynb',
     'treeArches_identifying_new_ct.ipynb',
-    'SageNet_mouse_embryo.ipynb'
+    'SageNet_mouse_embryo.ipynb',
+     'mvTCR_borcherding.ipynb'
 ]
 
 for nb in notebooks:
@@ -57,7 +58,7 @@ for nb in notebooks:
 # -- Project information -----------------------------------------------------
 
 project = 'scArches'
-author = 'Marco Wagenstetter, Mohammad Lotfollahi, Mohsen Naghipourfar, Sergei Rybakov'
+author = ' Mohammad Lotfollahi, Mohsen Naghipourfar, Sergei Rybakov'
 copyright = f'{datetime.now():%Y}, ' + author
 
 pygments_style = 'sphinx'
