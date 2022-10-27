@@ -10,6 +10,8 @@ Single-cell architecture surgery (scArches) is a package for reference-based ana
 Updates
 -------------------------------
 
+- **(22.10.2022)** We have added `mvTCR <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_ and `SageNet <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_ enabling mapping multimodal immune profiling (TCR+scRNAreq) and scRNA-seq to spatial atlases, respectively.
+
 - **(7.07.2022)** We have added `treeArches <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_ to scArches code base. treeArches enables building cell-type hierarchies to identify novel states (e.g., disease, subpopulations) in the query data when mapped to the reference. See tutorials `here <https://scarches.readthedocs.io/>`_ .
 
 - **(6.02.2022)** We have added `expiMap <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_ to scArches code base. expiMap allows interpretable reference mapping. See tutorials `here <https://scarches.readthedocs.io/>`_ .
