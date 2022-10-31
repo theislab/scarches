@@ -70,6 +70,10 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
        soft_ext_mask: Boolean
             Use the soft mask mode for training with the constarined extension terms.
             Used for query mapping.
+       cont_cov_key: String
+             A key in `adata.obs` that corresponds to continuous data.
+             These covariate can be added in addition to the discrete conditional covariate
+             and is also treated as a nuisance factor.
     """
     def __init__(
         self,
@@ -256,6 +260,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate.
            only_active
                 Return only the latent variables which correspond to active terms, i.e terms that
                 were not deactivated by the group lasso regularization.

@@ -277,6 +277,8 @@ class CVAELatentsMixin:
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate. Supported only by the `EXPIMAP` model.
            mean
                 return mean instead of random sample from the latent space
            mean_var
@@ -336,6 +338,7 @@ class CVAELatentsMixin:
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
+        cont_cov: Optional[np.ndarray] = None
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
@@ -347,6 +350,9 @@ class CVAELatentsMixin:
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate. Supported only by the `EXPIMAP` model.
+
            Returns
            -------
                 Returns array containing output of first decoder layer.
@@ -422,7 +428,14 @@ class CVAELatentsModelMixin:
                 Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
            c: torch.Tensor
                 Torch Tensor of condition labels for each sample.
-           mean: boolean
+           cont_cov: torch.Tensor
+                Torch Tensor of the categorical covariate. Supported only by the `EXPIMAP` model.
+           mean: Boolean
+                return mean instead of random sample from the latent space
+           mean_var: Boolean
+                return mean and variance instead of random sample from the latent space
+                if `mean=False`.
+
            Returns
            -------
            Returns Torch Tensor containing latent space encoding of 'x'.
@@ -453,6 +466,8 @@ class CVAELatentsModelMixin:
                 Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
            c: torch.Tensor
                 Torch Tensor of condition labels for each sample.
+           cont_cov: torch.Tensor
+                Torch Tensor of the categorical covariate. Supported only by the `EXPIMAP` model.
 
            Returns
            -------
