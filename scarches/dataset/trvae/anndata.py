@@ -73,7 +73,7 @@ class AnnotatedDataset(Dataset):
             self.cell_types = torch.tensor(self.cell_types, dtype=torch.long)
 
         if cont_cov_key is not None:
-            self.cont_cov = torch.tensor(adata.obs[cont_cov_key])
+            self.cont_cov = torch.tensor(adata.obs[cont_cov_key], dtype=self.size_factors.dtype)
             if len(self.cont_cov.shape) < 2:
                 self.cont_cov = self.cont_cov[:, None]
         else:
