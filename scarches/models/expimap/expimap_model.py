@@ -241,6 +241,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
+        cont_cov: Optional[np.ndarray] = None,
         only_active: bool = False,
         mean: bool = False,
         mean_var: bool = False
@@ -268,7 +269,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
            -------
                 Returns array containing latent space encoding of 'x'.
         """
-        result = super().get_latent(x, c, mean, mean_var)
+        result = super().get_latent(x, c, cont_cov, mean, mean_var)
 
         if not only_active:
             return result
