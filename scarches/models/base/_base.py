@@ -308,7 +308,7 @@ class CVAELatentsMixin:
         else:
             cont_cov_key = getattr(self, "cont_cov_key_", None)
             if cont_cov_key is not None:
-                cont_cov = torch.tensor(adata.obs[cont_cov_key], device=device)
+                cont_cov = torch.tensor(self.adata.obs[cont_cov_key], device=device)
 
         if cont_cov is not None and len(cont_cov.shape) < 2:
             cont_cov = cont_cov[:, None]
@@ -377,7 +377,7 @@ class CVAELatentsMixin:
         else:
             cont_cov_key = getattr(self, "cont_cov_key_", None)
             if cont_cov_key is not None:
-                cont_cov = torch.tensor(adata.obs[cont_cov_key], device=device)
+                cont_cov = torch.tensor(sef.adata.obs[cont_cov_key], device=device)
 
         if cont_cov is not None and len(cont_cov.shape) < 2:
             cont_cov = cont_cov[:, None]
