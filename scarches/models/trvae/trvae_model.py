@@ -143,7 +143,8 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
 
  #TODO: Check for correctness
-    def zero_shot_surgery(self, adata, model_path, force_cuda=False, copy=False, subsample=1.):
+    @classmethod
+    def zero_shot_surgery(cls, adata, model_path, force_cuda=False, copy=False, subsample=1.):
         # assert subsample > 0. and subsample <= 1.
 
         if copy:
@@ -167,7 +168,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         adata.obs[condition_key] = adata.obs[condition_key].cat.rename_categories(ref_conditions[:len(original_cats)])
 
-        ref_model = self.load(model_path, adata)
+        ref_model = cls.load(model_path, adata)
         if force_cuda:
             ref_model.model = ref_model.model.cuda()
 
@@ -210,8 +211,9 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
 
 #TODO: Check correctness
+    @classmethod
     def one_shot_surgery(
-        self,
+        cls,
         adata,
         model_path,
         force_cuda=False,
@@ -225,7 +227,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         if copy:
             adata = adata.copy()
 
-        ref_model, rename_cats = self.zero_shot_surgery(adata, model_path, force_cuda=force_cuda, copy=False)
+        ref_model, rename_cats = cls.zero_shot_surgery(adata, model_path, force_cuda=force_cuda, copy=False)
 
         cond_key = ref_model.condition_key_
         adata.obs[cond_key] = adata.obs["_original_" + cond_key]
@@ -233,7 +235,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         # if subsample < 1.:
         #     adata = subsample_conditions(adata, cond_key, subsample)
 
-        query_model = self.load_query_data(adata, ref_model, **kwargs)
+        query_model = cls.load_query_data(adata, ref_model, **kwargs)
 
         cond_enc = query_model.model.condition_encoder
 
