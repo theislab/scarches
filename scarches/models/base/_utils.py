@@ -35,6 +35,16 @@ def _validate_var_names(adata, source_var_names):
             " genes that were not contained in the reference dataset. This information "
             "will be removed from the query data object for further processing.")
 
+    #Warning for gene percentage   
+    try:
+        query_genes = adata.var_names
+        ref_genes = source_var_names
+        percentage = round((query_genes.intersection(ref_genes).size/query_genes.size)*100,4)
+        if percentage != 100:
+            logging.warning(f"WARNING: Query shares {percentage}% of its genes with the reference. This may lead to inaccuracy in the results.")
+    except Exception:
+            logging.warning("WARNING: Something is wrong with the reference genes.")
+
     # remove unseen gene information and order anndata
     new_adata = new_adata[:, source_var_names].copy()
 
