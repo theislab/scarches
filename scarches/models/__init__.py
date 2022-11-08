@@ -17,3 +17,9 @@ try:
 except:
     import warnings
     warnings.warn('mvTCR is not installed. To use mvTCR models, please install it first using "pip install mvtcr"')
+try:
+    from multigrate.data import organize_multiome_anndatas
+    from multigrate.model import MultiVAE
+except:
+    import warnings
+    warnings.warn('multigrate is not installed. To use multigrate models, please install it first using "pip install multigrate".')

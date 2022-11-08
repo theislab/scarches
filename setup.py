@@ -36,6 +36,7 @@ setup(name='scArches',
     	"tqdm>=4.56.0",
     	"requests",
         "gdown",
+        "muon",
       ],
       classifiers=[
           "Programming Language :: Python :: 3.6",
