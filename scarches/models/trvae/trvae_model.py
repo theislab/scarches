@@ -143,8 +143,16 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
 
  #TODO: Check for correctness
+ #TODO: Ask if I should remove subsampling
     @classmethod
-    def zero_shot_surgery(cls, adata, model_path, force_cuda=False, copy=False, subsample=1.):
+    def zero_shot_surgery(
+        cls,
+        adata,
+        model_path,
+        force_cuda=False,
+        copy=False,
+        # subsample=1.
+        ):
         # assert subsample > 0. and subsample <= 1.
 
         if copy:
@@ -218,7 +226,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         model_path,
         force_cuda=False,
         copy=False,
-        subsample=1.,
+        # subsample=1.,
         pretrain=1,
         **kwargs
     ):
@@ -242,6 +250,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         to_set = [cond_enc[cat] for cat in rename_cats]
         to_get = [cond_enc[cat] for cat in rename_cats.values()]
 
+        #TODO: Ask about this
         # query_model.model.embedding.weight.data[to_set] = query_model.model.embedding.weight.data[to_get]
 
         if pretrain > 0:
