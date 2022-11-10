@@ -250,8 +250,12 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         to_set = [cond_enc[cat] for cat in rename_cats]
         to_get = [cond_enc[cat] for cat in rename_cats.values()]
 
-        #TODO: Ask about this
+        #TODO: Check
+
         # query_model.model.embedding.weight.data[to_set] = query_model.model.embedding.weight.data[to_get]
+        
+        query_model.model.encoder.FC[0].cond_L.weight.data[to_set] = query_model.model.encoder.FC[0].cond_L.weight.data[to_get]
+        query_model.model.decoder.FirstL[0].cond_L.weight.data[to_set] = query_model.model.decoder.FirstL[0].cond_L.weight.data[to_get] 
 
         if pretrain > 0:
             query_model.train(n_epochs=pretrain, pretraining_epochs=pretrain)
