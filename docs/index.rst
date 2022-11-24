@@ -16,7 +16,7 @@ Single-cell architecture surgery (scArches) is a package for reference-based ana
 
 What is scArches?
 -------------------------------
-scArches allows analysis of your single-cell query data by integrating it into a reference atlas. To map your data you need an integrated atlas using one of the reference building methods for deifferent applications that are supported by scArches whcih are , inlcuding:
+scArches allows analysis of your single-cell query data by integrating it into a reference atlas. To map your data you need an integrated atlas using one of the reference building methods for different applications that are supported by scArches which are, including:
 
 
 
