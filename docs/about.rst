@@ -10,7 +10,7 @@ scArches is a package to integrate newly produced single-cell datasets into inte
 
 .. note::
 
-  expiMap has been added to scArches code base. It allows interpretable representation learning from scRNA-seq data and also reference mapping. Try it in the tutorial section. 
+  expiMap has been added to scArches code base. It allows interpretable representation learning from scRNA-seq data and also reference mapping. Try it in the tutorial section.
 
 What can you do with scArches?
 -------------------------------
@@ -38,8 +38,8 @@ Supervised and Semi-supervised
  these methods.
 
  - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
- 
- - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning. 
+
+ - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning.
 
 Multi-modal
  These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
@@ -52,11 +52,11 @@ Multi-modal
 Where to start?
 ---------------
 To get a sense of how the model works please go through `this <https://scarches.readthedocs.io/en/latest/trvae_surgery_pipeline.html>`__ tutorial.
-To find out how to construct and share or use pre-trained models example sections. 
+To find out how to construct and share or use pre-trained models example sections.
 
 Reference
 -------------------------------
-If scArches is useful in your research, please consider citing the `preprint <https://www.biorxiv.org/content/10.1101/2020.07.16.205997v1/>`_.
+If scArches is useful in your research, please consider citing the `paper <https://www.nature.com/articles/s41587-021-01001-7>`_.
 
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
