@@ -42,7 +42,7 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.
 
-- **Multigrate** (`Litinetskaya*, Lotfollahi* <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1>`_): Using this model, you will be able to build multimodal atlases using paired and unpaired for scRNA-seq, scATAC-seq, and CITE-seq. Additionally, combined with scArches, it allows you to map query data from either modality. 
+- **Multigrate** (`Litinetskaya*, Lotfollahi*, et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1>`_): Using this model, you will be able to build multimodal atlases using paired and unpaired data from scRNA-seq, scATAC-seq, and CITE-seq. Additionally, combined with scArches, it allows you to map query data from either modality. 
 
 Usage and installation
 -------------------------------
