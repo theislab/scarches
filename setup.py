@@ -8,7 +8,7 @@ try:
     from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
-    __version__ = '0.5.4'
+    __version__ = '0.5.5'
 
 setup(name='scArches',
       version=__version__,
@@ -37,6 +37,7 @@ setup(name='scArches',
     	"requests",
         "gdown",
         "leidenalg",  # TODO: set version criteria
+        "muon",
       ],
       classifiers=[
           "Programming Language :: Python :: 3.6",

@@ -36,6 +36,6 @@ On Windows machines you may need to download a C++ compiler if you wish to build
 Dependencies
 ------------
 
-The list of dependencies for scArches can be found in the `requirements.txt <https://github.com/theislab/scarches/blob/master/requirements.txt>`_ file in the repository.
+The list of dependencies for scArches can be found in the `requirements.txt <https://github.com/theislab/scarches/blob/master/docs/requirements.txt>`_ file in the repository.
 
 If you run into issues, do not hesitate to approach us or raise a `GitHub issue <https://github.com/theislab/scarches/issues/new/choose>`_.

@@ -9,6 +9,9 @@ Single-cell architecture surgery (scArches) is a package for reference-based ana
 
 Updates
 -------------------------------
+- **(22.11.2022)** We have added `Multigrate <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1=>`_ enabling multimodal reference building and mapping.
+
+- **(22.10.2022)** We have added `mvTCR <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_ and `SageNet <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_ enabling mapping multimodal immune profiling (TCR+scRNAreq) and scRNA-seq to spatial atlases, respectively.
 
 - **(7.07.2022)** We have added `treeArches <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_ to scArches code base. treeArches enables building cell-type hierarchies to identify novel states (e.g., disease, subpopulations) in the query data when mapped to the reference. See tutorials `here <https://scarches.readthedocs.io/>`_ .
 
@@ -16,10 +19,10 @@ Updates
 
 What is scArches?
 -------------------------------
-scArches allows analysis of your single-cell query data by integrating it into a reference atlas. To map your data you need an integrated atlas using one of the reference building methods for deifferent applications that are supported by scArches whcih are , inlcuding:
+scArches allows analysis of your single-cell query data by integrating it into a reference atlas. To map your data you need an integrated atlas using one of the reference building methods for different applications that are supported by scArches which are, including:
 
 
-  
+
 - **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes count distribution on the data (NB, ZINB, Poisson).
 
 - **trVAE** (`Lotfollahi et al.,2020 <https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5>`_): It supports both normalized log-transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
@@ -28,13 +31,18 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and Mapping. The reference mapping for this method solely relies on the integrated reference and requires no fine-tuning.
 
-- **expiMap** (`Lotfollahi*, Rybakov* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.  
+- **expiMap** (`Lotfollahi*, Rybakov* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.
 
 - **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
 
 - **treeArches** (`Michielsen*, Lotfollahi* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model builds a hierarchical tree for cell-types in the reference atlas and when mapping the query data can annotate and also identify novel cell-states and populations present in the query data.
 
 - **SageNet** (`Heidari et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_): This model allows constrcution of a spatial atlas by mapping query dissociated single cells/spots (e.g., from  scRNAseq or visium datasets) into a common coordinate framework using one or more spatially resolved reference datasets.
+
+
+- **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.
+
+- **Multigrate** (`Litinetskaya*, Lotfollahi*, et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1>`_): Using this model, you will be able to build multimodal atlases using paired and unpaired data from scRNA-seq, scATAC-seq, and CITE-seq. Additionally, combined with scArches, it allows you to map query data from either modality. 
 
 Usage and installation
 -------------------------------
