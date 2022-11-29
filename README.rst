@@ -44,6 +44,9 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **Multigrate** (`Litinetskaya*, Lotfollahi*, et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1>`_): Using this model, you will be able to build multimodal atlases using paired and unpaired data from scRNA-seq, scATAC-seq, and CITE-seq. Additionally, combined with scArches, it allows you to map query data from either modality. 
 
+
+- **scPoli** (`De Donno et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_): This model allows data integration of scRNA-seq dataset, prototype-based label transfer and reference mapping. scPoli learns both sample embeddings and integrated cell embeddings, thus providing the user with a multi-scale view of the data, especially useful in the case of many samples to integrate.
+
 Usage and installation
 -------------------------------
 See `here <https://scarches.readthedocs.io/>`_ for documentation and tutorials.
