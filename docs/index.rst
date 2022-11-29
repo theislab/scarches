@@ -112,3 +112,4 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    SageNet_mouse_embryo
    mvTCR_borcherding
    multigrate
+   scpoli_surgery_pipeline
