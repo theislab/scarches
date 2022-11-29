@@ -36,6 +36,7 @@ setup(name='scArches',
     	"tqdm>=4.56.0",
     	"requests",
         "gdown",
+        "leidenalg",  # TODO: set version criteria
         "muon",
       ],
       classifiers=[

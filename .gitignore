@@ -6,3 +6,4 @@ own_tests/
 *.egg-info
 build/
 dist/
+.ipynb_checkpoints
