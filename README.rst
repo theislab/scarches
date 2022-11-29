@@ -9,6 +9,8 @@ Single-cell architecture surgery (scArches) is a package for reference-based ana
 
 Updates
 -------------------------------
+- **(29.11.2022)** We have added `scPoli <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_ enabling population level itnegration of single-cell datasets.
+
 - **(22.11.2022)** We have added `Multigrate <https://www.biorxiv.org/content/10.1101/2022.03.16.484643v1=>`_ enabling multimodal reference building and mapping.
 
 - **(22.10.2022)** We have added `mvTCR <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_ and `SageNet <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_ enabling mapping multimodal immune profiling (TCR+scRNAreq) and scRNA-seq to spatial atlases, respectively.
