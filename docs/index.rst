@@ -40,10 +40,12 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.
 
+- **scPoli** (_`De Donno et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_): This model allows data integration of scRNA-seq dataset, prototype-based label transfer and reference mapping. scPoli learns both sample embeddings and integrated cell embeddings, thus providing the user with a multi-scale view of the data, especially useful in the case of many samples to integrate.
+
 Which model to choose?
 ---------------
 
-- If your reference data is labeled (cell-type labels) and you have an unlabeled or labeled query, then use **scArches scANVI** or **treeArrches**  .
+- If your reference data is labeled (cell-type labels) and you have an unlabeled or labeled query, then use **scArches scANVI**, **treeArches**  or **scPoli**.
 
 - If your reference data is labeled (cell-type labels) and you have a labeled query, then use **scGen**.
 
@@ -51,12 +53,14 @@ Which model to choose?
 
 - If you have CITE-seq data and want to integrate RNA-seq as a query and impute missing proteins in query scRNA-seq data, then use **scArches totalVI**.
 
-- If you scRANseq data and want to analyze your data in the context of gene programs to answer a question such as what pathways have changed after a disease or which genes are causing my new disease state in the query separate from others, then use **expiMap**.
+- If you scRNAseq data and want to analyze your data in the context of gene programs to answer a question such as what pathways have changed after a disease or which genes are causing my new disease state in the query separate from others, then use **expiMap**.
 
 
 - If you want to build a cellular hierarchy and continuously update the hierarchy using new query datasets, see how your query populations compare to the original hierarchy to identify new subpopulations or disease states in your query, then use **treeArches**.
 
 - If you have scRNA seq data and want to map it to a reference spatial atlas to infer the spatial location and perform cell-cell interaction analysis then use **SageNet**.
+
+- If you have many samples to integrate and are interested in obtaining a sample embedding space in addition to integrated cell embeddings use **scPoli**.
 
 
 
