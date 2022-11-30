@@ -11,6 +11,7 @@ from typing import Optional, Union
 from scipy.sparse import issparse
 
 from .trvae import trVAE
+from ._utils import subsample_conditions
 from ...trainers.trvae.unsupervised import trVAETrainer
 from ..base._utils import _validate_var_names
 from ..base._base import BaseMixin, SurgeryMixin, CVAELatentsMixin
@@ -141,9 +142,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self.is_trained_ = True
 
 
-
  #TODO: Check for correctness
- #TODO: Ask if I should remove subsampling
     @classmethod
     def zero_shot_surgery(
         cls,
@@ -151,9 +150,9 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         model_path,
         force_cuda=False,
         copy=False,
-        # subsample=1.
+        subsample=1.
         ):
-        # assert subsample > 0. and subsample <= 1.
+        assert subsample > 0. and subsample <= 1.
 
         if copy:
             adata = adata.copy()
@@ -164,8 +163,8 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         ref_conditions = attr_dict["conditions_"]
         condition_key = attr_dict["condition_key_"]
 
-        # if subsample < 1.:
-        #     adata = subsample_conditions(adata, condition_key, subsample)
+        if subsample < 1.:
+            adata = subsample_conditions(adata, condition_key, subsample)
 
         original_key = "_original_" + condition_key
         adata.obs[original_key] = adata.obs[condition_key].copy()
@@ -216,8 +215,6 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         return ref_model, rename_cats
 
 
-
-
 #TODO: Check correctness
     @classmethod
     def one_shot_surgery(
@@ -226,11 +223,11 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         model_path,
         force_cuda=False,
         copy=False,
-        # subsample=1.,
+        subsample=1.,
         pretrain=1,
         **kwargs
     ):
-        # assert subsample > 0. and subsample <= 1.
+        assert subsample > 0. and subsample <= 1.
 
         if copy:
             adata = adata.copy()
@@ -240,8 +237,8 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         cond_key = ref_model.condition_key_
         adata.obs[cond_key] = adata.obs["_original_" + cond_key]
 
-        # if subsample < 1.:
-        #     adata = subsample_conditions(adata, cond_key, subsample)
+        if subsample < 1.:
+            adata = subsample_conditions(adata, cond_key, subsample)
 
         query_model = cls.load_query_data(adata, ref_model, **kwargs)
 
@@ -249,10 +246,6 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         to_set = [cond_enc[cat] for cat in rename_cats]
         to_get = [cond_enc[cat] for cat in rename_cats.values()]
-
-        #TODO: Check
-
-        # query_model.model.embedding.weight.data[to_set] = query_model.model.embedding.weight.data[to_get]
         
         query_model.model.encoder.FC[0].cond_L.weight.data[to_set] = query_model.model.encoder.FC[0].cond_L.weight.data[to_get]
         query_model.model.decoder.FirstL[0].cond_L.weight.data[to_set] = query_model.model.decoder.FirstL[0].cond_L.weight.data[to_get] 
@@ -261,8 +254,6 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             query_model.train(n_epochs=pretrain, pretraining_epochs=pretrain)
 
         return query_model 
-
-
 
 
     @classmethod
