@@ -142,7 +142,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self.is_trained_ = True
 
 
- #TODO: Check for correctness
+ 
     @classmethod
     def zero_shot_surgery(
         cls,
@@ -215,7 +215,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         return ref_model, rename_cats
 
 
-#TODO: Check correctness
+
     @classmethod
     def one_shot_surgery(
         cls,
