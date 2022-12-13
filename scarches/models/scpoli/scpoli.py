@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
-from scarches.models.trvae._utils import one_hot_encoder
-from scarches.models.trvae.losses import mse, nb, zinb
-from scarches.trainers.scpoli._utils import cov, euclidean_dist
+from ..trvae._utils import one_hot_encoder
+from ..trvae.losses import mse, nb, zinb
+from ...trainers.scpoli._utils import cov, euclidean_dist
 
 
 class scpoli(nn.Module):

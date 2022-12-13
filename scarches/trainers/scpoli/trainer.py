@@ -8,9 +8,9 @@ import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
 
-from scarches.trainers.trvae._utils import make_dataset
-from scarches.trainers.trvae.trainer import Trainer
-from scarches.trainers.scpoli._utils import cov, euclidean_dist
+from ..trvae._utils import make_dataset
+from ..trvae.trainer import Trainer
+from ._utils import cov, euclidean_dist
 
 
 class scPoliTrainer(Trainer):

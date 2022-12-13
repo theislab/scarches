@@ -6,10 +6,10 @@ import scanpy as sc
 import torch
 from anndata import AnnData
 
-from scarches.models.base._base import BaseMixin
-from scarches.models.base._utils import _validate_var_names
-from scarches.models.scpoli.scpoli import scpoli
-from scarches.trainers.scpoli import scPoliTrainer
+from ..base._base import BaseMixin
+from ..base._utils import _validate_var_names
+from .scpoli import scpoli
+from ...trainers.scpoli import scPoliTrainer
 
 
 class scPoli(BaseMixin):
@@ -116,7 +116,7 @@ class scPoli(BaseMixin):
                 self.conditions_ = []
         else:
             self.conditions_ = conditions
-            
+
         if self.share_metadata_:
             self.obs_metadata_ = adata.obs.groupby(condition_key).first()
         else:
@@ -290,7 +290,7 @@ class scPoli(BaseMixin):
 
         latents = torch.cat(latents)
         return np.array(latents)
-    
+
     def get_conditional_embeddings(self):
         """
         Returns anndata object of the conditional embeddings
@@ -307,7 +307,7 @@ class scPoli(BaseMixin):
             c: Optional[np.ndarray] = None,
             prototype=False,
             get_prob=False,
-            log_distance=True, 
+            log_distance=True,
     ):
         """
         Classifies unlabeled cells using the prototypes obtained during training.
