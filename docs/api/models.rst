@@ -3,6 +3,7 @@ Models
 
 * `trVAE`_
 * `expiMap`_
+* `scPoli`_
 * `scVI`_
 * `scANVI`_
 * `TotalVI`_
@@ -16,9 +17,17 @@ trVAE
     :show-inheritance:
 
 expiMap
------
+-------
 
 .. autoclass:: scarches.models.EXPIMAP
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+scPoli
+------
+
+.. autoclass:: scarches.models.scPoli
     :members:
     :undoc-members:
     :show-inheritance:
