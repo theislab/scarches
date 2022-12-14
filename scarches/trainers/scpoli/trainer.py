@@ -232,12 +232,13 @@ class scPoliTrainer(Trainer):
         latent
         """
         latents = []
-        indices = torch.arange(self.train_data.data.size(0), device=self.device)
-        subsampled_indices = indices.split(self.batch_size)
+        indices = np.arange(len(self.train_data))
+        subsampled_indices = np.array_split(indices, self.batch_size)
         for batch in subsampled_indices:
+            batch_data = self.train_data[batch]
             latent = self.model.get_latent(
-                self.train_data.data[batch, :].to(self.device),
-                self.train_data.conditions[batch].to(self.device),
+                batch_data['x'].to(self.device),
+                batch_data['batch'].to(self.device),
             )
             latents += [latent.cpu().detach()]
         latent = torch.cat(latents)
