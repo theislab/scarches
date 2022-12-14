@@ -5,6 +5,7 @@ import pandas as pd
 import scanpy as sc
 import torch
 from anndata import AnnData
+from scipy import sparse
 
 from ..base._base import BaseMixin
 from ..base._utils import _validate_var_names
@@ -276,6 +277,8 @@ class scPoli(BaseMixin):
                 labels[c == condition] = label
             c = torch.tensor(labels, device="cpu")
 
+        if sparse.issparse(x):
+            x = x.A
         x = torch.tensor(x, device="cpu")
 
         latents = []
@@ -341,6 +344,8 @@ class scPoli(BaseMixin):
                     labels[c == condition] = label
                 c = torch.tensor(labels, device="cpu")
 
+        if sparse.issparse(x):
+            x = x.A
         x = torch.tensor(x, device="cpu")
 
         results = dict()
@@ -442,6 +447,9 @@ class scPoli(BaseMixin):
             for condition, label in self.model.condition_encoder.items():
                 labels[c == condition] = label
             c = torch.tensor(labels, device="cpu")
+        
+        if sparse.issparse(x):
+            x = x.A
         x = torch.tensor(x, device="cpu")
         latents = []
         indices = torch.arange(x.size(0), device="cpu")
