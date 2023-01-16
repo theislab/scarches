@@ -93,7 +93,6 @@ class scPoli(BaseMixin):
             use_bn: bool = False,
             use_ln: bool = True,
     ):
-
         # gather data information
         self.adata = adata
         self.share_metadata_ = share_metadata
@@ -212,7 +211,15 @@ class scPoli(BaseMixin):
                 next(self.model.parameters()).device
             )
 
-    def train(self, n_epochs: int = 400, lr: float = 1e-3, eps: float = 0.01, **kwargs):
+    def train(
+        self, 
+        n_epochs: int = 100,
+        pretraining_epochs = None,
+        lr: float = 1e-3, 
+        eps: float = 0.01, 
+        reload_best : bool = False,
+        **kwargs
+    ):
         """Train the model.
 
         Parameters
@@ -226,12 +233,16 @@ class scPoli(BaseMixin):
         kwargs
              kwargs for the TranVAE trainer.
         """
+        if pretraining_epochs is None:
+            pretraining_epochs = int(np.floor(n_epochs * 0.9))
         self.trainer = scPoliTrainer(
             self.model,
             self.adata,
             labeled_indices=self.labeled_indices_,
+            pretraining_epochs=pretraining_epochs,
             condition_key=self.condition_key_,
             cell_type_keys=self.cell_type_keys_,
+            reload_best=reload_best,
             **kwargs,
         )
         self.trainer.train(n_epochs, lr, eps)
