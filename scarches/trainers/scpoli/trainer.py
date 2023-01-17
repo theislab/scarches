@@ -79,7 +79,7 @@ class scPoliTrainer(Trainer):
             model,
             adata,
             labeled_indices: list = None,
-            pretraining_epochs: int = 0,
+            pretraining_epochs = None,
             clustering: str = "leiden",
             clustering_res: float = 2,
             n_clusters: int = None,
@@ -418,8 +418,8 @@ class scPoliTrainer(Trainer):
 
         # Loss addition and Logs
         prototype_loss = self.eta * unweighted_prototype_loss
-        trvae_loss = recon_loss + self.calc_alpha_coeff() * kl_loss + mmd_loss
-        loss = trvae_loss + prototype_loss
+        cvae_loss = recon_loss + self.calc_alpha_coeff() * kl_loss + mmd_loss
+        loss = cvae_loss + prototype_loss
         self.iter_logs["loss"].append(loss.item())
         self.iter_logs["unweighted_loss"].append(
             recon_loss.item()
@@ -427,7 +427,7 @@ class scPoliTrainer(Trainer):
             + mmd_loss.item()
             + unweighted_prototype_loss.item()
         )
-        self.iter_logs["trvae_loss"].append(trvae_loss.item())
+        self.iter_logs["cvae_loss"].append(cvae_loss.item())
         if self.epoch >= self.pretraining_epochs:
             self.iter_logs["prototype_loss"].append(prototype_loss.item())
             if 0 in label_categories or self.model.unknown_ct_names is not None:
