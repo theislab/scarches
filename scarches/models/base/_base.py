@@ -219,6 +219,8 @@ class SurgeryMixin:
         else:
             attr_dict = reference_model._get_public_attributes()
             model_state_dict = reference_model.model.state_dict()
+            adata = _validate_var_names(adata, reference_model.adata.var_names)
+
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
 
         conditions = init_params['conditions']

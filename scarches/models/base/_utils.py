@@ -6,8 +6,19 @@ logger = logging.getLogger(__name__)
 
 
 def _validate_var_names(adata, source_var_names):
-    user_var_names = adata.var_names.astype(str)
-    new_adata = adata.copy()
+    #Warning for gene percentage
+    user_var_names = adata.var_names
+    try:
+        percentage = (len(user_var_names.intersection(source_var_names)) / len(user_var_names)) * 100
+        percentage = round(percentage, 4)
+        if percentage != 100:
+            logger.warning(f"WARNING: Query shares {percentage}% of its genes with the reference."
+                            "This may lead to inaccuracy in the results.")
+    except Exception:
+            logger.warning("WARNING: Something is wrong with the reference genes.")
+
+    user_var_names = user_var_names.astype(str)
+    new_adata = adata
 
     # Get genes in reference that are not in query
     ref_genes_not_in_query = []
@@ -24,7 +35,7 @@ def _validate_var_names(adata, source_var_names):
         filling_X = np.zeros((len(adata), len(ref_genes_not_in_query)))
         new_target_X = np.concatenate((adata.X, filling_X), axis=1)
         new_target_vars = adata.var_names.tolist() + ref_genes_not_in_query
-        new_adata = AnnData(new_target_X)
+        new_adata = AnnData(new_target_X, dtype="float32")
         new_adata.var_names = new_target_vars
         new_adata.obs = adata.obs.copy()
 
@@ -35,8 +46,8 @@ def _validate_var_names(adata, source_var_names):
             " genes that were not contained in the reference dataset. This information "
             "will be removed from the query data object for further processing.")
 
-    # remove unseen gene information and order anndata
-    new_adata = new_adata[:, source_var_names].copy()
+        # remove unseen gene information and order anndata
+        new_adata = new_adata[:, source_var_names].copy()
 
     print(new_adata)
 
