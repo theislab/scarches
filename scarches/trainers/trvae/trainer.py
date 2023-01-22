@@ -10,6 +10,12 @@ from ...utils.monitor import EarlyStopping
 from ._utils import make_dataset, custom_collate, print_progress
 
 
+
+
+fisher_dict = {}
+optpar_dict = {}
+ewc_lambda = 1
+
 class Trainer:
     """ScArches base Trainer class. This class contains the implementation of the base CVAE/TRVAE Trainer.
 
@@ -202,12 +208,15 @@ class Trainer:
     def train(self,
               n_epochs=400,
               lr=1e-3,
-              eps=0.01):
+              eps=0.01,
+              ID=5,
+              learning_approach=None):
 
         self.initialize_loaders()
         begin = time.time()
         self.model.train()
         self.n_epochs = n_epochs
+    
 
         params = filter(lambda p: p.requires_grad, self.model.parameters())
 
@@ -221,15 +230,62 @@ class Trainer:
             for self.iter, batch_data in enumerate(self.dataloader_train):
                 for key, batch in batch_data.items():
                     batch_data[key] = batch.to(self.device)
-
                 # Loss Calculation
-                self.on_iteration(batch_data)
+                if learning_approach==None:
+                    self.on_standard_learning(batch_data)
+                elif learning_approach=='Surgery':
+                    self.on_iteration(batch_data)               
+                elif learning_approach=='ewc':
+                    self.on_ewc(ID,batch_data) 
+                elif learning_approach=='rehearsal':
+                    self.on_rehearsal(batch_data)
+                elif learning_approach == 'latent replay': 
+                    if self.epoch == 0: 
+                        batch_data['first_epoch'] = 1 #flag data in first epoch to be saved later in the forward function of encoder
+                        for name, module in self.model.named_modules():
+                            if 'encoder.FC.L1' in name:
+                                batch_data['replay_layer'] = 1 #when = 1, this is the latent replay layer
+                    else:
+                        batch_data['first_epoch'] = 0 #flag data in other epochs NOT to be saved later in the forward function of encoder
+                    freeze = True
+                    if freeze and self.iter>0: #freeze the parameters of layers before the latent layer in encoder, decoder doesn't have
+                        for name, module in self.model.named_modules():
+                            if 'encoder.FC.L0' in name:
+                                for p_name, p in module.named_parameters():
+                                    p.requires_grad = False
+                    self.on_latent_replay(ID,batch_data)
+                    
+                elif learning_approach == 'LR+EWC':
+                    if self.epoch == 0: 
+                        batch_data['first_epoch'] = 1 #flag data in first epoch to be saved later in the forward function of encoder
+                        for name, module in self.model.named_modules():
+                            if 'encoder.FC.L1' in name:
+                                batch_data['replay_layer'] = 1 # flag the reply layer, when = 1, this is the latent replay layer
+                    else:
+                        batch_data['first_epoch'] = 0
+                    freeze = True
+                    if freeze and self.iter>0:
+                        for name, module in self.model.named_modules():
+                            if 'encoder.FC.L0' in name:
+                                for p_name, p in module.named_parameters():
+                                    p.requires_grad = False
+                    self.on_LR_EWC(ID,batch_data)  
+            
+                    
+
 
             # Validation of Model, Monitoring, Early Stopping
             self.on_epoch_end()
             if self.use_early_stopping:
                 if not self.check_early_stop():
                     break
+                    
+        if learning_approach=='ewc':
+            self.on_task_update(ID,batch_data) #batch_data here is not the whole data, it is only the last batch in the training                                                            #set. torch.tensor[8,1001] which does not matter for this function as its job is to store
+                                               #fisher inofrmation. In this function parameters are NOT updated.
+        if learning_approach=='LR+EWC': 
+            self.on_task_update(ID,batch_data) #feed the last batch to to store fisher information without updating the parameters
+
 
         if self.best_state_dict is not None and self.reload_best:
             print("Saving best state of network...")
@@ -250,6 +306,70 @@ class Trainer:
     def after_loop(self):
         pass
 
+    def on_rehearsal(self, batch_data):
+        self.current_loss = loss = self.loss(batch_data)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        
+        
+    def on_latent_replay(self, ID, batch_data):
+        batch_data['external_memory'] = 1 #when = 1, save ONLY the training set WITHOUT the validation set
+        batch_data['dataset_counter'] = ID              
+        self.current_loss = loss = self.loss(batch_data)
+        self.optimizer.zero_grad()
+        loss.backward(retain_graph=True) 
+        self.optimizer.step()
+        
+    def on_LR_EWC(self,task_id, batch_data):
+        batch_data['external_memory'] = 1
+        batch_data['dataset_counter'] = task_id  
+        self.train_ewc(task_id,batch_data)
+       
+    def on_task_update(self,task_id,batch_data):
+        print('Calculating fisher information!')
+        self.optimizer.zero_grad()
+        self.current_loss = loss = self.loss(batch_data)
+        loss.backward()
+
+
+        fisher_dict[task_id] = {}
+        optpar_dict[task_id] = {}
+
+        for name, param in self.model.named_parameters():
+            optpar_dict[task_id][name] = param.data.clone() 
+            fisher_dict[task_id][name] = param.grad.data.clone().pow(2) 
+
+            
+    def train_ewc(self,task_id,batch_data):  
+        self.current_loss = loss = self.loss(batch_data)
+        self.optimizer.zero_grad()
+
+        for task in range(task_id): 
+            for name, param in self.model.named_parameters():
+                fisher = fisher_dict[task][name]
+                optpar = optpar_dict[task][name]
+                if 'theta' in name: 
+                    if fisher[task].size()==torch.Size([1]):
+                        loss += (fisher * (optpar - param[:,task+1]).pow(2)).sum() * ewc_lambda
+                    else:
+                        loss += (fisher[:,task]* (optpar[:,task] - param[:,task+1]).pow(2)).sum() * ewc_lambda
+                
+                elif 'bias' in name:
+                    loss += (fisher * (optpar - param).pow(2)).sum() * ewc_lambda
+
+                else:
+                    if fisher.size()==param.size():
+                        loss += (fisher * (optpar - param).pow(2)).sum() * ewc_lambda 
+                    else:
+                        loss += (fisher[:,task] * (optpar[:,task] - param[:,task+1]).pow(2)).sum() * ewc_lambda
+      
+        loss.backward()
+        self.optimizer.step()        
+        
+    def on_ewc(self,task_id,batch_data): 
+        self.train_ewc(task_id,batch_data)  
+                           
     def on_iteration(self, batch_data):
         # Dont update any weight on first layers except condition weights
         if self.model.freeze:
@@ -264,6 +384,12 @@ class Trainer:
         self.optimizer.zero_grad()
         loss.backward()
 
+    def on_standard_learning(self,batch_data):
+        # Calculate Loss depending on Trainer/Model
+        self.current_loss = loss = self.loss(batch_data)
+        self.optimizer.zero_grad()
+        loss.backward()
+        
         # Gradient Clipping
         if self.clip_value > 0:
             torch.nn.utils.clip_grad_value_(self.model.parameters(), self.clip_value)
@@ -291,7 +417,7 @@ class Trainer:
         for val_iter, batch_data in enumerate(self.dataloader_valid):
             for key, batch in batch_data.items():
                 batch_data[key] = batch.to(self.device)
-
+            batch_data['external_memory'] = 0 #when = 0, it is the validatin set, so do not save it in the memory
             val_loss = self.loss(batch_data)
 
         # Get Validation Logs

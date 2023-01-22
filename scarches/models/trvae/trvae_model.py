@@ -66,12 +66,11 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_ln: bool = True,
     ):
         self.adata = adata
-
         self.condition_key_ = condition_key
 
         if conditions is None:
             if condition_key is not None:
-                self.conditions_ = adata.obs[condition_key].unique().tolist()
+                self.conditions_ = adata.obs[condition_key].unique().tolist() 
             else:
                 self.conditions_ = []
         else:
@@ -114,8 +113,12 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         n_epochs: int = 400,
         lr: float = 1e-3,
         eps: float = 0.01,
+        ID: int = 0,
+        learning_approach = None,
         **kwargs
     ):
+        if learning_approach is not None:
+            print(learning_approach, 'is happening!')
         """Train the model.
 
            Parameters
@@ -134,7 +137,8 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             self.adata,
             condition_key=self.condition_key_,
             **kwargs)
-        self.trainer.train(n_epochs, lr, eps)
+        self.trainer.train(n_epochs, lr,ID=ID ,learning_approach=learning_approach)
+        
         self.is_trained_ = True
 
     @classmethod

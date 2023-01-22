@@ -10,7 +10,6 @@ from .losses import mse, mmd, zinb, nb
 from ._utils import one_hot_encoder
 from ..base._base import CVAELatentsModelMixin
 
-
 class trVAE(nn.Module, CVAELatentsModelMixin):
     """ScArches model class. This class contains the implementation of Conditional Variational Auto-encoder.
 
@@ -93,7 +92,7 @@ class trVAE(nn.Module, CVAELatentsModelMixin):
 
         self.hidden_layer_sizes = hidden_layer_sizes
         encoder_layer_sizes = self.hidden_layer_sizes.copy()
-        encoder_layer_sizes.insert(0, self.input_dim)
+        encoder_layer_sizes.insert(0, self.input_dim) #before insert it was [128,128], after inserting 1000 in the zero index, it became                                                           #[1000,128,128]
         decoder_layer_sizes = self.hidden_layer_sizes.copy()
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
@@ -112,13 +111,13 @@ class trVAE(nn.Module, CVAELatentsModelMixin):
                                self.use_dr,
                                self.dr_rate,
                                self.n_conditions)
-
-    def forward(self, x=None, batch=None, sizefactor=None, labeled=None):
+    
+    def forward(self, x=None, batch=None, sizefactor=None, labeled=None,external_memory=0,dataset_counter=0,first_epoch=0,replay_layer=0): 
         x_log = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_log = x
-
-        z1_mean, z1_log_var = self.encoder(x_log, batch)
+        z1_mean, z1_log_var = self.encoder(x_log, batch,external_memory,dataset_counter=dataset_counter, 
+                                           first_epoch=first_epoch, replay_layer=replay_layer) 
         z1 = self.sampling(z1_mean, z1_log_var)
         outputs = self.decoder(z1, batch)
 
@@ -153,5 +152,4 @@ class trVAE(nn.Module, CVAELatentsModelMixin):
                 mmd_loss = mmd(z1, batch,self.n_conditions, self.beta, self.mmd_boundary)
             else:
                 mmd_loss = mmd(y1, batch,self.n_conditions, self.beta, self.mmd_boundary)
-
         return recon_loss, kl_div, mmd_loss

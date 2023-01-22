@@ -12,6 +12,8 @@ from scipy.sparse import issparse
 
 from ._utils import _validate_var_names
 
+from ...trainers.trvae.trainer import Trainer
+
 
 class BaseMixin:
     """ Adapted from
@@ -185,9 +187,12 @@ class SurgeryMixin:
     def load_query_data(
         cls,
         adata: AnnData,
-        reference_model: Union[str, 'Model'],
-        freeze: bool = True,
-        freeze_expression: bool = True,
+#         reference_model: Union[str, 'Model'] = None,
+        learning_approach: str = None,
+        model: str = None,
+        ID: int = 0,
+#         freeze: bool = None,
+#         freeze_expression: bool = None,
         remove_dropout: bool = True,
         **kwargs
     ):
@@ -213,13 +218,67 @@ class SurgeryMixin:
            new_model
                 New model to train on query data.
         """
-        if isinstance(reference_model, str):
-            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
-            adata = _validate_var_names(adata, var_names)
-        else:
-            attr_dict = reference_model._get_public_attributes()
-            model_state_dict = reference_model.model.state_dict()
-            adata = _validate_var_names(adata, reference_model.adata.var_names)
+
+        if learning_approach == 'Surgery':
+            freeze = True
+            freeze_expression = True
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict =model._get_public_attributes()
+                model_state_dict = model.model.state_dict()
+            
+        elif learning_approach == 'ewc':
+            freeze = False
+            freeze_expression = False
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict = model._get_public_attributes() 
+                model_state_dict = model.model.state_dict()
+                
+        elif learning_approach == 'latent replay':
+            freeze = False
+            freeze_expression = False
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict = model._get_public_attributes() 
+                model_state_dict = model.model.state_dict()
+                
+        elif learning_approach == 'LR+EWC':
+            freeze = False
+            freeze_expression = False
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict = model._get_public_attributes() 
+                model_state_dict = model.model.state_dict()
+                
+        elif learning_approach == 'rehearsal':
+            freeze = False
+            freeze_expression = False
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict = model._get_public_attributes() 
+                model_state_dict = model.model.state_dict()
+                
+        elif learning_approach == 'generative_replay':
+            freeze = False
+            freeze_expression = False
+            if isinstance(model_cl, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict = model_cl._get_public_attributes() 
+                model_state_dict = model_cl.model.state_dict()
+            
 
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
 
@@ -233,6 +292,7 @@ class SurgeryMixin:
             if item not in conditions:
                 new_conditions.append(item)
 
+
         # Add new conditions to overall conditions
         for condition in new_conditions:
             conditions.append(condition)
@@ -244,7 +304,6 @@ class SurgeryMixin:
 
         new_model = cls(adata, **init_params)
         new_model._load_expand_params_from_dict(model_state_dict)
-
         if freeze:
             new_model.model.freeze = True
             for name, p in new_model.model.named_parameters():
