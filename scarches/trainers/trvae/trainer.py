@@ -209,7 +209,7 @@ class Trainer:
               n_epochs=400,
               lr=1e-3,
               eps=0.01,
-              ID=5,
+              ID=0,
               learning_approach=None):
 
         self.initialize_loaders()
@@ -270,8 +270,7 @@ class Trainer:
                                 for p_name, p in module.named_parameters():
                                     p.requires_grad = False
                     self.on_LR_EWC(ID,batch_data)  
-            
-                    
+                               
 
 
             # Validation of Model, Monitoring, Early Stopping
@@ -279,7 +278,6 @@ class Trainer:
             if self.use_early_stopping:
                 if not self.check_early_stop():
                     break
-                    
         if learning_approach=='ewc':
             self.on_task_update(ID,batch_data) #batch_data here is not the whole data, it is only the last batch in the training                                                            #set. torch.tensor[8,1001] which does not matter for this function as its job is to store
                                                #fisher inofrmation. In this function parameters are NOT updated.
@@ -383,12 +381,6 @@ class Trainer:
         self.current_loss = loss = self.loss(batch_data)
         self.optimizer.zero_grad()
         loss.backward()
-
-    def on_standard_learning(self,batch_data):
-        # Calculate Loss depending on Trainer/Model
-        self.current_loss = loss = self.loss(batch_data)
-        self.optimizer.zero_grad()
-        loss.backward()
         
         # Gradient Clipping
         if self.clip_value > 0:
@@ -396,6 +388,12 @@ class Trainer:
 
         self.optimizer.step()
 
+    def on_standard_learning(self,batch_data):
+        # Calculate Loss depending on Trainer/Model
+        self.current_loss = loss = self.loss(batch_data)
+        self.optimizer.zero_grad()
+        loss.backward()
+        
     def on_epoch_end(self):
         # Get Train Epoch Logs
         for key in self.iter_logs:
