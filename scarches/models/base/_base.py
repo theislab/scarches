@@ -219,7 +219,17 @@ class SurgeryMixin:
                 New model to train on query data.
         """
 
-        if learning_approach == 'Surgery':
+        if learning_approach == None:
+            freeze = False
+            freeze_expression = False            
+            if isinstance(model, str):
+                attr_dict, model_state_dict, var_names = cls._load_params(model)
+                adata = _validate_var_names(adata, var_names)
+            else:
+                attr_dict =model._get_public_attributes()
+                model_state_dict = model.model.state_dict()  
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
+        elif learning_approach == 'Surgery':
             freeze = True
             freeze_expression = True
             if isinstance(model, str):
@@ -228,6 +238,7 @@ class SurgeryMixin:
             else:
                 attr_dict =model._get_public_attributes()
                 model_state_dict = model.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
             
         elif learning_approach == 'ewc':
             freeze = False
@@ -238,6 +249,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
                 
         elif learning_approach == 'latent replay':
             freeze = False
@@ -248,6 +260,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
                 
         elif learning_approach == 'LR+EWC':
             freeze = False
@@ -258,6 +271,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
                 
         elif learning_approach == 'rehearsal':
             freeze = False
@@ -268,6 +282,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
                 
         elif learning_approach == 'generative_replay':
             freeze = False
@@ -278,6 +293,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model_cl._get_public_attributes() 
                 model_state_dict = model_cl.model.state_dict()
+                adata = _validate_var_names(adata, reference_model.adata.var_names)
             
 
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
