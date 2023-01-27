@@ -5,6 +5,8 @@ import numpy as np
 import anndata
 from sklearn.neighbors import KNeighborsTransformer
 
+#These function were created by Lisa Sikemma
+
 def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50):
     """Trains a weighted KNN classifier on ``train_adata``.
     Parameters
