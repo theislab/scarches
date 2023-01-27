@@ -119,3 +119,4 @@ If scArches is useful in your research, please consider citing the `preprint <ht
    mvTCR_borcherding
    multigrate
    scpoli_surgery_pipeline
+   hlca_map_classify
