@@ -393,6 +393,7 @@ class Trainer:
         self.current_loss = loss = self.loss(batch_data)
         self.optimizer.zero_grad()
         loss.backward()
+        self.optimizer.step()
         
     def on_epoch_end(self):
         # Get Train Epoch Logs
