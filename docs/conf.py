@@ -48,7 +48,8 @@ notebooks = [
     'SageNet_mouse_embryo.ipynb',
     'mvTCR_borcherding.ipynb',
     'multigrate.ipynb',
-    'scpoli_surgery_pipeline.ipynb'
+    'scpoli_surgery_pipeline.ipynb',
+    'hlca_map_classify.ipynb'
 ]
 
 for nb in notebooks:
