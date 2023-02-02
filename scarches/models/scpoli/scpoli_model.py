@@ -27,8 +27,8 @@ class scPoli(BaseMixin):
         column name of conditions in `adata.obs` data frame.
     conditions: List
         List of Condition names that the used data will contain to get the right encoding when used after reloading.
-    cell_type_keys: List
-        List of obs columns to use as cell type annotation for prototypes.
+    cell_type_keys: List or str
+        List or string of obs columns to use as cell type annotation for prototypes.
     cell_types: Dictionary
         Dictionary of cell types. Keys are cell types and values are cell_type_keys. Needed for surgery.
     unknown_ct_names: List
@@ -74,7 +74,7 @@ class scPoli(BaseMixin):
             condition_key: str = None,
             conditions: Optional[list] = None,
             inject_condition: Optional[list] = ['encoder', 'decoder'],
-            cell_type_keys: Optional[list] = None,
+            cell_type_keys: Optional[Union[str, list]] = None,
             cell_types: Optional[dict] = None,
             unknown_ct_names: Optional[list] = None,
             labeled_indices: Optional[list] = None,
@@ -97,7 +97,12 @@ class scPoli(BaseMixin):
         self.adata = adata
         self.share_metadata_ = share_metadata
         self.condition_key_ = condition_key
-        self.cell_type_keys_ = cell_type_keys
+        
+        if isinstance(cell_type_keys, str):
+            self.cell_type_keys_ = [cell_type_keys]
+        elif isinstance(cell_type_keys, list):
+            self.cell_type_keys_ = cell_type_keys
+            
         if unknown_ct_names is not None and type(unknown_ct_names) is not list:
             raise TypeError(
                 f"Parameter 'unknown_ct_names' has to be list not {type(unknown_ct_names)}"
@@ -126,7 +131,7 @@ class scPoli(BaseMixin):
         if cell_types is None:
             if cell_type_keys is not None:
                 self.cell_types_ = dict()
-                for cell_type_key in cell_type_keys:
+                for cell_type_key in self.cell_type_keys_:
                     uniq_cts = (
                         adata.obs[cell_type_key][self.labeled_indices_]
                         .unique()
