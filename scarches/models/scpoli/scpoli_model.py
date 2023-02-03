@@ -68,41 +68,41 @@ class scPoli(BaseMixin):
     """
 
     def __init__(
-            self,
-            adata: AnnData,
-            share_metadata: bool = True,
-            condition_key: str = None,
-            conditions: Optional[list] = None,
-            inject_condition: Optional[list] = ['encoder', 'decoder'],
-            cell_type_keys: Optional[Union[str, list]] = None,
-            cell_types: Optional[dict] = None,
-            unknown_ct_names: Optional[list] = None,
-            labeled_indices: Optional[list] = None,
-            prototypes_labeled: Optional[dict] = None,
-            prototypes_unlabeled: Optional[dict] = None,
-            hidden_layer_sizes: list = [256, 64],
-            latent_dim: int = 10,
-            embedding_dim: int = 10,
-            embedding_max_norm: float = 1.0,
-            dr_rate: float = 0.05,
-            use_mmd: bool = False,
-            mmd_on: str = "z",
-            mmd_boundary: Optional[int] = None,
-            recon_loss: Optional[str] = "nb",
-            beta: float = 1,
-            use_bn: bool = False,
-            use_ln: bool = True,
+        self,
+        adata: AnnData,
+        share_metadata: bool = True,
+        condition_key: str = None,
+        conditions: Optional[list] = None,
+        inject_condition: Optional[list] = ["encoder", "decoder"],
+        cell_type_keys: Optional[Union[str, list]] = None,
+        cell_types: Optional[dict] = None,
+        unknown_ct_names: Optional[list] = None,
+        labeled_indices: Optional[list] = None,
+        prototypes_labeled: Optional[dict] = None,
+        prototypes_unlabeled: Optional[dict] = None,
+        hidden_layer_sizes: list = [256, 64],
+        latent_dim: int = 10,
+        embedding_dim: int = 10,
+        embedding_max_norm: float = 1.0,
+        dr_rate: float = 0.05,
+        use_mmd: bool = False,
+        mmd_on: str = "z",
+        mmd_boundary: Optional[int] = None,
+        recon_loss: Optional[str] = "nb",
+        beta: float = 1,
+        use_bn: bool = False,
+        use_ln: bool = True,
     ):
         # gather data information
         self.adata = adata
         self.share_metadata_ = share_metadata
         self.condition_key_ = condition_key
-        
+
         if isinstance(cell_type_keys, str):
             self.cell_type_keys_ = [cell_type_keys]
-        elif isinstance(cell_type_keys, list):
+        else:
             self.cell_type_keys_ = cell_type_keys
-            
+
         if unknown_ct_names is not None and type(unknown_ct_names) is not list:
             raise TypeError(
                 f"Parameter 'unknown_ct_names' has to be list not {type(unknown_ct_names)}"
@@ -151,6 +151,9 @@ class scPoli(BaseMixin):
             for unknown_ct in self.unknown_ct_names_:
                 if unknown_ct in self.cell_types_:
                     del self.cell_types_[unknown_ct]
+                    
+        self.prototype_training_ = None
+        self.unlabeled_prototype_training_ = None
 
         # store model parameters
         self.hidden_layer_sizes_ = hidden_layer_sizes
@@ -217,13 +220,15 @@ class scPoli(BaseMixin):
             )
 
     def train(
-        self, 
+        self,
         n_epochs: int = 100,
-        pretraining_epochs = None,
-        lr: float = 1e-3, 
-        eps: float = 0.01, 
-        reload_best : bool = False,
-        **kwargs
+        pretraining_epochs=None,
+        lr: float = 1e-3,
+        eps: float = 0.01,
+        reload_best: bool = False,
+        prototype_training: Optional[bool] = True,
+        unlabeled_prototype_training: Optional[bool] = True,
+        **kwargs,
     ):
         """Train the model.
 
@@ -236,10 +241,18 @@ class scPoli(BaseMixin):
         eps
              torch.optim.Adam eps parameter
         kwargs
-             kwargs for the TranVAE trainer.
+             kwargs for the scPoli trainer.
         """
-        if pretraining_epochs is None:
+        self.prototype_training_ = prototype_training
+        self.unlabeled_prototype_training_ = unlabeled_prototype_training
+        if self.cell_type_keys_ is None:
+            pretraining_epochs = n_epochs
+            self.prototype_training_ = False
+            print("The model is being trained without using prototypes.")
+        elif pretraining_epochs is None:
             pretraining_epochs = int(np.floor(n_epochs * 0.9))
+        
+        
         self.trainer = scPoliTrainer(
             self.model,
             self.adata,
@@ -248,6 +261,8 @@ class scPoli(BaseMixin):
             condition_key=self.condition_key_,
             cell_type_keys=self.cell_type_keys_,
             reload_best=reload_best,
+            prototype_training=self.prototype_training_,
+            unlabeled_prototype_training=self.unlabeled_prototype_training_,
             **kwargs,
         )
         self.trainer.train(n_epochs, lr, eps)
@@ -256,10 +271,10 @@ class scPoli(BaseMixin):
         self.prototypes_unlabeled_ = self.model.prototypes_unlabeled
 
     def get_latent(
-            self,
-            x: Optional[np.ndarray] = None,
-            c: Optional[np.ndarray] = None,
-            mean: bool = False,
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+        mean: bool = False,
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
         data.
@@ -321,12 +336,12 @@ class scPoli(BaseMixin):
         return adata_emb
 
     def classify(
-            self,
-            x: Optional[np.ndarray] = None,
-            c: Optional[np.ndarray] = None,
-            prototype=False,
-            get_prob=False,
-            log_distance=True,
+        self,
+        x: Optional[np.ndarray] = None,
+        c: Optional[np.ndarray] = None,
+        prototype=False,
+        get_prob=False,
+        log_distance=True,
     ):
         """
         Classifies unlabeled cells using the prototypes obtained during training.
@@ -342,6 +357,9 @@ class scPoli(BaseMixin):
             stored in the model.
 
         """
+
+        assert self.prototype_training_ is True, f"Model was trained without prototypes"
+
         device = next(self.model.parameters()).device
         self.model.eval()
         if not prototype:
@@ -420,12 +438,12 @@ class scPoli(BaseMixin):
         return results
 
     def add_new_cell_type(
-            self,
-            cell_type_name,
-            obs_key,
-            prototypes,
-            x=None,
-            c=None,
+        self,
+        cell_type_name,
+        obs_key,
+        prototypes,
+        x=None,
+        c=None,
     ):
         """
         Function used to add new annotation for a novel cell type.
@@ -463,7 +481,7 @@ class scPoli(BaseMixin):
             for condition, label in self.model.condition_encoder.items():
                 labels[c == condition] = label
             c = torch.tensor(labels, device="cpu")
-        
+
         if sparse.issparse(x):
             x = x.A
         x = torch.tensor(x, device="cpu")
@@ -499,7 +517,8 @@ class scPoli(BaseMixin):
         self.cell_types_[cell_type_name] = [obs_key]
 
     def get_prototypes_info(
-            self, prototype_set="labeled",
+        self,
+        prototype_set="labeled",
     ):
         """
         Generates anndata file with prototype features and annotations.
@@ -533,7 +552,8 @@ class scPoli(BaseMixin):
         )
 
         results = self.classify(
-            prototypes, prototype=True,
+            prototypes,
+            prototype=True,
         )
         for cell_type_key in self.cell_type_keys_:
             if prototype_set == "l":
@@ -596,14 +616,14 @@ class scPoli(BaseMixin):
 
     @classmethod
     def load_query_data(
-            cls,
-            adata: AnnData,
-            reference_model: Union[str, "EMBEDCVAE"],
-            labeled_indices: Optional[list] = None,
-            unknown_ct_names: Optional[list] = None,
-            freeze: bool = True,
-            freeze_expression: bool = True,
-            remove_dropout: bool = True,
+        cls,
+        adata: AnnData,
+        reference_model: Union[str, "SCPOLI"],
+        labeled_indices: Optional[list] = None,
+        unknown_ct_names: Optional[list] = None,
+        freeze: bool = True,
+        freeze_expression: bool = True,
+        remove_dropout: bool = True,
     ):
         """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
 
@@ -612,7 +632,7 @@ class scPoli(BaseMixin):
         adata
              Query anndata object.
         reference_model
-             TRVAE model to expand or a path to TRVAE model folder.
+             SCPOLI model to expand or a path to SCPOLI model folder.
         freeze: Boolean
              If 'True' freezes every part of the network except the first layers of encoder/decoder.
         freeze_expression: Boolean
@@ -622,8 +642,8 @@ class scPoli(BaseMixin):
 
         Returns
         -------
-        new_model: trVAE
-             New TRVAE model to train on query data.
+        new_model: scPoli
+             New SCPOLI model to train on query data.
         """
         if isinstance(reference_model, str):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
@@ -652,26 +672,26 @@ class scPoli(BaseMixin):
         obs_metadata = pd.concat([obs_metadata, new_obs_metadata])
         cell_types = init_params["cell_types"]
         cell_type_keys = init_params["cell_type_keys"]
-
         # Check for cell types in new adata
-        adata_cell_types = dict()
-        for cell_type_key in cell_type_keys:
-            uniq_cts = adata.obs[cell_type_key][labeled_indices].unique().tolist()
-            for ct in uniq_cts:
-                if ct in adata_cell_types:
-                    adata_cell_types[ct].append(cell_type_key)
-                else:
-                    adata_cell_types[ct] = [cell_type_key]
+        if cell_type_keys is not None:
+            adata_cell_types = dict()
+            for cell_type_key in cell_type_keys:
+                uniq_cts = adata.obs[cell_type_key][labeled_indices].unique().tolist()
+                for ct in uniq_cts:
+                    if ct in adata_cell_types:
+                        adata_cell_types[ct].append(cell_type_key)
+                    else:
+                        adata_cell_types[ct] = [cell_type_key]
 
-        if unknown_ct_names is not None:
-            for unknown_ct in unknown_ct_names:
-                if unknown_ct in adata_cell_types:
-                    del adata_cell_types[unknown_ct]
+            if unknown_ct_names is not None:
+                for unknown_ct in unknown_ct_names:
+                    if unknown_ct in adata_cell_types:
+                        del adata_cell_types[unknown_ct]
 
-        # Check if new conditions are already known and if not add them
-        for key in adata_cell_types:
-            if key not in cell_types:
-                cell_types[key] = adata_cell_types[key]
+            # Check if new conditions are already known and if not add them
+            for key in adata_cell_types:
+                if key not in cell_types:
+                    cell_types[key] = adata_cell_types[key]
 
         if remove_dropout:
             init_params["dr_rate"] = 0.0

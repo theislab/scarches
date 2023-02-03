@@ -91,7 +91,9 @@ class scpoli(nn.Module):
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
 
-        self.embedding = nn.Embedding(self.n_conditions, self.embedding_dim, max_norm=self.embedding_max_norm)
+        self.embedding = nn.Embedding(
+            self.n_conditions, self.embedding_dim, max_norm=self.embedding_max_norm
+        )
 
         print(
             "Embedding dictionary:\n",
@@ -222,7 +224,9 @@ class scpoli(nn.Module):
         )
 
         # Add new prototype mean to labeled prototype means
-        new_prototype = self.prototypes_unlabeled["mean"][prototypes].mean(0).unsqueeze(0)
+        new_prototype = (
+            self.prototypes_unlabeled["mean"][prototypes].mean(0).unsqueeze(0)
+        )
         self.prototypes_labeled["mean"] = torch.cat(
             (self.prototypes_labeled["mean"], new_prototype), dim=0
         )
