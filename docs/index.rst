@@ -30,7 +30,7 @@ scArches allows analysis of your single-cell query data by integrating it into a
 
 - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and Mapping. The reference mapping for this method solely relies on the integrated reference and requires no fine-tuning.
 
-- **expiMap** (`Lotfollahi*, Rybakov* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.02.05.479217v1>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.
+- **expiMap** (`Lotfollahi*, Rybakov* et al., 2022 <https://www.nature.com/articles/s41556-022-01072-x>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.
 
 - **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
 
