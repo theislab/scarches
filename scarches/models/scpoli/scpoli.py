@@ -18,7 +18,7 @@ class scpoli(nn.Module):
         conditions,
         inject_condition,
         latent_dim,
-        embedding_dim,
+        embedding_dims,
         embedding_max_norm,
         recon_loss,
         dr_rate,
@@ -32,19 +32,19 @@ class scpoli(nn.Module):
 
         self.input_dim = input_dim
         self.latent_dim = latent_dim
-        self.embedding_dim = embedding_dim
+        self.embedding_dims = embedding_dims
         self.embedding_max_norm = embedding_max_norm
         self.cell_types = cell_types
         self.n_cell_types = len(cell_types)
         self.cell_type_encoder = {
             k: v for k, v in zip(cell_types, range(len(cell_types)))
         }
-        self.n_conditions = len(conditions)
+        self.n_conditions = [len(conditions[cond]) for cond in conditions.keys()]
         self.n_reference_conditions = None
         self.conditions = conditions
-        self.condition_encoder = {
-            k: v for k, v in zip(conditions, range(len(conditions)))
-        }
+        self.condition_encoders = [{
+            k: v for k, v in zip(conditions[cond], range(len(conditions[cond])))
+        } for cond in conditions.keys()]
         self.inject_condition = inject_condition
         self.use_bn = use_bn
         self.use_ln = use_ln
@@ -80,7 +80,7 @@ class scpoli(nn.Module):
 
         if recon_loss in ["nb", "zinb"]:
             self.theta = torch.nn.Parameter(
-                torch.randn(self.input_dim, self.n_conditions)
+                torch.randn(self.input_dim, sum(self.n_conditions))
             )
         else:
             self.theta = None
@@ -91,14 +91,14 @@ class scpoli(nn.Module):
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
 
-        self.embedding = nn.Embedding(
-            self.n_conditions, self.embedding_dim, max_norm=self.embedding_max_norm
-        )
+        self.embeddings = [nn.Embedding(
+            self.n_conditions[i], self.embedding_dims[i], max_norm=self.embedding_max_norm
+        ) for i in range(len(self.embedding_dims))]
 
         print(
             "Embedding dictionary:\n",
             f"\tNum conditions: {self.n_conditions}\n",
-            f"\tEmbedding dim: {self.embedding_dim}",
+            f"\tEmbedding dim: {self.embedding_dims}",
         )
         self.encoder = Encoder(
             encoder_layer_sizes,
@@ -107,7 +107,7 @@ class scpoli(nn.Module):
             self.use_ln,
             self.use_dr,
             self.dr_rate,
-            self.embedding_dim if "encoder" in self.inject_condition else None,
+            sum(self.embedding_dims) if "encoder" in self.inject_condition else None,
         )
         self.decoder = Decoder(
             decoder_layer_sizes,
@@ -117,7 +117,7 @@ class scpoli(nn.Module):
             self.use_ln,
             self.use_dr,
             self.dr_rate,
-            self.embedding_dim if "decoder" in self.inject_condition else None,
+            sum(self.embedding_dims) if "decoder" in self.inject_condition else None,
         )
 
     def forward(

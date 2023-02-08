@@ -71,7 +71,7 @@ class scPoli(BaseMixin):
         self,
         adata: AnnData,
         share_metadata: bool = True,
-        condition_key: str = None,
+        condition_keys: Optional[Union[list, str]] = None,
         conditions: Optional[list] = None,
         inject_condition: Optional[list] = ["encoder", "decoder"],
         cell_type_keys: Optional[Union[str, list]] = None,
@@ -82,7 +82,7 @@ class scPoli(BaseMixin):
         prototypes_unlabeled: Optional[dict] = None,
         hidden_layer_sizes: list = [256, 64],
         latent_dim: int = 10,
-        embedding_dim: int = 10,
+        embedding_dims: Union[list, int] = 10,
         embedding_max_norm: float = 1.0,
         dr_rate: float = 0.05,
         use_mmd: bool = False,
@@ -96,7 +96,12 @@ class scPoli(BaseMixin):
         # gather data information
         self.adata = adata
         self.share_metadata_ = share_metadata
-        self.condition_key_ = condition_key
+        
+        if isinstance(condition_keys, str):
+            self.condition_keys_ = [condition_keys]
+        else:
+            self.condition_keys_ = condition_keys
+        
 
         if isinstance(cell_type_keys, str):
             self.cell_type_keys_ = [cell_type_keys]
@@ -115,10 +120,12 @@ class scPoli(BaseMixin):
             self.labeled_indices_ = labeled_indices
 
         if conditions is None:
-            if condition_key is not None:
-                self.conditions_ = adata.obs[condition_key].unique().tolist()
+            if condition_keys is not None:
+                self.conditions_ = {}
+                for cond in self.condition_keys_:
+                    self.conditions_[cond] = adata.obs[cond].unique().tolist()
             else:
-                self.conditions_ = []
+                self.conditions_ = {}
         else:
             self.conditions_ = conditions
 
@@ -167,7 +174,12 @@ class scPoli(BaseMixin):
         self.use_bn_ = use_bn
         self.use_ln_ = use_ln
         self.inject_condition_ = inject_condition
-        self.embedding_dim_ = embedding_dim
+        if isinstance(embedding_dims, int):
+            self.embedding_dims_ = [embedding_dims] * len(self.condition_keys_)
+        else:
+            assert len(embedding_dims) == len(self.condition_keys_), \
+                "Embedding dimensions passed do not match condition keys"
+            self.embedding_dims_ = embedding_dims
         self.embedding_max_norm_ = embedding_max_norm
 
         self.input_dim_ = adata.n_vars
@@ -193,7 +205,7 @@ class scPoli(BaseMixin):
             conditions=self.conditions_,
             cell_types=self.model_cell_types,
             inject_condition=self.inject_condition_,
-            embedding_dim=self.embedding_dim_,
+            embedding_dims=self.embedding_dims_,
             embedding_max_norm=self.embedding_max_norm_,
             unknown_ct_names=self.unknown_ct_names_,
             prototypes_labeled=self.prototypes_labeled_,
@@ -258,7 +270,7 @@ class scPoli(BaseMixin):
             self.adata,
             labeled_indices=self.labeled_indices_,
             pretraining_epochs=pretraining_epochs,
-            condition_key=self.condition_key_,
+            condition_keys=self.condition_keys_,
             cell_type_keys=self.cell_type_keys_,
             reload_best=reload_best,
             prototype_training=self.prototype_training_,

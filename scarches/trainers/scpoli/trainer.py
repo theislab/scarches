@@ -227,7 +227,7 @@ class scPoliTrainer(Trainer):
             train_frac=self.train_frac,
             condition_key=self.condition_key,
             cell_type_keys=self.cell_type_keys,
-            condition_encoder=self.model.condition_encoder,
+            condition_encoders=self.model.condition_encoders,
             cell_type_encoder=self.model.cell_type_encoder,
             labeled_indices=self.labeled_indices,
         )
