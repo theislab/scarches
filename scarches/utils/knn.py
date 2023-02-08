@@ -5,9 +5,9 @@ import numpy as np
 import anndata
 from sklearn.neighbors import KNeighborsTransformer
 
-#These function were created by Lisa Sikemma
+#These function were originally created by Lisa Sikemma
 
-def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50):
+def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50, verbose=True):
     """Trains a weighted KNN classifier on ``train_adata``.
     Parameters
     ----------
@@ -18,11 +18,11 @@ def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50):
         used
     n_neighbors: int
         Number of nearest neighbors in KNN classifier.
+    verbose: bool
+        Whether or not additional processing information should be printed
     """
-    print(
-        f"Weighted KNN with n_neighbors = {n_neighbors} ... ",
-        end="",
-    )
+    print(f"Weighted KNN with n_neighbors = {n_neighbors}")
+
     k_neighbors_transformer = KNeighborsTransformer(
         n_neighbors=n_neighbors,
         mode="distance",
@@ -38,8 +38,15 @@ def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50):
         raise ValueError(
             "train_adata_emb should be set to either 'X' or the name of the obsm layer to be used!"
         )
+    if verbose:
+        print(f"Transforming training dataset into a graph of {n_neighbors} nearest neighbor. This may take some time...")
+
     k_neighbors_transformer.fit(train_emb)
+
+    if verbose:
+        print("Transformation completed.")
     return k_neighbors_transformer    
+
 
 def weighted_knn_transfer(
     query_adata,
@@ -49,7 +56,7 @@ def weighted_knn_transfer(
     knn_model,
     threshold=1,
     pred_unknown=False,
-    mode="package",
+    verbose=True
 ):
     """Annotates ``query_adata`` cells with an input trained weighted KNN classifier.
     Parameters
@@ -61,8 +68,8 @@ def weighted_knn_transfer(
         query_adata.X will be used
     ref_adata_obs: :class:`pd.DataFrame`
         obs of ref Anndata
-    label_keys: str
-        Names of the columns to be used as target variables (e.g. cell_type) in ``query_adata``.
+    label_keys: list of str
+        Names of the obs columns to be used as target variables (e.g. cell_type) in ``query_adata``.
     knn_model: :class:`~sklearn.neighbors._graph.KNeighborsTransformer`
         knn model trained on reference adata with weighted_knn_trainer function
     threshold: float
@@ -74,9 +81,8 @@ def weighted_knn_transfer(
         ``False`` by default. Whether to annotate any cell as "unknown" or not.
         If `False`, ``threshold`` will not be used and each cell will be annotated
         with the label which is the most common in its ``n_neighbors`` nearest cells.
-    mode: str
-        Has to be one of "paper" or "package". If mode is set to "package",
-        uncertainties will be 1 - P(pred_label), otherwise it will be 1 - P(true_label).
+    verbose: bool
+        Whether or not additional processing information should be printed
     """
     if not type(knn_model) == KNeighborsTransformer:
         raise ValueError(
@@ -91,6 +97,7 @@ def weighted_knn_transfer(
         raise ValueError(
             "query_adata_emb should be set to either 'X' or the name of the obsm layer to be used!"
         )
+
     top_k_distances, top_k_indices = knn_model.kneighbors(X=query_emb)
 
     stds = np.std(top_k_distances, axis=1)
@@ -102,14 +109,23 @@ def weighted_knn_transfer(
     weights = top_k_distances_tilda / np.sum(
         top_k_distances_tilda, axis=1, keepdims=True
     )
-    cols = ref_adata_obs.columns[ref_adata_obs.columns.str.startswith(label_keys)]
+
+    cols = ref_adata_obs.columns[ref_adata_obs.columns.isin(label_keys)]
     uncertainties = pd.DataFrame(columns=cols, index=query_adata.obs_names)
     pred_labels = pd.DataFrame(columns=cols, index=query_adata.obs_names)
+
+    if verbose:
+        print("Label transfer begins:")
+
     for i in range(len(weights)):
         for j in cols:
+            if verbose:
+                print(f"transferring labels for {j}")
+
             y_train_labels = ref_adata_obs[j].values
             unique_labels = np.unique(y_train_labels[top_k_indices[i]])
             best_label, best_prob = None, 0.0
+
             for candidate_label in unique_labels:
                 candidate_prob = weights[
                     i, y_train_labels[top_k_indices[i]] == candidate_label
@@ -126,14 +142,69 @@ def weighted_knn_transfer(
             else:
                 pred_label = best_label
 
-            if mode == "package":
-                uncertainties.iloc[i][j] = (max(1 - best_prob, 0))
-
-            else:
-                raise Exception("Inquery Mode!")
-
             pred_labels.iloc[i][j] = (pred_label)
 
-    print("finished!")
+    print("Finished!")
 
     return pred_labels, uncertainties
+
+
+def knn(train_adata,
+    train_adata_emb,
+    query_adata,
+    query_adata_emb,
+    ref_adata_obs,
+    label_keys,
+    n_neighbors=50,
+    threshold=1,
+    pred_unknown=False,
+    verbose=True
+):
+    """Trains a weighted KNN classifier on ``train_adata`` and annotates ``query_adata`` cells
+    with it. Returns cell labels and uncertainties for the different annotation levels
+
+    Parameters
+    ----------
+    train_adata: :class:`~anndata.AnnData`
+        Annotated dataset to be used to train KNN classifier with ``label_key`` as the target variable.
+    train_adata_emb: str
+        Name of the obsm layer to be used for calculation of neighbors. If set to "X", anndata.X will be
+        used
+    uery_adata: :class:`~anndata.AnnData`
+        Annotated dataset to be used to queryate KNN classifier. Embedding to be used
+    query_adata_emb: str
+        Name of the obsm layer to be used for label transfer. If set to "X",
+        query_adata.X will be used
+    ref_adata_obs: :class:`pd.DataFrame`
+        obs of ref Anndata
+    label_keys: list of str
+        Names of the obs columns to be used as target variables (e.g. cell_type) in ``query_adata``.
+    n_neighbors: int
+        Number of nearest neighbors in KNN classifier.
+    threshold: float
+        Threshold of uncertainty used to annotating cells as "Unknown". cells with
+        uncertainties higher than this value will be annotated as "Unknown".
+        Set to 1 to keep all predictions. This enables one to later on play
+        with thresholds.
+    pred_unknown: bool
+        ``False`` by default. Whether to annotate any cell as "unknown" or not.
+        If `False`, ``threshold`` will not be used and each cell will be annotated
+        with the label which is the most common in its ``n_neighbors`` nearest cells.
+    verbose: bool
+        ``True`` by default. Whether additional processing information should be printed.
+    """
+
+    knn_transformer = weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors, verbose)
+
+    labels, uncert = weighted_knn_transfer(
+        query_adata,
+        query_adata_emb,
+        ref_adata_obs,
+        label_keys,
+        knn_transformer,
+        threshold,
+        pred_unknown,
+        verbose
+    )
+
+    return labels, uncert
