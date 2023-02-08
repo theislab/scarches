@@ -286,15 +286,15 @@ class scPoli(BaseMixin):
             labels = np.zeros(c.shape[0])
             for condition, label in self.model.condition_encoder.items():
                 labels[c == condition] = label
-            c = torch.tensor(labels, device="cpu")
+            c = torch.tensor(labels, device=device)
 
         if sparse.issparse(x):
             x = x.A
-        x = torch.tensor(x, device="cpu")
+        x = torch.tensor(x, device=device)
 
         latents = []
         # batch the latent transformation process
-        indices = torch.arange(x.size(0), device="cpu")
+        indices = torch.arange(x.size(0), device=device)
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
             latent = self.model.get_latent(
@@ -353,11 +353,11 @@ class scPoli(BaseMixin):
                 labels = np.zeros(c.shape[0])
                 for condition, label in self.model.condition_encoder.items():
                     labels[c == condition] = label
-                c = torch.tensor(labels, device="cpu")
+                c = torch.tensor(labels, device=device)
 
         if sparse.issparse(x):
             x = x.A
-        x = torch.tensor(x, device="cpu")
+        x = torch.tensor(x, device=device)
 
         results = dict()
         # loop through hierarchies
