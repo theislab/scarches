@@ -95,8 +95,6 @@ class scPoli(BaseMixin):
     ):
         # gather data information
         self.adata = adata
-        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
-        self.conditions_combined = self.adata.obs['conditions_combined'].unique().tolist()
         self.share_metadata_ = share_metadata
         
         if isinstance(condition_keys, str):
@@ -131,6 +129,7 @@ class scPoli(BaseMixin):
         else:
             self.conditions_ = conditions
         
+        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
         self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
 
         if self.share_metadata_:
@@ -346,12 +345,47 @@ class scPoli(BaseMixin):
         """
         Returns anndata object of the conditional embeddings
         """
-        embeddings = self.model.embedding.weight.cpu().detach().numpy()
-        adata_emb = sc.AnnData(X=embeddings, obs=pd.DataFrame(index=self.conditions_))
+        embeddings = [self.model.embeddings[i].weight.cpu().detach().numpy() for i in range(len(self.model.embeddings))]
+        adata_emb = {}
+        for i, cond in enumerate(self.conditions_.keys()):
+            adata_emb[cond] =  sc.AnnData(
+                X=embeddings[i], 
+                obs=pd.DataFrame(index=self.conditions_[cond])
+            )
         if self.share_metadata_:
             adata_emb.obs = self.obs_metadata_
         return adata_emb
 
+    def get_combined_conditional_embeddings(self):
+        """
+        Returns anndata object of the conditional embeddings
+        """
+        embeddings = [self.model.embeddings[i].weight.cpu().detach().numpy() for i in range(len(self.model.embeddings))]
+        adata_emb = {}
+        for i, cond in enumerate(self.conditions_.keys()):
+            adata_emb[cond] =  sc.AnnData(
+                X=embeddings[i], 
+                obs=pd.DataFrame(index=self.conditions_[cond])
+            )
+        unique_conditions = self.adata.obs[self.condition_keys_].drop_duplicates()
+        combined_embeddings = []
+        for i in range(len(unique_conditions)):
+            embs = []
+            for cond in self.condition_keys_:
+                embs.append(np.squeeze(adata_emb[cond][adata_emb[cond].obs_names == unique_conditions.iloc[i][cond]].X))
+            embs = np.hstack(embs)
+            print(embs.shape)
+            combined_embeddings.append(embs)
+        adata_emb_combined = sc.AnnData(
+                X=np.vstack(combined_embeddings), 
+                obs=unique_conditions
+            )
+                
+            
+        #if self.share_metadata_:
+        #    adata_emb.obs = self.obs_metadata_
+        return adata_emb_combined
+    
     def classify(
         self,
         x: Optional[np.ndarray] = None,

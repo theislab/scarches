@@ -333,7 +333,7 @@ class scpoli(nn.Module):
         if "encoder" in self.inject_condition:
             # c = c.type(torch.cuda.LongTensor)
             c = c.long()
-            embed_c = self.embedding(c)
+            embed_c = torch.hstack([self.embeddings[i](c[:, i]) for i in range(c.shape[1])])
             z_mean, z_log_var = self.encoder(x_, embed_c)
         else:
             z_mean, z_log_var = self.encoder(x_)
