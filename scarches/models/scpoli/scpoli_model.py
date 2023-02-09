@@ -374,7 +374,6 @@ class scPoli(BaseMixin):
             for cond in self.condition_keys_:
                 embs.append(np.squeeze(adata_emb[cond][adata_emb[cond].obs_names == unique_conditions.iloc[i][cond]].X))
             embs = np.hstack(embs)
-            print(embs.shape)
             combined_embeddings.append(embs)
         adata_emb_combined = sc.AnnData(
                 X=np.vstack(combined_embeddings), 
