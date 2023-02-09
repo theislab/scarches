@@ -47,13 +47,13 @@ class MultiConditionAnnotatedDataset(Dataset):
         self.labeled_vector = torch.tensor(labeled_array)
 
         # Encode condition strings to integer
-        if self.condition_key is not None:
+        if self.condition_keys is not None:
             self.conditions = [label_encoder(
                 adata,
                 encoder=self.condition_encoders[i],
-                condition_key=condition_key,
+                condition_key=condition_keys[i],
             ) for i in range(len(self.condition_encoders))]
-            self.conditions = torch.tensor(self.conditions, dtype=torch.long)
+            self.conditions = torch.tensor(self.conditions, dtype=torch.long).T
 
         # Encode cell type strings to integer
         if self.cell_type_keys is not None:
@@ -81,7 +81,7 @@ class MultiConditionAnnotatedDataset(Dataset):
         outputs["labeled"] = self.labeled_vector[index]
         outputs["sizefactor"] = self.size_factors[index]
 
-        if self.condition_key:
+        if self.condition_keys:
             outputs["batch"] = self.conditions[index, :]
 
         if self.cell_type_keys:

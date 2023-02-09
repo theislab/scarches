@@ -52,4 +52,5 @@ def label_encoder(adata, encoder, condition_key=None):
 
     for condition, label in encoder.items():
         labels[adata.obs[condition_key] == condition] = label
+    labels = [int(x) for x in labels]
     return labels

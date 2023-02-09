@@ -1,7 +1,114 @@
+import collections.abc as container_abcs
 import numpy as np
+import re
 import torch
 from ...dataset import MultiConditionAnnotatedDataset
 
+def custom_collate(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+    np_str_obj_array_pattern = re.compile(r'[SaUO]')
+    default_collate_err_msg_format = (
+        "default_collate: batch must contain tensors, numpy arrays, numbers, "
+        "dicts or lists; found {}")
+
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, torch.Tensor):
+        out = None
+        if torch.utils.data.get_worker_info() is not None:
+            # If we're in a background process, concatenate directly into a
+            # shared memory tensor to avoid an extra copy
+            numel = sum([x.numel() for x in batch])
+            storage = elem.storage()._new_shared(numel)
+            out = elem.new(storage)
+        return torch.stack(batch, 0, out=out)
+
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' and elem_type.__name__ != 'string_':
+        elem = batch[0]
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+
+            return custom_collate([torch.as_tensor(b) for b in batch])
+        elif elem.shape == ():  # scalars
+            return torch.as_tensor(batch)
+
+    elif isinstance(elem, container_abcs.Mapping):
+        output = {key: custom_collate([d[key] for d in batch]) for key in elem}
+        return output
+
+def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=None, labeled_array=None):
+    """Splits 'Anndata' object into training and validation data.
+
+       Parameters
+       ----------
+       adata: `~anndata.AnnData`
+            `AnnData` object for training the model.
+       train_frac: float
+            Train-test split fraction. the model will be trained with train_frac for training
+            and 1-train_frac for validation.
+
+       Returns
+       -------
+       Indices for training and validating the model.
+    """
+    indices = np.arange(adata.shape[0])
+
+    if train_frac == 1:
+        return indices, None
+
+    if cell_type_key is not None:
+        labeled_array = np.zeros((len(adata), 1)) if labeled_array is None else labeled_array
+        labeled_array = np.ravel(labeled_array)
+
+        labeled_idx = indices[labeled_array == 1]
+        unlabeled_idx = indices[labeled_array == 0]
+
+        train_labeled_idx = []
+        val_labeled_idx = []
+        train_unlabeled_idx = []
+        val_unlabeled_idx = []
+
+        if len(labeled_idx) > 0:
+            cell_types = adata[labeled_idx].obs[cell_type_key].unique().tolist()
+            for cell_type in cell_types:
+                ct_idx = labeled_idx[adata[labeled_idx].obs[cell_type_key] == cell_type]
+                n_train_samples = int(np.ceil(train_frac * len(ct_idx)))
+                np.random.shuffle(ct_idx)
+                train_labeled_idx.append(ct_idx[:n_train_samples])
+                val_labeled_idx.append(ct_idx[n_train_samples:])
+        if len(unlabeled_idx) > 0:
+            n_train_samples = int(np.ceil(train_frac * len(unlabeled_idx)))
+            train_unlabeled_idx.append(unlabeled_idx[:n_train_samples])
+            val_unlabeled_idx.append(unlabeled_idx[n_train_samples:])
+        train_idx = train_labeled_idx + train_unlabeled_idx
+        val_idx = val_labeled_idx + val_unlabeled_idx
+
+        train_idx = np.concatenate(train_idx)
+        val_idx = np.concatenate(val_idx)
+
+    elif condition_keys is not None:
+        train_idx = []
+        val_idx = []
+        conditions = adata.obs['conditions_combined'].unique().tolist()
+        for condition in conditions:
+            cond_idx = indices[adata.obs['conditions_combined'] == condition]
+            n_train_samples = int(np.ceil(train_frac * len(cond_idx)))
+            np.random.shuffle(cond_idx)
+            train_idx.append(cond_idx[:n_train_samples])
+            val_idx.append(cond_idx[n_train_samples:])
+
+        train_idx = np.concatenate(train_idx)
+        val_idx = np.concatenate(val_idx)
+
+    else:
+        n_train_samples = int(np.ceil(train_frac * len(indices)))
+        np.random.shuffle(indices)
+        train_idx = indices[:n_train_samples]
+        val_idx = indices[n_train_samples:]
+
+    return train_idx, val_idx
 
 def make_dataset(adata,
                  train_frac=0.9,
@@ -52,7 +159,7 @@ def make_dataset(adata,
     if train_frac == 1:
         return data_set_train, None
     else:
-        data_set_valid = trVAEDataset(
+        data_set_valid = MultiConditionAnnotatedDataset(
             adata[val_idx],
             condition_keys=condition_keys,
             cell_type_keys=cell_type_keys,
@@ -109,7 +216,6 @@ def cov(x, rowvar=False, bias=False, ddof=None, aweights=None):
 
     return c.squeeze()
 
-
 def t_dist(x, y, alpha):
     """student t-distribution, as same as used in t-SNE algorithm.
              q_ij = 1/(1+dist(x_i, u_j)^2), then normalize it.
@@ -134,11 +240,9 @@ def t_dist(x, y, alpha):
     q = (q.T / q.sum(1)).T
     return q
 
-
 def target_distribution(q):
     weight = torch.pow(q, 2) / q.sum(0)
     return (weight.T / weight.sum(1)).T
-
 
 def kl_loss(p, q):
     return (p * torch.log(p / q)).sum(1).mean()

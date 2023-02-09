@@ -8,8 +8,7 @@ import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
 
-from ._utils import make_dataset
-from ._utils import cov, euclidean_dist
+from ._utils import make_dataset, cov, euclidean_dist, custom_collate
 from ...utils.monitor import EarlyStopping
 
 
@@ -84,7 +83,7 @@ class scPoliTrainer:
         self,
         model,
         adata,
-        condition_key: str = None,
+        condition_keys: str = None,
         cell_type_keys: str = None,
         batch_size: int = 128,
         alpha_epoch_anneal: int = None,
@@ -104,8 +103,9 @@ class scPoliTrainer:
         **kwargs,
     ):
         self.adata = adata
+        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
         self.model = model
-        self.condition_key = condition_key
+        self.condition_keys = condition_keys
         self.cell_type_keys = cell_type_keys
 
         self.batch_size = batch_size
@@ -120,7 +120,7 @@ class scPoliTrainer:
 
         self.n_samples = kwargs.pop("n_samples", None)
         self.train_frac = kwargs.pop("train_frac", 0.9)
-        self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
+        self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", False)
 
         self.weight_decay = kwargs.pop("weight_decay", 0.04)
         self.clip_value = kwargs.pop("clip_value", 0.0)
@@ -164,9 +164,9 @@ class scPoliTrainer:
         self.train_data, self.valid_data = make_dataset(
             self.adata,
             train_frac=self.train_frac,
-            condition_key=self.condition_key,
+            condition_keys=self.condition_keys,
             cell_type_keys=self.cell_type_keys,
-            condition_encoder=self.model.condition_encoder,
+            condition_encoders=self.model.condition_encoders,
             cell_type_encoder=self.model.cell_type_encoder,
         )
 
@@ -209,15 +209,6 @@ class scPoliTrainer:
             self.prototypes_labeled_cov = self.prototypes_labeled_cov.to(
                 device=self.device
             )
-        
-        self.train_data, self.valid_data = make_dataset(
-            self.adata,
-            train_frac=self.train_frac,
-            condition_keys=self.condition_keys,
-            cell_type_keys=self.cell_type_keys,
-            condition_encoders=self.model.condition_encoders,
-            cell_type_encoder=self.model.cell_type_encoder,
-        )
 
     def initialize_loaders(self):
         """
