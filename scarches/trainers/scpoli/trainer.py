@@ -10,6 +10,7 @@ from sklearn.cluster import KMeans
 
 from ._utils import make_dataset
 from ._utils import cov, euclidean_dist
+from ...utils.monitor import EarlyStopping
 
 
 class scPoliTrainer:
