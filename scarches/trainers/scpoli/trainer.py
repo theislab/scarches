@@ -8,12 +8,11 @@ import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
 
-from ..trvae._utils import make_dataset
-from ..trvae.trainer import Trainer
+from ._utils import make_dataset
 from ._utils import cov, euclidean_dist
 
 
-class scPoliTrainer(Trainer):
+class scPoliTrainer:
     """
     scPoli Trainer class. This class contains the implementation of the training routine for scPoli models
 
@@ -84,6 +83,14 @@ class scPoliTrainer(Trainer):
         self,
         model,
         adata,
+        condition_key: str = None,
+        cell_type_keys: str = None,
+        batch_size: int = 128,
+        alpha_epoch_anneal: int = None,
+        alpha_kl: float = 1.,
+        use_early_stopping: bool = True,
+        reload_best: bool = True,
+        early_stopping_kwargs: dict = None,
         labeled_indices: list = None,
         pretraining_epochs=None,
         clustering: str = "leiden",
@@ -95,7 +102,73 @@ class scPoliTrainer(Trainer):
         unlabeled_prototype_training: bool = True,
         **kwargs,
     ):
-        super().__init__(model, adata, **kwargs)
+        self.adata = adata
+        self.model = model
+        self.condition_key = condition_key
+        self.cell_type_keys = cell_type_keys
+
+        self.batch_size = batch_size
+        self.alpha_epoch_anneal = alpha_epoch_anneal
+        self.alpha_iter_anneal = kwargs.pop("alpha_iter_anneal", None)
+        self.use_early_stopping = use_early_stopping
+        self.reload_best = reload_best
+
+        self.alpha_kl = alpha_kl
+
+        early_stopping_kwargs = (early_stopping_kwargs if early_stopping_kwargs else dict())
+
+        self.n_samples = kwargs.pop("n_samples", None)
+        self.train_frac = kwargs.pop("train_frac", 0.9)
+        self.use_stratified_sampling = kwargs.pop("use_stratified_sampling", True)
+
+        self.weight_decay = kwargs.pop("weight_decay", 0.04)
+        self.clip_value = kwargs.pop("clip_value", 0.0)
+
+        self.n_workers = kwargs.pop("n_workers", 0)
+        self.seed = kwargs.pop("seed", 2020)
+        self.monitor = kwargs.pop("monitor", True)
+        self.monitor_only_val = kwargs.pop("monitor_only_val", True)
+
+        self.early_stopping = EarlyStopping(**early_stopping_kwargs)
+
+        torch.manual_seed(self.seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(self.seed)
+            self.model.cuda()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.epoch = -1
+        self.n_epochs = None
+        self.iter = 0
+        self.best_epoch = None
+        self.best_state_dict = None
+        self.current_loss = None
+        self.previous_loss_was_nan = False
+        self.nan_counter = 0
+        self.optimizer = None
+        self.training_time = 0
+
+        self.train_data = None
+        self.valid_data = None
+        self.sampler = None
+        self.dataloader_train = None
+        self.dataloader_valid = None
+
+        self.iters_per_epoch = None
+        self.val_iters_per_epoch = None
+
+        self.logs = defaultdict(list)
+
+        # Create Train/Valid AnnotatetDataset objects
+        self.train_data, self.valid_data = make_dataset(
+            self.adata,
+            train_frac=self.train_frac,
+            condition_key=self.condition_key,
+            cell_type_keys=self.cell_type_keys,
+            condition_encoder=self.model.condition_encoder,
+            cell_type_encoder=self.model.cell_type_encoder,
+        )
+
         self.eta = eta
         self.clustering = clustering
         self.n_clusters = n_clusters
@@ -135,6 +208,72 @@ class scPoliTrainer(Trainer):
             self.prototypes_labeled_cov = self.prototypes_labeled_cov.to(
                 device=self.device
             )
+        
+        self.train_data, self.valid_data = make_dataset(
+            self.adata,
+            train_frac=self.train_frac,
+            condition_keys=self.condition_keys,
+            cell_type_keys=self.cell_type_keys,
+            condition_encoders=self.model.condition_encoders,
+            cell_type_encoder=self.model.cell_type_encoder,
+        )
+
+    def initialize_loaders(self):
+        """
+        Initializes Train-/Test Data and Dataloaders with custom_collate and WeightedRandomSampler for Trainloader.
+        Returns:
+
+        """
+        if self.n_samples is None or self.n_samples > len(self.train_data):
+            self.n_samples = len(self.train_data)
+        self.iters_per_epoch = int(np.ceil(self.n_samples / self.batch_size))
+
+        if self.use_stratified_sampling:
+            # Create Sampler and Dataloaders
+            stratifier_weights = torch.tensor(self.train_data.stratifier_weights, device=self.device)
+
+            self.sampler = WeightedRandomSampler(stratifier_weights,
+                                                 num_samples=self.n_samples,
+                                                 replacement=True)
+            self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,
+                                                                batch_size=self.batch_size,
+                                                                sampler=self.sampler,
+                                                                collate_fn=custom_collate,
+                                                                num_workers=self.n_workers)
+        else:
+            self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,
+                                                                batch_size=self.batch_size,
+                                                                shuffle=True,
+                                                                collate_fn=custom_collate,
+                                                                num_workers=self.n_workers)
+        if self.valid_data is not None:
+            val_batch_size = self.batch_size
+            if self.batch_size > len(self.valid_data):
+                val_batch_size = len(self.valid_data)
+            self.val_iters_per_epoch = int(np.ceil(len(self.valid_data) / self.batch_size))
+            self.dataloader_valid = torch.utils.data.DataLoader(dataset=self.valid_data,
+                                                                batch_size=val_batch_size,
+                                                                shuffle=True,
+                                                                collate_fn=custom_collate,
+                                                                num_workers=self.n_workers)
+
+    def calc_alpha_coeff(self):
+        """Calculates current alpha coefficient for alpha annealing.
+
+           Parameters
+           ----------
+
+           Returns
+           -------
+           Current annealed alpha value
+        """
+        if self.alpha_epoch_anneal is not None:
+            alpha_coeff = min(self.alpha_kl * self.epoch / self.alpha_epoch_anneal, self.alpha_kl)
+        elif self.alpha_iter_anneal is not None:
+            alpha_coeff = min((self.alpha_kl * (self.epoch * self.iters_per_epoch + self.iter) / self.alpha_iter_anneal), self.alpha_kl)
+        else:
+            alpha_coeff = self.alpha_kl
+        return alpha_coeff
 
     def train(self, n_epochs=400, lr=1e-3, eps=0.01):
         self.initialize_loaders()
@@ -225,7 +364,7 @@ class scPoliTrainer(Trainer):
         self.train_data, self.valid_data = make_dataset(
             self.adata,
             train_frac=self.train_frac,
-            condition_key=self.condition_key,
+            condition_keys=self.condition_keys,
             cell_type_keys=self.cell_type_keys,
             condition_encoders=self.model.condition_encoders,
             cell_type_encoder=self.model.cell_type_encoder,
@@ -615,3 +754,35 @@ class scPoliTrainer(Trainer):
         ).mean()
 
         return loss_val, args_count
+
+    @torch.no_grad()
+    def validate(self):
+        self.model.eval()
+        self.iter_logs = defaultdict(list)
+        # Calculate Validation Losses
+        for val_iter, batch_data in enumerate(self.dataloader_valid):
+            for key, batch in batch_data.items():
+                batch_data[key] = batch.to(self.device)
+
+            val_loss = self.loss(batch_data)
+
+        # Get Validation Logs
+        for key in self.iter_logs:
+            self.logs["val_" + key].append(np.array(self.iter_logs[key]).mean())
+
+        self.model.train()
+
+    def check_early_stop(self):
+        # Calculate Early Stopping and best state
+        early_stopping_metric = self.early_stopping.early_stopping_metric
+        if self.early_stopping.update_state(self.logs[early_stopping_metric][-1]):
+            self.best_state_dict = self.model.state_dict()
+            self.best_epoch = self.epoch
+
+        continue_training, update_lr = self.early_stopping.step(self.logs[early_stopping_metric][-1])
+        if update_lr:
+            print(f'\nADJUSTED LR')
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] *= self.early_stopping.lr_factor
+
+        return continue_training

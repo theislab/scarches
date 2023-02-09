@@ -1,22 +1,66 @@
 import numpy as np
 import torch
+from ...dataset import MultiConditionAnnotatedDataset
 
 
-def gini(array):
-    """Calculate the Gini coefficient of a numpy array."""
-    # based on bottom eq: http://www.statsdirect.com/help/content/image/stat0206_wmf.gif
-    # from: http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
-    array = array.flatten()  # all values are treated equally, arrays must be 1d
-    if np.amin(array) < 0:
-        array -= np.amin(array)  # values cannot be negative
-    array += 0.0000001  # values cannot be 0
-    array = np.sort(array)  # values must be sorted
-    index = np.arange(1, array.shape[0] + 1)  # index per array element
-    n = array.shape[0]  # number of array elements
-    return (np.sum((2 * index - n - 1) * array)) / (
-        n * np.sum(array)
-    )  # Gini coefficient
+def make_dataset(adata,
+                 train_frac=0.9,
+                 condition_keys=None,
+                 cell_type_keys=None,
+                 condition_encoders=None,
+                 cell_type_encoder=None,
+                 labeled_indices=None,
+                 ):
+    """Splits 'adata' into train and validation data and converts them into 'CustomDatasetFromAdata' objects.
 
+       Parameters
+       ----------
+
+       Returns
+       -------
+       Training 'CustomDatasetFromAdata' object, Validation 'CustomDatasetFromAdata' object
+    """
+    # Preprare data for semisupervised learning
+    labeled_array = np.zeros((len(adata), 1))
+    if labeled_indices is not None:
+        labeled_array[labeled_indices] = 1
+
+    if cell_type_keys is not None:
+        finest_level = None
+        n_cts = 0
+        for cell_type_key in cell_type_keys:
+            if len(adata.obs[cell_type_key].unique().tolist()) >= n_cts:
+                n_cts = len(adata.obs[cell_type_key].unique().tolist())
+                finest_level = cell_type_key
+
+        train_idx, val_idx = train_test_split(adata, train_frac, cell_type_key=finest_level,
+                                              labeled_array=labeled_array)
+
+    elif condition_key is not None:
+        train_idx, val_idx = train_test_split(adata, train_frac, condition_key=condition_key)
+    else:
+        train_idx, val_idx = train_test_split(adata, train_frac)
+
+    data_set_train = MultiConditionAnnotatedDataset(
+        adata if train_frac == 1 else adata[train_idx],
+        condition_keys=condition_keys,
+        cell_type_keys=cell_type_keys,
+        condition_encoders=condition_encoders,
+        cell_type_encoder=cell_type_encoder,
+        labeled_array=labeled_array[train_idx]
+    )
+    if train_frac == 1:
+        return data_set_train, None
+    else:
+        data_set_valid = trVAEDataset(
+            adata[val_idx],
+            condition_keys=condition_keys,
+            cell_type_keys=cell_type_keys,
+            condition_encoders=condition_encoders,
+            cell_type_encoder=cell_type_encoder,
+            labeled_array=labeled_array[val_idx]
+        )
+        return data_set_train, data_set_valid
 
 def cov(x, rowvar=False, bias=False, ddof=None, aweights=None):
     """Estimates covariance matrix like numpy.cov"""
