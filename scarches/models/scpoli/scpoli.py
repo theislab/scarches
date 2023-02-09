@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
-from ..trvae._utils import one_hot_encoder
+from ._utils import one_hot_encoder
 from ..trvae.losses import mse, nb, zinb
 from ...trainers.scpoli._utils import cov, euclidean_dist
 
@@ -16,6 +16,7 @@ class scpoli(nn.Module):
         cell_types,
         unknown_ct_names,
         conditions,
+        conditions_combined,
         inject_condition,
         latent_dim,
         embedding_dims,
@@ -45,6 +46,11 @@ class scpoli(nn.Module):
         self.condition_encoders = [{
             k: v for k, v in zip(conditions[cond], range(len(conditions[cond])))
         } for cond in conditions.keys()]
+        self.conditions_combined = conditions_combined
+        self.n_conditions_combined = len(conditions_combined)
+        self.conditions_combined_encoder = {
+            k: v for k, v in zip(conditions_combined, range(len(conditions_combined)))
+        }
         self.inject_condition = inject_condition
         self.use_bn = use_bn
         self.use_ln = use_ln
@@ -80,7 +86,7 @@ class scpoli(nn.Module):
 
         if recon_loss in ["nb", "zinb"]:
             self.theta = torch.nn.Parameter(
-                torch.randn(self.input_dim, sum(self.n_conditions))
+                torch.randn(self.input_dim, self.n_conditions_combined)
             )
         else:
             self.theta = None
@@ -124,22 +130,23 @@ class scpoli(nn.Module):
         self,
         x=None,
         batch=None,
+        combined_batch=None,
         sizefactor=None,
         celltypes=None,
         labeled=None,
-    ):
-        batch_embedding = self.embedding(batch)
+    ):   
+        batch_embeddings = torch.hstack([self.embeddings[i](batch[:, i]) for i in range(batch.shape[1])])
         x_log = torch.log(1 + x)
         if self.recon_loss == "mse":
             x_log = x
         if "encoder" in self.inject_condition:
-            z1_mean, z1_log_var = self.encoder(x_log, batch_embedding)
+            z1_mean, z1_log_var = self.encoder(x_log, batch_embeddings)
         else:
             z1_mean, z1_log_var = self.encoder(x_log, batch=None)
         z1 = self.sampling(z1_mean, z1_log_var)
 
         if "decoder" in self.inject_condition:
-            outputs = self.decoder(z1, batch_embedding)
+            outputs = self.decoder(z1, batch_embeddings)
         else:
             outputs = self.decoder(z1, batch=None)
 
@@ -152,7 +159,7 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
+            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = (
                 -zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout)
@@ -166,7 +173,7 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
+            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
 

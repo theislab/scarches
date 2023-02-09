@@ -26,6 +26,7 @@ class MultiConditionAnnotatedDataset(Dataset):
                  adata,
                  condition_keys=None,
                  condition_encoders=None,
+                 conditions_combined_encoder=None,
                  cell_type_keys=None,
                  cell_type_encoder=None,
                  labeled_array=None
@@ -33,9 +34,9 @@ class MultiConditionAnnotatedDataset(Dataset):
 
         self.condition_keys = condition_keys
         self.condition_encoders = condition_encoders
+        self.conditions_combined_encoder = conditions_combined_encoder
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
-
         self._is_sparse = sparse.issparse(adata.X)
         self.data = adata.X if self._is_sparse else torch.tensor(adata.X)
 
@@ -54,6 +55,12 @@ class MultiConditionAnnotatedDataset(Dataset):
                 condition_key=condition_keys[i],
             ) for i in range(len(self.condition_encoders))]
             self.conditions = torch.tensor(self.conditions, dtype=torch.long).T
+            self.conditions_combined = label_encoder(
+                adata,
+                encoder=self.conditions_combined_encoder,
+                condition_key='conditions_combined'
+            )
+            self.conditions_combined=torch.tensor(self.conditions_combined, dtype=torch.long)
 
         # Encode cell type strings to integer
         if self.cell_type_keys is not None:
@@ -83,6 +90,7 @@ class MultiConditionAnnotatedDataset(Dataset):
 
         if self.condition_keys:
             outputs["batch"] = self.conditions[index, :]
+            outputs["combined_batch"] = self.conditions_combined[index]
 
         if self.cell_type_keys:
             outputs["celltypes"] = self.cell_types[index, :]

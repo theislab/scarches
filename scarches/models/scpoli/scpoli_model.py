@@ -95,6 +95,8 @@ class scPoli(BaseMixin):
     ):
         # gather data information
         self.adata = adata
+        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+        self.conditions_combined = self.adata.obs['conditions_combined'].unique().tolist()
         self.share_metadata_ = share_metadata
         
         if isinstance(condition_keys, str):
@@ -128,6 +130,8 @@ class scPoli(BaseMixin):
                 self.conditions_ = {}
         else:
             self.conditions_ = conditions
+        
+        self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
 
         if self.share_metadata_:
             self.obs_metadata_ = adata.obs.groupby(condition_key).first()
@@ -203,6 +207,7 @@ class scPoli(BaseMixin):
         self.model = scpoli(
             input_dim=self.input_dim_,
             conditions=self.conditions_,
+            conditions_combined=self.conditions_combined_,
             cell_types=self.model_cell_types,
             inject_condition=self.inject_condition_,
             embedding_dims=self.embedding_dims_,

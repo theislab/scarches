@@ -1,8 +1,70 @@
 import collections.abc as container_abcs
 import numpy as np
 import re
+import sys
 import torch
 from ...dataset import MultiConditionAnnotatedDataset
+
+def print_progress(epoch, logs, n_epochs=10000, only_val_losses=True):
+    """Creates Message for '_print_progress_bar'.
+
+       Parameters
+       ----------
+       epoch: Integer
+            Current epoch iteration.
+       logs: Dict
+            Dictionary of all current losses.
+       n_epochs: Integer
+            Maximum value of epochs.
+       only_val_losses: Boolean
+            If 'True' only the validation dataset losses are displayed, if 'False' additionally the training dataset
+            losses are displayed.
+
+       Returns
+       -------
+    """
+    message = ""
+    for key in logs:
+        if only_val_losses:
+            if "val_" in key and "unweighted" not in key:
+                message += f" - {key:s}: {logs[key][-1]:7.10f}"
+        else:
+            if "unweighted" not in key:
+                message += f" - {key:s}: {logs[key][-1]:7.10f}"
+
+    _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
+
+
+def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    """Prints out message with a progress bar.
+
+       Parameters
+       ----------
+       iteration: Integer
+            Current epoch.
+       total: Integer
+            Maximum value of epochs.
+       prefix: String
+            String before the progress bar.
+       suffix: String
+            String after the progress bar.
+       decimals: Integer
+            Digits after comma for all the losses.
+       length: Integer
+            Length of the progress bar.
+       fill: String
+            Symbol for filling the bar.
+
+       Returns
+       -------
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_len = int(length * iteration // total)
+    bar = fill * filled_len + '-' * (length - filled_len)
+    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percent, '%', suffix)),
+    if iteration == total:
+        sys.stdout.write('\n')
+    sys.stdout.flush()
 
 def custom_collate(batch):
     r"""Puts each data field into a tensor with outer dimension batch size"""
@@ -115,6 +177,7 @@ def make_dataset(adata,
                  condition_keys=None,
                  cell_type_keys=None,
                  condition_encoders=None,
+                 conditions_combined_encoder=None,
                  cell_type_encoder=None,
                  labeled_indices=None,
                  ):
@@ -153,6 +216,7 @@ def make_dataset(adata,
         condition_keys=condition_keys,
         cell_type_keys=cell_type_keys,
         condition_encoders=condition_encoders,
+        conditions_combined_encoder=conditions_combined_encoder,
         cell_type_encoder=cell_type_encoder,
         labeled_array=labeled_array[train_idx]
     )
@@ -164,6 +228,7 @@ def make_dataset(adata,
             condition_keys=condition_keys,
             cell_type_keys=cell_type_keys,
             condition_encoders=condition_encoders,
+            conditions_combined_encoder=conditions_combined_encoder,
             cell_type_encoder=cell_type_encoder,
             labeled_array=labeled_array[val_idx]
         )

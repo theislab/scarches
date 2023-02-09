@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
 
-from ._utils import make_dataset, cov, euclidean_dist, custom_collate
+from ._utils import make_dataset, cov, euclidean_dist, custom_collate, print_progress
 from ...utils.monitor import EarlyStopping
 
 
@@ -103,7 +103,6 @@ class scPoliTrainer:
         **kwargs,
     ):
         self.adata = adata
-        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
         self.model = model
         self.condition_keys = condition_keys
         self.cell_type_keys = cell_type_keys
@@ -159,7 +158,6 @@ class scPoliTrainer:
         self.val_iters_per_epoch = None
 
         self.logs = defaultdict(list)
-
         # Create Train/Valid AnnotatetDataset objects
         self.train_data, self.valid_data = make_dataset(
             self.adata,
@@ -167,6 +165,7 @@ class scPoliTrainer:
             condition_keys=self.condition_keys,
             cell_type_keys=self.cell_type_keys,
             condition_encoders=self.model.condition_encoders,
+            conditions_combined_encoder=self.model.conditions_combined_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
         )
 
@@ -359,6 +358,7 @@ class scPoliTrainer:
             condition_keys=self.condition_keys,
             cell_type_keys=self.cell_type_keys,
             condition_encoders=self.model.condition_encoders,
+            conditions_combined_encoder=self.model.conditions_combined_encoder,
             cell_type_encoder=self.model.cell_type_encoder,
             labeled_indices=self.labeled_indices,
         )
@@ -619,7 +619,18 @@ class scPoliTrainer:
                     proto.requires_grad = False
 
         self.model.train()
-        super().on_epoch_end()
+        
+        # Get Train Epoch Logs
+        for key in self.iter_logs:
+            self.logs["epoch_" + key].append(np.array(self.iter_logs[key]).mean())
+
+        # Validate Model
+        if self.valid_data is not None:
+            self.validate()
+
+        # Monitor Logs
+        if self.monitor:
+            print_progress(self.epoch, self.logs, self.n_epochs, self.monitor_only_val)
 
     def after_loop(self):
         """
