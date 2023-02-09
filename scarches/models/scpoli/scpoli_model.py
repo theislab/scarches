@@ -341,7 +341,7 @@ class scPoli(BaseMixin):
         latents = torch.cat(latents)
         return np.array(latents)
 
-    def get_conditional_embeddings(self):
+    def get_partitioned_conditional_embeddings(self):
         """
         Returns anndata object of the conditional embeddings
         """
@@ -356,7 +356,7 @@ class scPoli(BaseMixin):
             adata_emb.obs = self.obs_metadata_
         return adata_emb
 
-    def get_combined_conditional_embeddings(self):
+    def get_conditional_embeddings(self):
         """
         Returns anndata object of the conditional embeddings
         """
