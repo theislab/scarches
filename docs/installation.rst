@@ -17,6 +17,20 @@ The easiest way to get scArches is through pip using the following command::
 
     sudo pip install -U scarches
 
+
+Conda Environment
+---------------------
+
+
+You can also use our environment file. This will create the conda environment 'scarches' with
+the required dependencies::
+
+    git clone https://github.com/theislab/scarches
+    cd scarches
+    conda env create -f envs/scarches_linux.yml
+    conda activate scarches
+
+
 Development
 ---------------
 
