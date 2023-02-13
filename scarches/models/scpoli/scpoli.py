@@ -97,9 +97,9 @@ class scpoli(nn.Module):
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
 
-        self.embeddings = [nn.Embedding(
+        self.embeddings = nn.ModuleList(nn.Embedding(
             self.n_conditions[i], self.embedding_dims[i], max_norm=self.embedding_max_norm
-        ) for i in range(len(self.embedding_dims))]
+        ) for i in range(len(self.embedding_dims)))
 
         print(
             "Embedding dictionary:\n",
