@@ -141,6 +141,7 @@ class BaseMixin:
         cls,
         dir_path: str,
         adata: Optional[AnnData] = None,
+        map_location = None
     ):
         """Instantiate a model from the saved output.
            Parameters
@@ -150,6 +151,9 @@ class BaseMixin:
            adata
                 AnnData object.
                 If None, will check for and load anndata saved with the model.
+           map_location
+                 a function, torch.device, string or a dict specifying
+                 how to remap storage locations
            Returns
            -------
                 Model with loaded state dictionaries.
@@ -163,7 +167,7 @@ class BaseMixin:
         elif not os.path.exists(adata_path) and load_adata:
             raise ValueError("Save path contains no saved anndata and no adata was passed.")
 
-        attr_dict, model_state_dict, var_names = cls._load_params(dir_path)
+        attr_dict, model_state_dict, var_names = cls._load_params(dir_path, map_location)
 
         # Overwrite adata with new genes
         adata = _validate_var_names(adata, var_names)
@@ -172,6 +176,7 @@ class BaseMixin:
         init_params = cls._get_init_params_from_dict(attr_dict)
 
         model = cls(adata, **init_params)
+        model.model.to(next(iter(model_state_dict.values())).device)
         model.model.load_state_dict(model_state_dict)
         model.model.eval()
 
@@ -189,6 +194,7 @@ class SurgeryMixin:
         freeze: bool = True,
         freeze_expression: bool = True,
         remove_dropout: bool = True,
+        map_location = None,
         **kwargs
     ):
         """Transfer Learning function for new data. Uses old trained model and expands it for new conditions.
@@ -205,6 +211,9 @@ class SurgeryMixin:
                 If 'True' freeze every weight in first layers except the condition weights.
            remove_dropout: Boolean
                 If 'True' remove Dropout for Transfer Learning.
+           map_location
+                map_location to remap storage locations (as in '.load') of 'reference_model'.
+                Only taken into account if 'reference_model' is a path to a model on disk.
            kwargs
                 kwargs for the initialization of the query model.
 
@@ -214,7 +223,7 @@ class SurgeryMixin:
                 New model to train on query data.
         """
         if isinstance(reference_model, str):
-            attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
+            attr_dict, model_state_dict, var_names = cls._load_params(reference_model, map_location)
             adata = _validate_var_names(adata, var_names)
         else:
             attr_dict = reference_model._get_public_attributes()
@@ -243,6 +252,7 @@ class SurgeryMixin:
         init_params.update(kwargs)
 
         new_model = cls(adata, **init_params)
+        new_model.model.to(next(iter(model_state_dict.values())).device)
         new_model._load_expand_params_from_dict(model_state_dict)
 
         if freeze:
