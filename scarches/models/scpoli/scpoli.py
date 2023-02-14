@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
 from ..trvae._utils import one_hot_encoder
-from ..trvae.losses import mse, nb, zinb
+from ..trvae.losses import mse, nb, zinb, bce
 from ...trainers.scpoli._utils import cov, euclidean_dist
 
 
@@ -157,7 +157,6 @@ class scpoli(nn.Module):
                 .sum(dim=-1)
                 .mean()
             )
-
         elif self.recon_loss == "nb":
             dec_mean_gamma, y1 = outputs
             size_factor_view = sizefactor.unsqueeze(1).expand(
@@ -167,6 +166,9 @@ class scpoli(nn.Module):
             dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
+        elif self.recon_loss == 'bernoulli':
+            recon_x, y1 = outputs
+            recon_loss = bce(recon_x, x).sum(dim=-1).mean()
 
         z1_var = torch.exp(z1_log_var) + 1e-4
         kl_div = (
@@ -560,17 +562,21 @@ class Decoder(nn.Module):
             self.recon_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.ReLU()
             )
-        if self.recon_loss == "zinb":
+        elif self.recon_loss == "zinb":
             # mean gamma
             self.mean_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Softmax(dim=-1)
             )
             # dropout
             self.dropout_decoder = nn.Linear(layer_sizes[-2], layer_sizes[-1])
-        if self.recon_loss == "nb":
+        elif self.recon_loss == "nb":
             # mean gamma
             self.mean_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Softmax(dim=-1)
+            )
+        elif self.recon_loss == 'bernoulli':
+            self.recon_decoder = nn.Sequential(
+                nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Sigmoid()
             )
 
     def forward(self, z, batch=None):
@@ -599,6 +605,10 @@ class Decoder(nn.Module):
         elif self.recon_loss == "nb":
             dec_mean_gamma = self.mean_decoder(x)
             return dec_mean_gamma, dec_latent
+        elif self.recon_loss == 'bernoulli':
+            recon_x = self.recon_decoder(x)
+            return recon_x, dec_latent
+       
 
 
 class CondLayers(nn.Module):

@@ -73,6 +73,7 @@ class Trainer:
                  use_early_stopping: bool = True,
                  reload_best: bool = True,
                  early_stopping_kwargs: dict = None,
+                 device: str = None,
                  **kwargs):
 
         self.adata = adata
@@ -104,11 +105,19 @@ class Trainer:
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
 
-        torch.manual_seed(self.seed)
-        if torch.cuda.is_available():
+        #torch.manual_seed(self.seed)
+        if device is not None:
+            self.device = device
+        else:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if self.device == 'cuda':
             torch.cuda.manual_seed(self.seed)
             self.model.cuda()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            
+        #if torch.cuda.is_available():
+        #    torch.cuda.manual_seed(self.seed)
+        #    self.model.cuda()
+        
 
         self.epoch = -1
         self.n_epochs = None

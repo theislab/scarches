@@ -5,6 +5,23 @@ import torch.nn.functional as F
 from ._utils import partition
 
 
+def bce(recon_x, x):
+    """Computes BCE loss between reconstructed data and ground truth data.
+
+       Parameters
+       ----------
+       recon_x: torch.Tensor
+            Torch Tensor of reconstructed data
+       x: torch.Tensor
+            Torch Tensor of ground truth data
+
+       Returns
+       -------
+       MSE loss value
+    """
+    bce_loss = torch.nn.functional.binary_cross_entropy(recon_x, (x > 0).float(), reduction='none')
+    return bce_loss
+
 def mse(recon_x, x):
     """Computes MSE loss between reconstructed data and ground truth data.
 
