@@ -105,11 +105,11 @@ class Trainer:
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
 
         torch.manual_seed(self.seed)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if torch.cuda.is_available():
             torch.cuda.manual_seed(self.seed)
             self.model.cuda()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+        
         self.epoch = -1
         self.n_epochs = None
         self.iter = 0
