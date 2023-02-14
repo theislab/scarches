@@ -70,26 +70,32 @@ class scPoliTrainer(Trainer):
         Weight for loss computed including unlabeled samples
     eta: Float
         Weight for the prototype loss
+    prototype_training: Bool
+        Boolean that can be used to turn off prototype training.
+    unlabeled_prototype_training: Bool
+        Boolean that can be used to turn off prototype training. This can lead to a significant speedup
+        since it allows the model to skip the clustering step. Considering doing this if you do not plan
+        to make use of unlabeled prototypes for novel cell type annotation.
     seed: Integer
         Define a specific random seed to get reproducable results.
     """
 
     def __init__(
-            self,
-            model,
-            adata,
-            labeled_indices: list = None,
-            pretraining_epochs = None,
-            clustering: str = "leiden",
-            clustering_res: float = 2,
-            n_clusters: int = None,
-            unlabeled_weight: float = 0.0,
-            eta: float = 1,
-            **kwargs,
+        self,
+        model,
+        adata,
+        labeled_indices: list = None,
+        pretraining_epochs=None,
+        clustering: str = "leiden",
+        clustering_res: float = 2,
+        n_clusters: int = None,
+        unlabeled_weight: float = 0,
+        eta: float = 1,
+        prototype_training: bool = True,
+        unlabeled_prototype_training: bool = True,
+        **kwargs,
     ):
-
         super().__init__(model, adata, **kwargs)
-
         self.eta = eta
         self.clustering = clustering
         self.n_clusters = n_clusters
@@ -105,14 +111,22 @@ class scPoliTrainer(Trainer):
         self.best_prototypes_labeled_cov = None  # cache for ES
         self.best_prototypes_unlabeled = None  # cache for ES
         self.prototype_optim = None  # prototype optimizer
-        # Set indices for labeled data
+        
+        #set indices for labeled data
         if labeled_indices is None:
             self.labeled_indices = range(len(adata))
         else:
             self.labeled_indices = labeled_indices
         self.update_labeled_indices(self.labeled_indices)
-
-        # Parse prototypes from model into right format
+        self.prototype_training = prototype_training
+        self.unlabeled_prototype_training = unlabeled_prototype_training
+        self.any_labeled_data = 1 in self.train_data.labeled_vector.unique().tolist()
+        self.any_unlabeled_data = (
+            0 in self.train_data.labeled_vector.unique().tolist() 
+            or self.model.unknown_ct_names is not None
+        )
+        
+        #parse prototypes from model into right format
         if self.model.prototypes_labeled["mean"] is not None:
             self.prototypes_labeled = self.model.prototypes_labeled["mean"]
             self.prototypes_labeled_cov = self.model.prototypes_labeled["cov"]
@@ -147,8 +161,6 @@ class scPoliTrainer(Trainer):
             weight_decay=self.weight_decay,
         )
 
-        self.before_loop()
-
         for self.epoch in range(n_epochs):
             self.on_epoch_begin(lr, eps)
             self.iter_logs = defaultdict(list)
@@ -156,10 +168,10 @@ class scPoliTrainer(Trainer):
                 for key, batch in batch_data.items():
                     batch_data[key] = batch.to(self.device)
 
-                # Loss Calculation
+                #loss calculation
                 self.on_iteration(batch_data)
 
-            # Validation of Model, Monitoring, Early Stopping
+            #validation of model, monitoring, early stopping
             self.on_epoch_end()
             if self.use_early_stopping:
                 if not self.check_early_stop():
@@ -176,7 +188,7 @@ class scPoliTrainer(Trainer):
         self.training_time += time.time() - begin
 
     def on_iteration(self, batch_data):
-        # Dont update any weight on first layers except condition weights
+        #do not update any weight on first layers except condition weights
         if self.model.freeze:
             for name, module in self.model.named_modules():
                 if isinstance(module, nn.BatchNorm1d):
@@ -184,22 +196,19 @@ class scPoliTrainer(Trainer):
                         module.affine = False
                         module.track_running_stats = False
 
-        # Calculate Loss depending on Trainer/Model
+        #calculate loss depending on trainer/model
         self.current_loss = loss = self.loss(batch_data)
         self.optimizer.zero_grad()
 
         loss.backward()
-        # Gradient Clipping
+        #gradient Clipping
         if self.clip_value > 0:
             torch.nn.utils.clip_grad_value_(self.model.parameters(), self.clip_value)
-        # print(self.model.embedding.weight.grad)
         if self.model.freeze == True:
             if self.model.embedding:
-                # print(self.model.n_reference_conditions)
                 self.model.embedding.weight.grad[
-                : self.model.n_reference_conditions
+                    : self.model.n_reference_conditions
                 ] = 0
-        # print(self.model.embedding.weight.grad)
         self.optimizer.step()
 
     def update_labeled_indices(self, labeled_indices):
@@ -237,8 +246,8 @@ class scPoliTrainer(Trainer):
         for batch in subsampled_indices:
             batch_data = self.train_data[batch]
             latent = self.model.get_latent(
-                batch_data['x'].to(self.device),
-                batch_data['batch'].to(self.device),
+                batch_data["x"].to(self.device),
+                batch_data["batch"].to(self.device),
             )
             latents += [latent.cpu().detach()]
         latent = torch.cat(latents)
@@ -252,14 +261,15 @@ class scPoliTrainer(Trainer):
         latent = self.get_latent_train()
 
         # Init labeled prototypes if labeled data existent
-        if 1 in self.train_data.labeled_vector.unique().tolist():
+        if self.any_labeled_data is True:
+            # get cell type annot
             labeled_latent = latent[torch.where(self.train_data.labeled_vector == 1)[0]]
             labeled_cell_types = self.train_data.cell_types[
-                                 torch.where(self.train_data.labeled_vector == 1)[0], :
-                                 ]  # get cell type annot
-            if (
-                    self.prototypes_labeled is not None
-            ):  # checks if model already has initialized prototypes and then initialize new prototypes for new or unseen cell types in query
+                torch.where(self.train_data.labeled_vector == 1)[0], :
+            ]
+            # check if model already has initialized prototypes
+            # and then initialize new prototypes for new or unseen cell types in query
+            if self.prototypes_labeled is not None:  
                 with torch.no_grad():
                     if len(self.model.new_prototypes) > 0:
                         for value in self.model.new_prototypes:
@@ -274,35 +284,35 @@ class scPoliTrainer(Trainer):
                             self.prototypes_labeled_cov = torch.cat(
                                 [self.prototypes_labeled_cov, prototype_cov]
                             )
-            else:  # compute labeled prototypes
+            else:  
+                #compute labeled prototypes
                 (
                     self.prototypes_labeled,
                     self.prototypes_labeled_cov,
                 ) = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
-                    self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
+                    self.train_data.cell_types[
+                        torch.where(self.train_data.labeled_vector == 1)[0], :
+                    ],
                     None,
                     None,
                 )
 
-        # Init unlabeled prototypes if unlabeled data existent
+        # Init unlabeled prototypes if unlabeled data exists
         # Unknown ct names: list of strings that identify cells to ignore during training
-        if (
-                0 in self.train_data.labeled_vector.unique().tolist()
-                or self.model.unknown_ct_names is not None
-        ):
+        if (self.any_unlabeled_data is True) and (self.unlabeled_prototype_training is True):
             lat_array = latent.cpu().detach().numpy()
 
             if self.clustering == "kmeans" and self.n_clusters is not None:
                 print(
-                    f"\nInitializing unlabeled prototypes with KMeans-Clustering with a given number of"
+                    f"\nInitializing unlabeled prototypes with KMeans with a given number of"
                     f"{self.n_clusters} clusters."
                 )
                 k_means = KMeans(n_clusters=self.n_clusters).fit(lat_array)
                 k_means_prototypes = torch.tensor(
                     k_means.cluster_centers_, device=self.device
                 )
-
+                # initialize tensor with zeros
                 self.prototypes_unlabeled = [
                     torch.zeros(
                         size=(1, self.model.latent_dim),
@@ -310,24 +320,24 @@ class scPoliTrainer(Trainer):
                         device=self.device,
                     )
                     for _ in range(self.n_clusters)
-                ]  # initialize tensor with zeros
+                ]
 
                 with torch.no_grad():
+                    # replace zeros with the kmeans centroids
                     [
                         self.prototypes_unlabeled[i].copy_(k_means_prototypes[i, :])
                         for i in range(k_means_prototypes.shape[0])
                     ]
-                    # replace zeros with the kmeans centroids
             else:
                 if self.clustering == "kmeans" and self.n_clusters is None:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden-Clustering because no value for the"
-                        f"number of clusters was given."
+                        f"\nInitializing unlabeled prototypes with Leiden"
+                        f"because no value for the number of clusters was given."
                     )
                 else:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden-Clustering with an unknown number of "
-                        f"clusters."
+                        f"\nInitializing unlabeled prototypes with Leiden"
+                        f"with an unknown number of  clusters."
                     )
                 lat_adata = sc.AnnData(lat_array)
                 sc.pp.neighbors(lat_adata)
@@ -345,7 +355,7 @@ class scPoliTrainer(Trainer):
                 cluster_centers = np.asarray(merged_df.groupby("cluster").mean())
 
                 self.n_clusters = cluster_centers.shape[0]
-                print(f"Leiden Clustering succesful. Found {self.n_clusters} clusters.")
+                print(f"Clustering succesful. Found {self.n_clusters} clusters.")
                 leiden_prototypes = torch.tensor(cluster_centers, device=self.device)
 
                 self.prototypes_unlabeled = [
@@ -367,12 +377,9 @@ class scPoliTrainer(Trainer):
         """
         Routine that happens at the beginning of every epoch. Model update step.
         """
-        if self.epoch == self.pretraining_epochs:
+        if (self.epoch == self.pretraining_epochs) and (self.prototype_training is True):
             self.initialize_prototypes()
-            if (
-                    0 in self.train_data.labeled_vector.unique().tolist()
-                    or self.model.unknown_ct_names is not None
-            ):
+            if (self.any_unlabeled_data is True) and (self.unlabeled_prototype_training is True):
                 self.prototype_optim = torch.optim.Adam(
                     params=self.prototypes_unlabeled,
                     lr=lr,
@@ -391,28 +398,30 @@ class scPoliTrainer(Trainer):
     def loss(self, total_batch=None):
         latent, recon_loss, kl_loss, mmd_loss = self.model(**total_batch)
 
-        # Calculate classifier loss for labeled/unlabeled data
+        #calculate classifier loss for labeled/unlabeled data
         label_categories = total_batch["labeled"].unique().tolist()
         unweighted_prototype_loss = torch.tensor(0.0, device=self.device)
         unlabeled_loss = torch.tensor(0.0, device=self.device)
         labeled_loss = torch.tensor(0.0, device=self.device)
         if self.epoch >= self.pretraining_epochs:
-            # Calculate prototype loss for all data
-            if self.prototypes_unlabeled is not None and self.unlabeled_weight > 0:
+            #calculate prototype loss for all data
+            if self.prototypes_unlabeled is not None:
                 unlabeled_loss, _ = self.prototype_unlabeled_loss(
                     latent,
                     torch.stack(self.prototypes_unlabeled).squeeze(),
                 )
                 unweighted_prototype_loss = (
-                        unweighted_prototype_loss + self.unlabeled_weight * unlabeled_loss
+                    unweighted_prototype_loss + self.unlabeled_weight * unlabeled_loss
                 )
 
             # Calculate prototype loss for labeled data
-            if 1 in label_categories:
+            if (self.any_labeled_data is True) and (self.prototype_training is True):
                 labeled_loss = self.prototype_labeled_loss(
                     latent[torch.where(total_batch["labeled"] == 1)[0], :],
                     self.prototypes_labeled,
-                    total_batch["celltypes"][torch.where(total_batch["labeled"] == 1)[0], :],
+                    total_batch["celltypes"][
+                        torch.where(total_batch["labeled"] == 1)[0], :
+                    ],
                 )
                 unweighted_prototype_loss = unweighted_prototype_loss + labeled_loss
 
@@ -442,27 +451,32 @@ class scPoliTrainer(Trainer):
         """
         self.model.eval()
 
-        if self.epoch >= self.pretraining_epochs:
+        if (
+            (self.epoch >= self.pretraining_epochs) 
+            and (self.prototype_training is True)
+        ):
             latent = self.get_latent_train()
             label_categories = self.train_data.labeled_vector.unique().tolist()
 
             # Update labeled prototype positions
-            if 1 in label_categories:
+            if self.any_labeled_data is True:
                 (
                     self.prototypes_labeled,
                     self.prototypes_labeled_cov,
                 ) = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
-                    self.train_data.cell_types[torch.where(self.train_data.labeled_vector == 1)[0], :],
+                    self.train_data.cell_types[
+                        torch.where(self.train_data.labeled_vector == 1)[0], :
+                    ],
                     self.prototypes_labeled,
                     self.prototypes_labeled_cov,
                     self.model.new_prototypes,
                 )
 
             # Update unlabeled prototype positions
-            if 0 in label_categories or self.model.unknown_ct_names is not None:
-                for landmk in self.prototypes_unlabeled:
-                    landmk.requires_grad = True
+            if (self.any_unlabeled_data is True) and (self.unlabeled_prototype_training is True):
+                for proto in self.prototypes_unlabeled:
+                    proto.requires_grad = True
                 self.prototype_optim.zero_grad()
                 update_loss, args_count = self.prototype_unlabeled_loss(
                     latent,
@@ -470,8 +484,8 @@ class scPoliTrainer(Trainer):
                 )
                 update_loss.backward()
                 self.prototype_optim.step()
-                for landmk in self.prototypes_unlabeled:
-                    landmk.requires_grad = False
+                for proto in self.prototypes_unlabeled:
+                    proto.requires_grad = False
 
         self.model.train()
         super().on_epoch_end()
@@ -488,10 +502,7 @@ class scPoliTrainer(Trainer):
         self.model.prototypes_labeled["mean"] = self.prototypes_labeled
         self.model.prototypes_labeled["cov"] = self.prototypes_labeled_cov
 
-        if (
-                0 in self.train_data.labeled_vector.unique().tolist()
-                or self.model.unknown_ct_names is not None
-        ):
+        if self.prototypes_unlabeled is not None:
             self.model.prototypes_unlabeled["mean"] = torch.stack(
                 self.prototypes_unlabeled
             ).squeeze()
@@ -499,7 +510,7 @@ class scPoliTrainer(Trainer):
             self.model.prototypes_unlabeled["mean"] = self.prototypes_unlabeled
 
     def update_labeled_prototypes(
-            self, latent, labels, previous_prototypes, previous_prototypes_cov, mask=None
+        self, latent, labels, previous_prototypes, previous_prototypes_cov, mask=None
     ):
         """
         Function that updates labeled prototypes.
@@ -522,7 +533,7 @@ class scPoliTrainer(Trainer):
             prototypes_cov = None
             for value in range(self.model.n_cell_types):
                 if (
-                        mask is None or value in mask
+                    mask is None or value in mask
                 ) and value in unique_labels:  # update the prototype included in mask if there is one
                     indices = labels.eq(value).nonzero(as_tuple=False)[:, 0]
                     prototype = latent[indices, :].mean(0).unsqueeze(0)
