@@ -211,6 +211,7 @@ class scpoli(nn.Module):
         -------
         """
         # Update internal model parameters
+        device = next(self.parameters()).device
         self.cell_types.append(cell_type_name)
         self.n_cell_types += 1
         self.cell_type_encoder = {
@@ -234,7 +235,8 @@ class scpoli(nn.Module):
         )
 
         # Get latent indices which correspond to new prototype
-        latent = latent.to(self.prototypes_labeled["mean"].device)
+        self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
+        latent = latent.to(device)
         dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
         min_dist, y_hat = torch.min(dists, 1)
         y_hat = classes_list[y_hat]
@@ -276,7 +278,8 @@ class scpoli(nn.Module):
             latent = x
         else:
             latent = self.get_latent(x, c)
-
+        device = next(self.parameters()).device
+        self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
         dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
 
         # Idea of using euclidean distances for classification

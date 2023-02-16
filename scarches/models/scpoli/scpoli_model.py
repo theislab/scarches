@@ -152,8 +152,6 @@ class scPoli(BaseMixin):
                 if unknown_ct in self.cell_types_:
                     del self.cell_types_[unknown_ct]
                     
-        self.prototype_training_ = None
-        self.unlabeled_prototype_training_ = None
 
         # store model parameters
         self.hidden_layer_sizes_ = hidden_layer_sizes
@@ -357,8 +355,8 @@ class scPoli(BaseMixin):
             stored in the model.
 
         """
-
-        assert self.prototype_training_ is True, f"Model was trained without prototypes"
+        
+        assert self.prototypes_labeled_['mean'] is not None, f"Model was trained without prototypes"
 
         device = next(self.model.parameters()).device
         self.model.eval()
@@ -597,6 +595,8 @@ class scPoli(BaseMixin):
             "labeled_indices": dct["labeled_indices_"],
             "prototypes_labeled": dct["prototypes_labeled_"],
             "prototypes_unlabeled": dct["prototypes_unlabeled_"],
+            #"prototype_training": dct["prototype_training_"],
+            #"unlabeled_prototype_training": dct["unlabeled_prototype_training_"],
             "hidden_layer_sizes": dct["hidden_layer_sizes_"],
             "latent_dim": dct["latent_dim_"],
             "dr_rate": dct["dr_rate_"],
