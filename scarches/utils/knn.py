@@ -7,7 +7,13 @@ from sklearn.neighbors import KNeighborsTransformer
 
 #These function were originally created by Lisa Sikemma
 
-def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50, verbose=True):
+def weighted_knn_trainer(
+    train_adata,
+    train_adata_emb,
+    n_neighbors=50,
+    precomputed = False,
+    verbose=True,
+    ):
     """Trains a weighted KNN classifier on ``train_adata``.
     Parameters
     ----------
@@ -18,16 +24,20 @@ def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50, verbose=T
         used
     n_neighbors: int
         Number of nearest neighbors in KNN classifier.
+    precomputed: bool
+        ``False`` by default.
     verbose: bool
         Whether or not additional processing information should be printed
     """
     print(f"Weighted KNN with n_neighbors = {n_neighbors}")
 
+    metric = "precomputed" if precomputed else "euclidean"
+
     k_neighbors_transformer = KNeighborsTransformer(
         n_neighbors=n_neighbors,
         mode="distance",
         algorithm="brute",
-        metric="euclidean",
+        metric=metric,
         n_jobs=-1,
     )
     if train_adata_emb == "X":
@@ -39,12 +49,12 @@ def weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors=50, verbose=T
             "train_adata_emb should be set to either 'X' or the name of the obsm layer to be used!"
         )
     if verbose:
-        print(f"Transforming training dataset into a graph of {n_neighbors} nearest neighbor. This may take some time...")
+        print(f"Fitting the {n_neighbors}-nearest neighbors transformer from the training dataset.")
 
     k_neighbors_transformer.fit(train_emb)
 
     if verbose:
-        print("Transformation completed.")
+        print("Fitting completed.")
     return k_neighbors_transformer    
 
 
@@ -86,8 +96,9 @@ def weighted_knn_transfer(
     """
     if not type(knn_model) == KNeighborsTransformer:
         raise ValueError(
-            "knn_model should be of type sklearn.neighbors._graph.KNeighborsTransformer!"
+            "You should use a knn_model of type sklearn.neighbors._graph.KNeighborsTransformer!"
         )
+
 
     if query_adata_emb == "X":
         query_emb = query_adata.X
@@ -98,7 +109,13 @@ def weighted_knn_transfer(
             "query_adata_emb should be set to either 'X' or the name of the obsm layer to be used!"
         )
 
+    if verbose:
+        print(f"Finding the {knn_model.n_neighbors}-neighbors of a point. This may take some time...")
+    
     top_k_distances, top_k_indices = knn_model.kneighbors(X=query_emb)
+
+    if verbose:
+        print("Neighbors computed.")
 
     stds = np.std(top_k_distances, axis=1)
     stds = (2.0 / stds) ** 2
@@ -149,7 +166,8 @@ def weighted_knn_transfer(
     return pred_labels, uncertainties
 
 
-def knn(train_adata,
+def knn_label_transfer(
+    train_adata,
     train_adata_emb,
     query_adata,
     query_adata_emb,
@@ -157,6 +175,7 @@ def knn(train_adata,
     label_keys,
     n_neighbors=50,
     threshold=1,
+    precomputed = False,
     pred_unknown=False,
     verbose=True
 ):
@@ -190,11 +209,18 @@ def knn(train_adata,
         ``False`` by default. Whether to annotate any cell as "unknown" or not.
         If `False`, ``threshold`` will not be used and each cell will be annotated
         with the label which is the most common in its ``n_neighbors`` nearest cells.
+    precomputed: bool
+        ``False`` by default.
     verbose: bool
         ``True`` by default. Whether additional processing information should be printed.
     """
 
-    knn_transformer = weighted_knn_trainer(train_adata, train_adata_emb, n_neighbors, verbose)
+    knn_transformer = weighted_knn_trainer(
+        train_adata,
+        train_adata_emb,
+        n_neighbors,
+        precomputed, 
+        verbose)
 
     labels, uncert = weighted_knn_transfer(
         query_adata,
