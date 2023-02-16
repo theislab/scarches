@@ -331,12 +331,12 @@ class scPoliTrainer(Trainer):
             else:
                 if self.clustering == "kmeans" and self.n_clusters is None:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden"
+                        f"\nInitializing unlabeled prototypes with Leiden "
                         f"because no value for the number of clusters was given."
                     )
                 else:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden"
+                        f"\nInitializing unlabeled prototypes with Leiden "
                         f"with an unknown number of  clusters."
                     )
                 lat_adata = sc.AnnData(lat_array)
