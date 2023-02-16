@@ -314,17 +314,19 @@ class scPoli(BaseMixin):
         if x is None and c is None:
             x = self.adata.X
             if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_key_]
+                c = self.adata.obs[self.condition_keys_]
 
         if c is not None:
-            c = np.asarray(c)
-            if not set(c).issubset(self.conditions_):
-                raise ValueError("Incorrect conditions")
-            labels = np.zeros(c.shape[0])
-            for condition, label in self.model.condition_encoder.items():
-                labels[c == condition] = label
-            c = torch.tensor(labels, device=device)
-
+            c_tensor = []
+            for i, key in enumerate(c.keys()):
+                conds = np.asarray(c[key])
+                if not set(conds).issubset(self.conditions_[key]):
+                    raise ValueError("Incorrect conditions")
+                labels = np.zeros(conds.shape[0])
+                for condition, label in self.model.condition_encoders[i].items():
+                    labels[conds == condition] = label
+                c_tensor.append(labels)
+            c = torch.tensor(np.vstack(c_tensor).T, device=device)
         if sparse.issparse(x):
             x = x.A
         x = torch.tensor(x, device=device)
@@ -335,7 +337,7 @@ class scPoli(BaseMixin):
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
             latent = self.model.get_latent(
-                x[batch, :].to(device), c[batch].to(device), mean
+                x[batch, :].to(device), c[batch, :].to(device), mean
             )
             latents += [latent.cpu().detach()]
 
@@ -523,7 +525,7 @@ class scPoli(BaseMixin):
         if x is None and c is None:
             x = self.adata.X
             if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_key_]
+                c = self.adata.obs[self.condition_keys_]
         if c is not None:
             c = np.asarray(c)
             if not set(c).issubset(self.conditions_):
