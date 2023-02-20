@@ -137,6 +137,7 @@ class scPoliTrainer(Trainer):
             )
 
     def train(self, n_epochs=400, lr=1e-3, eps=0.01):
+        print("Initializing dataloaders")
         self.initialize_loaders()
         begin = time.time()
         self.model.train()
@@ -160,7 +161,7 @@ class scPoliTrainer(Trainer):
             eps=eps,
             weight_decay=self.weight_decay,
         )
-
+        print("Starting training")
         for self.epoch in range(n_epochs):
             self.on_epoch_begin(lr, eps)
             self.iter_logs = defaultdict(list)
