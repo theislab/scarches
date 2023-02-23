@@ -283,19 +283,7 @@ class SurgeryMixin:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
                 adata = _validate_var_names(adata, reference_model.adata.var_names)
-                
-        elif learning_approach == 'generative_replay':
-            freeze = False
-            freeze_expression = False
-            if isinstance(model_cl, str):
-                attr_dict, model_state_dict, var_names = cls._load_params(model)
-                adata = _validate_var_names(adata, var_names)
-            else:
-                attr_dict = model_cl._get_public_attributes() 
-                model_state_dict = model_cl.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
             
-
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
 
         conditions = init_params['conditions']
