@@ -180,7 +180,7 @@ def knn_label_transfer(
     verbose=True
 ):
     """Trains a weighted KNN classifier on ``train_adata`` and annotates ``query_adata`` cells
-    with it. Returns cell labels and uncertainties for the different annotation levels
+    with it. Returns the combined embedding with the transferred cell labels
 
     Parameters
     ----------
@@ -233,4 +233,21 @@ def knn_label_transfer(
         verbose
     )
 
-    return labels, uncert
+    combined_emb = train_adata.concatenate(query_adata, index_unique=None)
+
+    labels.rename(columns={f'Level_{lev}':f'Level_{lev}_transferred_label' for lev in range(1,6)},inplace=True)
+    uncert.rename(columns={f'Level_{lev}':f'Level_{lev}_transfer_uncert' for lev in range(1,6)},inplace=True)
+
+    combined_emb.obs = combined_emb.obs.join(labels)
+    combined_emb.obs = combined_emb.obs.join(uncert)
+
+    t_labels = [f'Level_{lev}_transferred_label' for lev in range(1,6)]
+    t_uncert = [f'Level_{lev}_transfer_uncert' for lev in range(1,6)]
+
+    combined_emb.obs[t_uncert] = list(np.array(combined_emb.obs[t_uncert]))
+
+    combined_emb.obs[t_labels] = pd.Categorical(combined_emb.obs[t_labels])
+
+    combined_emb.obs[t_labels].replace('nan',np.nan,inplace=True)
+
+    return combined_emb
