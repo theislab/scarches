@@ -51,7 +51,7 @@ class MultiConditionAnnotatedDataset(Dataset):
         if self.condition_keys is not None:
             self.conditions = [label_encoder(
                 adata,
-                encoder=self.condition_encoders[i],
+                encoder=self.condition_encoders[condition_keys[i]],
                 condition_key=condition_keys[i],
             ) for i in range(len(self.condition_encoders))]
             self.conditions = torch.tensor(self.conditions, dtype=torch.long).T

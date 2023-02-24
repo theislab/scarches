@@ -43,9 +43,9 @@ class scpoli(nn.Module):
         self.n_conditions = [len(conditions[cond]) for cond in conditions.keys()]
         self.n_reference_conditions = None
         self.conditions = conditions
-        self.condition_encoders = [{
+        self.condition_encoders = {cond: {
             k: v for k, v in zip(conditions[cond], range(len(conditions[cond])))
-        } for cond in conditions.keys()]
+        } for cond in conditions.keys()}
         self.conditions_combined = conditions_combined
         self.n_conditions_combined = len(conditions_combined)
         self.conditions_combined_encoder = {

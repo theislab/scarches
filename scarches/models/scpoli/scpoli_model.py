@@ -74,6 +74,7 @@ class scPoli(BaseMixin):
         share_metadata: bool = True,
         condition_keys: Optional[Union[list, str]] = None,
         conditions: Optional[list] = None,
+        conditions_combined: Optional[list] = None,
         inject_condition: Optional[list] = ["encoder", "decoder"],
         cell_type_keys: Optional[Union[str, list]] = None,
         cell_types: Optional[dict] = None,
@@ -130,8 +131,11 @@ class scPoli(BaseMixin):
         else:
             self.conditions_ = conditions
         
-        self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
-        self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
+        if conditions_combined is None:
+            self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+            self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
+        else:
+            self.conditions_combined_ = conditions_combined
 
         if self.share_metadata_:
             self.obs_metadata_ = adata.obs.groupby(condition_keys).first()
@@ -316,17 +320,17 @@ class scPoli(BaseMixin):
             if self.conditions_ is not None:
                 c = self.adata.obs[self.condition_keys_]
 
-        if c is not None:
-            c_tensor = []
-            for i, key in enumerate(c.keys()):
-                conds = np.asarray(c[key])
-                if not set(conds).issubset(self.conditions_[key]):
+        if isinstance(c, dict):
+            label_tensor = []
+            for cond in c.keys():
+                query_conditions = c[cond]
+                if not set(query_conditions).issubset(self.conditions_[cond]):
                     raise ValueError("Incorrect conditions")
-                labels = np.zeros(conds.shape[0])
-                for condition, label in self.model.condition_encoders[i].items():
-                    labels[conds == condition] = label
-                c_tensor.append(labels)
-            c = torch.tensor(np.vstack(c_tensor).T, device=device)
+                labels = np.zeros(query_conditions.shape[0])
+                for condition, label in self.model.condition_encoders[cond].items():
+                    labels[query_conditions == condition] = label
+                label_tensor.append(labels)
+            c = torch.tensor(label_tensor, device=device).T
         if sparse.issparse(x):
             x = x.A
         x = torch.tensor(x, device=device)
@@ -344,21 +348,6 @@ class scPoli(BaseMixin):
         latents = torch.cat(latents)
         return np.array(latents)
 
-    def get_partitioned_conditional_embeddings(self):
-        """
-        Returns anndata object of the conditional embeddings
-        """
-        embeddings = [self.model.embeddings[i].weight.cpu().detach().numpy() for i in range(len(self.model.embeddings))]
-        adata_emb = {}
-        for i, cond in enumerate(self.conditions_.keys()):
-            adata_emb[cond] =  sc.AnnData(
-                X=embeddings[i], 
-                obs=pd.DataFrame(index=self.conditions_[cond])
-            )
-        if self.share_metadata_:
-            adata_emb.obs = self.obs_metadata_
-        return adata_emb
-
     def get_conditional_embeddings(self):
         """
         Returns anndata object of the conditional embeddings
@@ -370,28 +359,43 @@ class scPoli(BaseMixin):
                 X=embeddings[i], 
                 obs=pd.DataFrame(index=self.conditions_[cond])
             )
-        unique_conditions = self.adata.obs[self.condition_keys_].drop_duplicates()
-        combined_embeddings = []
-        for i in range(len(unique_conditions)):
-            embs = []
-            for cond in self.condition_keys_:
-                embs.append(np.squeeze(adata_emb[cond][adata_emb[cond].obs_names == unique_conditions.iloc[i][cond]].X))
-            embs = np.hstack(embs)
-            combined_embeddings.append(embs)
-        adata_emb_combined = sc.AnnData(
-                X=np.vstack(combined_embeddings), 
-                obs=unique_conditions
-            )
+        #if self.share_metadata_:
+        #    adata_emb.obs = self.obs_metadata_
+        return adata_emb
+
+    #def get_combined_conditional_embeddings(self):
+    #    """
+    #    Returns anndata object of the conditional embeddings
+    #    """
+    #    embeddings = [self.model.embeddings[i].weight.cpu().detach().numpy() for i in range(len(self.model.embeddings))]
+    #    adata_emb = {}
+    #    for i, cond in enumerate(self.conditions_.keys()):
+    #        adata_emb[cond] =  sc.AnnData(
+    #            X=embeddings[i], 
+    #            obs=pd.DataFrame(index=self.conditions_[cond])
+    #        )
+    #    unique_conditions = self.adata.obs[self.condition_keys_].drop_duplicates()
+    #    combined_embeddings = []
+    #    for i in range(len(unique_conditions)):
+    #        embs = []
+    #        for cond in self.condition_keys_:
+    #            embs.append(np.squeeze(adata_emb[cond][adata_emb[cond].obs_names == unique_conditions.iloc[i][cond]].X))
+    #        embs = np.hstack(embs)
+    #        combined_embeddings.append(embs)
+    #    adata_emb_combined = sc.AnnData(
+    #            X=np.vstack(combined_embeddings), 
+    #            obs=unique_conditions
+    #        )
                 
             
         #if self.share_metadata_:
         #    adata_emb.obs = self.obs_metadata_
-        return adata_emb_combined
+    #    return adata_emb_combined
     
     def classify(
         self,
         x: Optional[np.ndarray] = None,
-        c: Optional[np.ndarray] = None,
+        c: Optional[Union[dict, np.ndarray]] = None,
         prototype=False,
         get_prob=False,
         log_distance=True,
@@ -403,8 +407,9 @@ class scPoli(BaseMixin):
         x:  np.ndarray
             Features to be classified. If None the stored
             model's adata is used.
-        c: np.ndarray
-            Condition vector.
+        c: Dict or np.ndarray
+            Condition vector, or dictionary when the model is conditioned on multiple
+            batch covariates.
         prototype:
             Boolean whether to classify the gene features or prototypes stored
             stored in the model.
@@ -415,22 +420,29 @@ class scPoli(BaseMixin):
 
         device = next(self.model.parameters()).device
         self.model.eval()
-        if not prototype:
-            # get the gene features from stored adata
-            if x is None:
-                x = self.adata.X
-                if self.conditions_ is not None:
-                    c = self.adata.obs[self.condition_key_]
-            # get the conditions from passed input
-            if c is not None:
-                c = np.asarray(c)
-                if not set(c).issubset(self.conditions_):
+        #if not prototype:
+        #    # get the gene features from stored adata
+        #    if x is None:
+        #        x = self.adata.X
+        #        if self.conditions_ is not None:
+        #            c_df = self.adata.obs[self.condition_keys_]
+        #            for cond in c_df.columns:
+        #                c[cond] = c_df[cond].values
+        #            
+        # get the conditions from passed input
+        
+        if isinstance(c, dict):
+            label_tensor = []
+            for cond in c.keys():
+                query_conditions = c[cond]
+                if not set(query_conditions).issubset(self.conditions_[cond]):
                     raise ValueError("Incorrect conditions")
-                labels = np.zeros(c.shape[0])
-                for condition, label in self.model.condition_encoder.items():
-                    labels[c == condition] = label
-                c = torch.tensor(labels, device=device)
-
+                labels = np.zeros(query_conditions.shape[0])
+                for condition, label in self.model.condition_encoders[cond].items():
+                    labels[query_conditions == condition] = label
+                label_tensor.append(labels)
+            c = torch.tensor(label_tensor, device=device).T
+            
         if sparse.issparse(x):
             x = x.A
         x = torch.tensor(x, device=device)
@@ -487,7 +499,6 @@ class scPoli(BaseMixin):
                 "uncert": full_uncert,
                 "weighted_distances": full_weighted_distances,
             }
-
         return results
 
     def add_new_cell_type(
@@ -525,15 +536,19 @@ class scPoli(BaseMixin):
         if x is None and c is None:
             x = self.adata.X
             if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_keys_]
+                c = {cond: self.adata.obs[cond].values for cond in self.condition_keys_}
+                
         if c is not None:
-            c = np.asarray(c)
-            if not set(c).issubset(self.conditions_):
-                raise ValueError("Incorrect conditions")
-            labels = np.zeros(c.shape[0])
-            for condition, label in self.model.condition_encoder.items():
-                labels[c == condition] = label
-            c = torch.tensor(labels, device=device)
+            label_tensor = []
+            for cond in c.keys():
+                query_conditions = c[cond]
+                if not set(query_conditions).issubset(self.conditions_[cond]):
+                    raise ValueError("Incorrect conditions")
+                labels = np.zeros(query_conditions.shape[0])
+                for condition, label in self.model.condition_encoders[cond].items():
+                    labels[query_conditions == condition] = label
+                label_tensor.append(labels)
+            c = torch.tensor(label_tensor, device=device).T
         
         if sparse.issparse(x):
             x = x.A
@@ -600,7 +615,7 @@ class scPoli(BaseMixin):
             )
             return
         prototypes_info = sc.AnnData(prototypes)
-        prototypes_info.obs[self.condition_key_] = np.array(
+        prototypes_info.obs['batch'] = np.array(
             (prototypes.shape[0] * [batch_name])
         )
 
@@ -645,6 +660,7 @@ class scPoli(BaseMixin):
             "share_metadata": dct["share_metadata_"],
             "condition_keys": dct["condition_keys_"],
             "conditions": dct["conditions_"],
+            "conditions_combined": dct["conditions_combined_"],
             "cell_type_keys": dct["cell_type_keys_"],
             "cell_types": dct["cell_types_"],
             "labeled_indices": dct["labeled_indices_"],
@@ -723,7 +739,14 @@ class scPoli(BaseMixin):
         for cond in condition_keys:
             for condition in new_conditions[cond]:
                 conditions[cond].append(condition)
-            
+        
+        conditions_combined = init_params["conditions_combined"]
+        adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+        new_conditions_combined = adata.obs['conditions_combined'].unique().tolist()
+        for item in new_conditions_combined:
+            if item not in conditions_combined:
+                conditions_combined.append(item)
+        
         #obs_metadata = attr_dict["obs_metadata_"]
         #new_obs_metadata = adata.obs.groupby(condition_key).first()
         #obs_metadata = pd.concat([obs_metadata, new_obs_metadata])
@@ -788,7 +811,7 @@ class scPoli(BaseMixin):
             if new_ten.size() == load_ten.size():
                 continue
             # new embedding in dictionary
-            elif key == "embedding.weight":
+            elif "embedding" in key:
                 load_ten = load_ten.to(device)
                 dim_diff = new_ten.size()[0] - load_ten.size()[0]
                 fixed_ten = torch.cat([load_ten, new_ten[-dim_diff:, ...]], dim=0)

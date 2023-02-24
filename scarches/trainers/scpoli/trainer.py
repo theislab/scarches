@@ -334,11 +334,11 @@ class scPoliTrainer:
         #gradient Clipping
         if self.clip_value > 0:
             torch.nn.utils.clip_grad_value_(self.model.parameters(), self.clip_value)
-        if self.model.freeze == True:
-            if self.model.embedding:
-                self.model.embedding.weight.grad[
-                    : self.model.n_reference_conditions
-                ] = 0
+        #if self.model.freeze == True:
+        #    if self.model.embedding:
+        #        self.model.embedding.weight.grad[
+        #            : self.model.n_reference_conditions
+        #        ] = 0
         self.optimizer.step()
 
     def update_labeled_indices(self, labeled_indices):
