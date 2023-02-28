@@ -132,12 +132,10 @@ def weighted_knn_transfer(
     pred_labels = pd.DataFrame(columns=cols, index=query_adata.obs_names)
 
     if verbose:
-        print("Label transfer begins:")
+        print("Label transfer begins...")
 
     for i in range(len(weights)):
         for j in cols:
-            if verbose:
-                print(f"transferring labels for {j}")
 
             y_train_labels = ref_adata_obs[j].values
             unique_labels = np.unique(y_train_labels[top_k_indices[i]])
@@ -158,6 +156,8 @@ def weighted_knn_transfer(
                     pred_label = "Unknown"
             else:
                 pred_label = best_label
+                
+            uncertainties.iloc[i][j] = (max(1 - best_prob, 0))
 
             pred_labels.iloc[i][j] = (pred_label)
 
@@ -238,16 +238,16 @@ def knn_label_transfer(
     labels.rename(columns={f'Level_{lev}':f'Level_{lev}_transferred_label' for lev in range(1,6)},inplace=True)
     uncert.rename(columns={f'Level_{lev}':f'Level_{lev}_transfer_uncert' for lev in range(1,6)},inplace=True)
 
+    print(labels)
+    print(uncert)
+    
     combined_emb.obs = combined_emb.obs.join(labels)
     combined_emb.obs = combined_emb.obs.join(uncert)
 
-    t_labels = [f'Level_{lev}_transferred_label' for lev in range(1,6)]
-    t_uncert = [f'Level_{lev}_transfer_uncert' for lev in range(1,6)]
+    # combined_emb.obs[uncert] = list(np.array(combined_emb.obs[uncert]))
 
-    combined_emb.obs[t_uncert] = list(np.array(combined_emb.obs[t_uncert]))
+    combined_emb.obs[labels] = pd.Categorical(combined_emb.obs[labels])
 
-    combined_emb.obs[t_labels] = pd.Categorical(combined_emb.obs[t_labels])
-
-    combined_emb.obs[t_labels].replace('nan',np.nan,inplace=True)
+    combined_emb.obs[labels].replace('nan',np.nan,inplace=True)
 
     return combined_emb
