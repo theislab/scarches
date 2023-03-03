@@ -34,8 +34,8 @@ def _validate_var_names(adata, source_var_names):
         print("The missing information will be filled with zeroes.")
        
         filling_X = np.zeros((len(adata), len(ref_genes_not_in_query)))
-        if isinstance(adata.X, csr_matrix): # support sparse matrix
-            filling_X = csr_matrix(filling_X)
+        if isinstance(adata.X, csr_matrix): 
+            filling_X = csr_matrix(filling_X) # support csr sparse matrix
             new_target_X = hstack((adata.X, filling_X))
         else:
             new_target_X = np.concatenate((adata.X, filling_X), axis=1)
