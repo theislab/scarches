@@ -316,7 +316,7 @@ class Trainer:
         batch_data['dataset_counter'] = ID              
         self.current_loss = loss = self.loss(batch_data)
         self.optimizer.zero_grad()
-        loss.backward(retain_graph=True) 
+        loss.backward() 
         self.optimizer.step()
         
     def on_LR_EWC(self,task_id, batch_data):
