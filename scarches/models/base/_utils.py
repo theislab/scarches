@@ -33,7 +33,7 @@ def _validate_var_names(adata, source_var_names):
         print("The missing information will be filled with zeroes.")
 
         filling_X = np.zeros((len(adata), len(ref_genes_not_in_query)))
-        new_target_X = np.concatenate((adata.X, filling_X), axis=1)
+        new_target_X = np.concatenate([adata.X, filling_X], axis=1)
         new_target_vars = adata.var_names.tolist() + ref_genes_not_in_query
         new_adata = AnnData(new_target_X, dtype="float32")
         new_adata.var_names = new_target_vars
