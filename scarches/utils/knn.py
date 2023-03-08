@@ -148,16 +148,18 @@ def weighted_knn_transfer(
                 if best_prob < candidate_prob:
                     best_prob = candidate_prob
                     best_label = candidate_label
-
+                    
+            uncertainty = (max(1 - best_prob, 0))
+            
             if pred_unknown:
-                if best_prob >= threshold:
+                if uncertainty <= threshold:
                     pred_label = best_label
                 else:
                     pred_label = "Unknown"
             else:
                 pred_label = best_label
                 
-            uncertainties.iloc[i][j] = (max(1 - best_prob, 0))
+            uncertainties.iloc[i][j] = uncertainty
 
             pred_labels.iloc[i][j] = (pred_label)
 
@@ -245,9 +247,8 @@ def knn_label_transfer(
     combined_emb.obs = combined_emb.obs.join(uncert)
 
     # combined_emb.obs[uncert] = list(np.array(combined_emb.obs[uncert]))
-
-    combined_emb.obs[labels] = pd.Categorical(combined_emb.obs[labels])
-
-    combined_emb.obs[labels].replace('nan',np.nan,inplace=True)
+    for col in labels:
+        combined_emb.obs[col] = combined_emb.obs[col].astype('category')
+        combined_emb.obs[col].replace('nan',np.nan,inplace=True)
 
     return combined_emb
