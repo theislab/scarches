@@ -110,7 +110,7 @@ def weighted_knn_transfer(
         )
 
     if verbose:
-        print(f"Finding the {knn_model.n_neighbors}-neighbors of a point. This may take some time...")
+        print(f"Finding the {knn_model.n_neighbors}-neighbors of all point. This may take some time...")
     
     top_k_distances, top_k_indices = knn_model.kneighbors(X=query_emb)
 
