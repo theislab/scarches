@@ -202,7 +202,7 @@ class SurgeryMixin:
            ----------
            adata
                 Query anndata object.
-           reference_model
+           model
                 A model to expand or a path to a model folder.
            freeze: Boolean
                 If 'True' freezes every part of the network except the first layers of encoder/decoder.
@@ -228,7 +228,7 @@ class SurgeryMixin:
             else:
                 attr_dict =model._get_public_attributes()
                 model_state_dict = model.model.state_dict()  
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
         elif learning_approach == 'Surgery':
             freeze = True
             freeze_expression = True
@@ -238,7 +238,7 @@ class SurgeryMixin:
             else:
                 attr_dict =model._get_public_attributes()
                 model_state_dict = model.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
             
         elif learning_approach == 'ewc':
             freeze = False
@@ -249,7 +249,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
                 
         elif learning_approach == 'latent replay':
             freeze = False
@@ -260,7 +260,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
                 
         elif learning_approach == 'LR+EWC':
             freeze = False
@@ -271,7 +271,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
                 
         elif learning_approach == 'rehearsal':
             freeze = False
@@ -282,7 +282,7 @@ class SurgeryMixin:
             else:
                 attr_dict = model._get_public_attributes() 
                 model_state_dict = model.model.state_dict()
-                adata = _validate_var_names(adata, reference_model.adata.var_names)
+                adata = _validate_var_names(adata, model.adata.var_names)
             
         init_params = deepcopy(cls._get_init_params_from_dict(attr_dict))
 
