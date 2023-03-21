@@ -1,0 +1,2 @@
+This is the CL extension of scarches.
+standard_PBMC file sometimes raises an assertion error in the one_hot_encoder function in scarches/models/trvae/_utils.py
