@@ -5,3 +5,4 @@ nbsphinx>=0.7
 numpydoc
 cython
 pkgconfig
+furo
