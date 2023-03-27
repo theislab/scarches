@@ -107,6 +107,7 @@ class Encoder(nn.Module):
             per=1 #percentage of task i you take to concatenate later with the task i+1
             if external_memory ==1:# ONLY save the training data
                 if first_epoch == 1 and replay_layer ==1: #save the training data ONLY on the first epoch
+                    x=x.detach()
                     data_list.append(x) #save task i
                     if dataset_counter!=0:
                         next_data_list.append(x) # save task i+1
@@ -183,8 +184,7 @@ class Encoder(nn.Module):
 
                                 start_previous = it * (n2inject)
                                 end_previous = (it + 1) * (n2inject)
-                                x= torch.cat((new_tensor[start_new:end_new],old_tensor[start_previous:end_previous]),0)
-                                x = x.detach()
+                                x= torch.cat((new_tensor[start_new:end_new],old_tensor[start_previous:end_previous]),0)       
 
                                 it+=1
                                 if it>old_loop: 
@@ -192,7 +192,6 @@ class Encoder(nn.Module):
                                     start_previous = it * (n2inject)
                                     end_previous = (it + 1) * (n2inject)
                                     x= torch.cat((new_tensor[start_new:end_new],old_tensor[start_previous:end_previous]),0)
-                                    x  = x.detach()
 
                         elif new_loop<old_loop:
                             for it in range(old_loop): 
@@ -202,14 +201,14 @@ class Encoder(nn.Module):
                                 start_previous = it * (n2inject)
                                 end_previous = (it + 1) * (n2inject)
                                 x= torch.cat((new_tensor[start_new:end_new],old_tensor[start_previous:end_previous]),0)
-                                x  = x.detach()
+                                
                                 it+=1
                                 if it>new_loop:
                                     it = random.randrange(new_loop)
                                     start_new = it * (cur_sz)
                                     end_new = (it + 1) * (cur_sz)
                                     x= torch.cat((new_tensor[start_new:end_new],old_tensor[start_previous:end_previous]),0)
-                                    x  = x.detach()
+
         means = self.mean_encoder(x)
         log_vars = self.log_var_encoder(x)
 
