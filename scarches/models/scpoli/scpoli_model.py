@@ -341,6 +341,7 @@ class scPoli(BaseMixin):
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
         prototype=False,
+        p=2,
         get_prob=False,
         log_distance=True,
     ):
@@ -405,6 +406,7 @@ class scPoli(BaseMixin):
                         x[batch, :].to(device),
                         prototype=prototype,
                         classes_list=prototypes_idx,
+                        p=p,
                         get_prob=get_prob,
                         log_distance=log_distance,
                     )
@@ -414,6 +416,7 @@ class scPoli(BaseMixin):
                         c[batch].to(device),
                         prototype=prototype,
                         classes_list=prototypes_idx,
+                        p=p,
                         get_prob=get_prob,
                         log_distance=log_distance,
                     )

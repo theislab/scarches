@@ -1,5 +1,7 @@
+from scvi.distributions import NegativeBinomial
 import torch
 from torch.autograd import Variable
+from torch.distributions import Poisson
 import torch.nn.functional as F
 
 from ._utils import partition
@@ -38,6 +40,24 @@ def mse(recon_x, x):
     """
     mse_loss = torch.nn.functional.mse_loss(recon_x, x, reduction='none')
     return mse_loss
+
+def poisson(recon_x, x):
+    """Computes Poisson NLL between reconstructed data and ground truth data.
+
+       Parameters
+       ----------
+       recon_x: torch.Tensor
+            Torch Tensor of reconstructed data
+       x: torch.Tensor
+            Torch Tensor of ground truth data
+
+       Returns
+       -------
+       MSE loss value
+    """
+    #poisson_nll = torch.nn.functional.poisson_nll_loss(recon_x, x, reduction='none')
+    poisson_loss = -Poisson(recon_x).log_prob(x)
+    return poisson_loss
 
 
 def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
@@ -80,6 +100,10 @@ def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
     )
 
     return res
+
+def nb_dist(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
+    loss = -NegativeBinomial(mu=mu, theta=theta).log_prob(x)
+    return loss
 
 
 def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tensor, eps=1e-8):

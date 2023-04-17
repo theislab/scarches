@@ -98,21 +98,3 @@ def target_distribution(q):
 
 def kl_loss(p, q):
     return (p * torch.log(p / q)).sum(1).mean()
-
-
-def euclidean_dist(x, y):
-    """
-    Compute euclidean distance between two tensors
-    """
-    # x: N x D
-    # y: M x D
-    n = x.size(0)
-    d = x.size(1)
-    m = y.size(0)
-    if d != y.size(1):
-        raise Exception
-
-    x = x.unsqueeze(1).expand(n, m, d)
-    y = y.unsqueeze(0).expand(n, m, d)
-
-    return torch.pow(x - y, 2).sum(2)

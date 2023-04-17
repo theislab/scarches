@@ -10,7 +10,7 @@ from sklearn.cluster import KMeans
 
 from ..trvae._utils import make_dataset
 from ..trvae.trainer import Trainer
-from ._utils import cov, euclidean_dist
+from ._utils import cov
 
 
 class scPoliTrainer(Trainer):
@@ -91,12 +91,14 @@ class scPoliTrainer(Trainer):
         n_clusters: int = None,
         unlabeled_weight: float = 0,
         eta: float = 1,
+        p_prototype_loss: float = 2,
         prototype_training: bool = True,
         unlabeled_prototype_training: bool = True,
         **kwargs,
     ):
         super().__init__(model, adata, **kwargs)
         self.eta = eta
+        self.p_prototype_loss = p_prototype_loss
         self.clustering = clustering
         self.n_clusters = n_clusters
         self.unlabeled_weight = unlabeled_weight
@@ -578,7 +580,8 @@ class scPoliTrainer(Trainer):
             Tensor containing cell type information of the batch
         """
         unique_labels = torch.unique(labels, sorted=True)
-        distances = euclidean_dist(latent, prototypes)
+        dists = torch.cdist(latent, prototypes, p=self.p_prototype_loss)
+        
         loss = torch.tensor(0.0, device=self.device)
 
         # If data only contains 'unknown' celltypes
@@ -590,7 +593,7 @@ class scPoliTrainer(Trainer):
             if value == -1:
                 continue
             indices = labels.eq(value).nonzero(as_tuple=False)[:, 0]
-            label_loss = distances[indices, value].sum(0) / len(indices)
+            label_loss = dists[indices, value].sum(0) / len(indices)
             loss += label_loss
 
         return loss
@@ -606,7 +609,7 @@ class scPoliTrainer(Trainer):
             prototypes: Tensor
                 Tensor containing the means of the prototypes
         """
-        dists = euclidean_dist(latent, prototypes)
+        dists = torch.cdist(latent, prototypes, p=self.p_prototype_loss) 
         min_dist, y_hat = torch.min(dists, 1)
         args_uniq = torch.unique(y_hat, sorted=True)
         args_count = torch.stack([(y_hat == x_u).sum() for x_u in args_uniq])
