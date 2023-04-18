@@ -650,9 +650,9 @@ class scPoli(BaseMixin):
         if adata.n_vars != dct["input_dim_"]:
             raise ValueError("Incorrect var dimension")
 
-        adata_conditions = adata.obs[dct["condition_key_"]].unique().tolist()
-        if not set(adata_conditions).issubset(dct["conditions_"]):
-            raise ValueError("Incorrect conditions")
+        #adata_conditions = adata.obs[dct["condition_key_"]].unique().tolist()
+        #if not set(adata_conditions).issubset(dct["conditions_"]):
+        #    raise ValueError("Incorrect conditions")
 
     @classmethod
     def _get_init_params_from_dict(cls, dct):
