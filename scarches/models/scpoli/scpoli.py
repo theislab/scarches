@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
-from _utils import one_hot_encoder
+from ._utils import one_hot_encoder
 from ..trvae.losses import mse, nb, zinb, bce, poisson, nb_dist
 from ...trainers.scpoli._utils import cov
 
