@@ -180,7 +180,7 @@ class scPoli(BaseMixin):
 
         # store model parameters
         if hidden_layer_sizes is None:
-            self.hidden_layer_sizes_ = [int(np.sqrt(adata.shape[1]))]
+            self.hidden_layer_sizes_ = [int(np.ceil(np.sqrt(adata.shape[1])))]
         else:
             self.hidden_layer_sizes_ = hidden_layer_sizes
         self.latent_dim_ = latent_dim
@@ -372,7 +372,10 @@ class scPoli(BaseMixin):
             )
         #if self.share_metadata_:
         #    adata_emb.obs = self.obs_metadata_
-        return adata_emb
+        if len(self.condition_keys_) == 1:
+            return adata_emb[self.condition_keys_[0]]
+        else:
+            return adata_emb
 
     #def get_combined_conditional_embeddings(self):
     #    """
