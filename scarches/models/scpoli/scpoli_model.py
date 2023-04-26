@@ -84,7 +84,7 @@ class scPoli(BaseMixin):
         labeled_indices: Optional[list] = None,
         prototypes_labeled: Optional[dict] = None,
         prototypes_unlabeled: Optional[dict] = None,
-        hidden_layer_sizes: list = [256, 64],
+        hidden_layer_sizes: list = None,
         latent_dim: int = 10,
         embedding_dims: Union[list, int] = 10,
         embedding_max_norm: float = 1.0,
@@ -179,7 +179,10 @@ class scPoli(BaseMixin):
                     
 
         # store model parameters
-        self.hidden_layer_sizes_ = hidden_layer_sizes
+        if hidden_layer_sizes is None:
+            self.hidden_layer_sizes_ = [int(np.sqrt(adata.shape[1]))]
+        else:
+            self.hidden_layer_sizes_ = hidden_layer_sizes
         self.latent_dim_ = latent_dim
         self.dr_rate_ = dr_rate
         self.use_mmd_ = use_mmd
@@ -252,8 +255,10 @@ class scPoli(BaseMixin):
         self,
         n_epochs: int = 100,
         pretraining_epochs=None,
+        eta: float = 1,
         lr: float = 1e-3,
         eps: float = 0.01,
+        alpha_epoch_anneal = 1e2,
         reload_best: bool = False,
         prototype_training: Optional[bool] = True,
         unlabeled_prototype_training: Optional[bool] = True,
@@ -292,6 +297,8 @@ class scPoli(BaseMixin):
             reload_best=reload_best,
             prototype_training=self.prototype_training_,
             unlabeled_prototype_training=self.unlabeled_prototype_training_,
+            eta=eta,
+            alpha_epoch_anneal=alpha_epoch_anneal,
             **kwargs,
         )
         self.trainer.train(n_epochs, lr, eps)
