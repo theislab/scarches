@@ -6,6 +6,7 @@ import scanpy as sc
 import torch
 from anndata import AnnData
 from scipy import sparse
+from sklearn.preprocessing import RobustScaler, MinMaxScaler
 
 from ..base._base import BaseMixin
 from ..base._utils import _validate_var_names
@@ -344,6 +345,7 @@ class scPoli(BaseMixin):
         p=2,
         get_prob=False,
         log_distance=True,
+        scale_uncertainties=False,
     ):
         """
         Classifies unlabeled cells using the prototypes obtained during training.
@@ -432,7 +434,11 @@ class scPoli(BaseMixin):
 
             for idx, pred in enumerate(full_pred):
                 full_pred_names.append(inv_ct_encoder[pred])
-
+            
+            if scale_uncertainties is True:
+                full_uncert = RobustScaler().fit_transform(full_uncert.reshape(-1, 1))
+                full_uncert = MinMaxScaler(feature_range=(0, 1)).fit_transform(full_uncert).reshape(-1)
+                 
             results[cell_type_key] = {
                 "preds": np.array(full_pred_names),
                 "uncert": full_uncert,
