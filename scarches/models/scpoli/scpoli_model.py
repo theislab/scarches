@@ -301,8 +301,7 @@ class scPoli(BaseMixin):
 
     def get_latent(
         self,
-        x: Optional[np.ndarray] = None,
-        c: Optional[np.ndarray] = None,
+        adata,
         mean: bool = False,
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
@@ -312,7 +311,6 @@ class scPoli(BaseMixin):
          ----------
          x
              Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-             If None, then `self.adata.X` is used.
          c
              `numpy nd-array` of original (unencoded) desired labels for each sample.
          mean
@@ -323,10 +321,8 @@ class scPoli(BaseMixin):
              Returns array containing latent space encoding of 'x'.
         """
         device = next(self.model.parameters()).device
-        if x is None and c is None:
-            x = self.adata.X
-            if self.conditions_ is not None:
-                c = self.adata.obs[self.condition_keys_]
+        x = adata.X
+        c = {k: adata.obs[k].values for k in self.condition_keys_}
 
         if isinstance(c, dict):
             label_tensor = []
@@ -429,30 +425,22 @@ class scPoli(BaseMixin):
 
         device = next(self.model.parameters()).device
         self.model.eval()
-        #if not prototype:
-        #    # get the gene features from stored adata
-        #    if x is None:
-        #        x = self.adata.X
-        #        if self.conditions_ is not None:
-        #            c_df = self.adata.obs[self.condition_keys_]
-        #            for cond in c_df.columns:
-        #                c[cond] = c_df[cond].values
-        #            
-        # get the conditions from passed input
-        x = adata.X
-        c = {k: adata.obs[k].values for k in self.condition_keys_}
-        
-        if isinstance(c, dict):
-            label_tensor = []
-            for cond in c.keys():
-                query_conditions = c[cond]
-                if not set(query_conditions).issubset(self.conditions_[cond]):
-                    raise ValueError("Incorrect conditions")
-                labels = np.zeros(query_conditions.shape[0])
-                for condition, label in self.model.condition_encoders[cond].items():
-                    labels[query_conditions == condition] = label
-                label_tensor.append(labels)
-            c = torch.tensor(label_tensor, device=device).T
+        if prototype is False:
+            x = adata.X
+            c = {k: adata.obs[k].values for k in self.condition_keys_}
+            if isinstance(c, dict):
+                label_tensor = []
+                for cond in c.keys():
+                    query_conditions = c[cond]
+                    if not set(query_conditions).issubset(self.conditions_[cond]):
+                        raise ValueError("Incorrect conditions")
+                    labels = np.zeros(query_conditions.shape[0])
+                    for condition, label in self.model.condition_encoders[cond].items():
+                        labels[query_conditions == condition] = label
+                    label_tensor.append(labels)
+                c = torch.tensor(label_tensor, device=device).T
+        else:
+            x = adata
             
         if sparse.issparse(x):
             x = x.A
@@ -504,7 +492,7 @@ class scPoli(BaseMixin):
             inv_ct_encoder = {v: k for k, v in self.model.cell_type_encoder.items()}
             full_pred_names = []
 
-            for idx, pred in enumerate(full_pred):
+            for _, pred in enumerate(full_pred):
                 full_pred_names.append(inv_ct_encoder[pred])
             
             if scale_uncertainties is True:
