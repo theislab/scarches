@@ -402,8 +402,7 @@ class scPoli(BaseMixin):
     
     def classify(
         self,
-        x: Optional[np.ndarray] = None,
-        c: Optional[Union[dict, np.ndarray]] = None,
+        adata,
         prototype=False,
         p=2,
         get_prob=False,
@@ -440,6 +439,8 @@ class scPoli(BaseMixin):
         #                c[cond] = c_df[cond].values
         #            
         # get the conditions from passed input
+        x = adata.X
+        c = {k: adata.obs[k].values for k in self.condition_keys_}
         
         if isinstance(c, dict):
             label_tensor = []

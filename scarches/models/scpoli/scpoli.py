@@ -282,7 +282,7 @@ class scpoli(nn.Module):
         Data handling before call to model's classify method.
 
         x: torch.Tensor
-            Features to be classified. If None the stored model's adata is used.
+            Features to be classified.
         c: torch.Tensor
             Condition vector.
         prototype: Boolean
