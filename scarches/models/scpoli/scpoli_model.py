@@ -134,7 +134,10 @@ class scPoli(BaseMixin):
             self.conditions_ = conditions
 
         if conditions_combined is None:
-            self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+            if len(self.condition_keys_) > 1:
+                self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+            else:
+                self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x))
             self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
         else:
             self.conditions_combined_ = conditions_combined
@@ -758,7 +761,10 @@ class scPoli(BaseMixin):
                 conditions[cond].append(condition)
         
         conditions_combined = init_params["conditions_combined"]
-        adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+        if len(condition_keys) > 1:
+            adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
+        else:
+            adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x))
         new_conditions_combined = adata.obs['conditions_combined'].unique().tolist()
         for item in new_conditions_combined:
             if item not in conditions_combined:
