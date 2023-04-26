@@ -132,19 +132,19 @@ class scPoli(BaseMixin):
                 self.conditions_ = {}
         else:
             self.conditions_ = conditions
-        
-        if obs_metadata is not None:
-            self.obs_metadata_ = obs_metadata
-        elif self.share_metadata_ is True:
-            self.obs_metadata_ = adata.obs.groupby(condition_key).first()
-        else:
-            self.obs_metadata_ = []
 
         if conditions_combined is None:
             self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
             self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
         else:
             self.conditions_combined_ = conditions_combined
+
+        if obs_metadata is not None:
+            self.obs_metadata_ = obs_metadata
+        elif self.share_metadata_ is True:
+            self.obs_metadata_ = adata.obs.groupby('conditions_combined').first()
+        else:
+            self.obs_metadata_ = []
 
         if self.share_metadata_:
             self.obs_metadata_ = adata.obs.groupby(condition_keys).first()
@@ -764,10 +764,10 @@ class scPoli(BaseMixin):
             if item not in conditions_combined:
                 conditions_combined.append(item)
         
-        #obs_metadata = attr_dict["obs_metadata_"]
-        #new_obs_metadata = adata.obs.groupby(condition_key).first()
-        #obs_metadata = pd.concat([obs_metadata, new_obs_metadata])
-       #init_params["obs_metadata"] = obs_metadata
+        obs_metadata = attr_dict["obs_metadata_"]
+        new_obs_metadata = adata.obs.groupby('conditions_combined').first()
+        obs_metadata = pd.concat([obs_metadata, new_obs_metadata])
+        init_params["obs_metadata"] = obs_metadata
 
         cell_types = init_params["cell_types"]
         cell_type_keys = init_params["cell_type_keys"]
