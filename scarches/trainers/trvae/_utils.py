@@ -101,7 +101,7 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
         val_labeled_idx = []
         train_unlabeled_idx = []
         val_unlabeled_idx = []
-        #TODO this is horribly inefficient
+
         if len(labeled_idx) > 0:
             cell_types = adata[labeled_idx].obs[cell_type_key].unique().tolist()
             for cell_type in cell_types:
@@ -127,7 +127,7 @@ def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=N
         for condition in conditions:
             cond_idx = indices[adata.obs[condition_key] == condition]
             n_train_samples = int(np.ceil(train_frac * len(cond_idx)))
-            #np.random.shuffle(cond_idx)
+            np.random.shuffle(cond_idx)
             train_idx.append(cond_idx[:n_train_samples])
             val_idx.append(cond_idx[n_train_samples:])
 
@@ -161,7 +161,6 @@ def make_dataset(adata,
        Training 'CustomDatasetFromAdata' object, Validation 'CustomDatasetFromAdata' object
     """
     # Preprare data for semisupervised learning
-    print(f"Preparing {adata.shape}")
     labeled_array = np.zeros((len(adata), 1))
     if labeled_indices is not None:
         labeled_array[labeled_indices] = 1
@@ -173,16 +172,15 @@ def make_dataset(adata,
             if len(adata.obs[cell_type_key].unique().tolist()) >= n_cts:
                 n_cts = len(adata.obs[cell_type_key].unique().tolist())
                 finest_level = cell_type_key
-        print(f"Splitting data {adata.shape}")
+
         train_idx, val_idx = train_test_split(adata, train_frac, cell_type_key=finest_level,
                                               labeled_array=labeled_array)
-    
+
     elif condition_key is not None:
         train_idx, val_idx = train_test_split(adata, train_frac, condition_key=condition_key)
     else:
         train_idx, val_idx = train_test_split(adata, train_frac)
-        
-    print("Instantiating dataset")
+
     data_set_train = trVAEDataset(
         adata if train_frac == 1 else adata[train_idx],
         condition_key=condition_key,

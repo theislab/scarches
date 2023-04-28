@@ -1,4 +1,5 @@
 from .trainer import scPoliTrainer
+
 __author__ = ", ".join(
     [
         "Carlo De Donno",
