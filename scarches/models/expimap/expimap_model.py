@@ -185,7 +185,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
            eps: Float
                 torch.optim.Adam eps parameter
            alpha_kl: Float
-                Multiplies the KL divergence part of the loss. Set to 0.4 by default.
+                Multiplies the KL divergence part of the loss. Set to 0.35 by default.
            alpha_epoch_anneal: Integer or None
                 If not 'None', the KL Loss scaling factor (alpha_kl) will be annealed from 0 to 1 every epoch until the input
                 integer is reached. By default is set to 130 epochs or to n_epochs if n_epochs < 130.
@@ -219,7 +219,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 kwargs for the expiMap trainer.
         """
         if "alpha_kl" not in kwargs:
-            kwargs["alpha_kl"] = 0.4
+            kwargs["alpha_kl"] = 0.35
 
         if "alpha_epoch_anneal" not in kwargs:
             epochs_anneal = 130
