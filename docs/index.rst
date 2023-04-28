@@ -53,7 +53,6 @@ scArches allows your single-cell query data to be analyzed by integrating it int
    about
    installation
    api/index.rst
-   model_sharing
    training_tips
 
 .. toctree::
