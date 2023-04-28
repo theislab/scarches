@@ -188,7 +188,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 Multiplies the KL divergence part of the loss. Set to 0.5 by default.
            alpha_epoch_anneal: Integer or None
                 If not 'None', the KL Loss scaling factor (alpha_kl) will be annealed from 0 to 1 every epoch until the input
-                integer is reached. By default is set to 100 epochs or to n_epochs if n_epochs < 100.
+                integer is reached. By default is set to 130 epochs or to n_epochs if n_epochs < 130.
            alpha: Float
                 Group Lasso regularization coefficient
            omega: Tensor or None
@@ -222,8 +222,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             kwargs["alpha_kl"] = 0.5
 
         if "alpha_epoch_anneal" not in kwargs:
-            epochs_anneal = 100
-            if n_epochs < 100:
+            epochs_anneal = 130
+            if n_epochs < 130:
                 epochs_anneal = n_epochs
             kwargs["alpha_epoch_anneal"] = epochs_anneal
 
