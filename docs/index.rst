@@ -27,8 +27,10 @@ scArches allows your single-cell query data to be analyzed by integrating it int
 - **Spatial transcriptomics**: To map scRNAseq data to a spatial reference and infer spatial locations check `SageNet (Heidari et al., 2022) <https://docs.scarches.org/en/latest/SageNet_mouse_embryo.html>`_.
 
 
-- **Querying gene programs in single-cell atlases**: Using gene programs (GPs), you can embed your datasets into known subspaces (e.g., interferon signaling) and see the activity of your query dataset within desired GPs. You can use available GP databases (e.g, GO pathways) or your curated GPs (see `expiMap (Lotfollahi*, Rybakov*  et al., 2023) <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_basic.html>`_. One can also learn novel GPs as shown `here <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_advanced.html>`__.
+- **Querying gene programs in single-cell atlases**: Using gene programs (GPs), you can embed your datasets into known subspaces (e.g., interferon signaling) and see the activity of your query dataset within desired GPs. You can use available GP databases (e.g, GO pathways) or your curated GPs, see `expiMap (Lotfollahi*, Rybakov*  et al., 2023) <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_basic.html>`_. One can also learn novel GPs as shown `here <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_advanced.html>`_.
 
+
+**Links to the papers** can be found `here <https://docs.scarches.org/en/latest/about.html>`_.
 
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scarches.svg
