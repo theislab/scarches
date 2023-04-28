@@ -12,4 +12,4 @@ __email__ = ', '.join([
     'sergei.rybakov@helmholtz-muenchen.de'
 ])
 
-__version__ = '0.5.7'
+__version__ = '0.5.8'
