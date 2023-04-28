@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
-from ._utils import one_hot_encoder
-from ..trvae.losses import mse, nb, zinb, bce, poisson, nb_dist
-from ...trainers.scpoli._utils import cov
+from ..trvae._utils import one_hot_encoder
+from ..trvae.losses import mse, nb, zinb, bce
+from ...trainers.scpoli._utils import cov, euclidean_dist
+
 
 class scpoli(nn.Module):
     def __init__(
@@ -15,10 +16,9 @@ class scpoli(nn.Module):
         cell_types,
         unknown_ct_names,
         conditions,
-        conditions_combined,
         inject_condition,
         latent_dim,
-        embedding_dims,
+        embedding_dim,
         embedding_max_norm,
         recon_loss,
         dr_rate,
@@ -32,23 +32,18 @@ class scpoli(nn.Module):
 
         self.input_dim = input_dim
         self.latent_dim = latent_dim
-        self.embedding_dims = embedding_dims
+        self.embedding_dim = embedding_dim
         self.embedding_max_norm = embedding_max_norm
         self.cell_types = cell_types
         self.n_cell_types = len(cell_types)
         self.cell_type_encoder = {
             k: v for k, v in zip(cell_types, range(len(cell_types)))
         }
-        self.n_conditions = [len(conditions[cond]) for cond in conditions.keys()]
+        self.n_conditions = len(conditions)
         self.n_reference_conditions = None
         self.conditions = conditions
-        self.condition_encoders = {cond: {
-            k: v for k, v in zip(conditions[cond], range(len(conditions[cond])))
-        } for cond in conditions.keys()}
-        self.conditions_combined = conditions_combined
-        self.n_conditions_combined = len(conditions_combined)
-        self.conditions_combined_encoder = {
-            k: v for k, v in zip(conditions_combined, range(len(conditions_combined)))
+        self.condition_encoder = {
+            k: v for k, v in zip(conditions, range(len(conditions)))
         }
         self.inject_condition = inject_condition
         self.use_bn = use_bn
@@ -83,9 +78,9 @@ class scpoli(nn.Module):
         else:
             self.use_dr = False
 
-        if recon_loss in ["nb", "zinb", "nb_dist"]:
+        if recon_loss in ["nb", "zinb"]:
             self.theta = torch.nn.Parameter(
-                torch.randn(self.input_dim, self.n_conditions_combined)
+                torch.randn(self.input_dim, self.n_conditions)
             )
         else:
             self.theta = None
@@ -96,14 +91,14 @@ class scpoli(nn.Module):
         decoder_layer_sizes.reverse()
         decoder_layer_sizes.append(self.input_dim)
 
-        self.embeddings = nn.ModuleList(nn.Embedding(
-            self.n_conditions[i], self.embedding_dims[i], max_norm=self.embedding_max_norm
-        ) for i in range(len(self.embedding_dims)))
+        self.embedding = nn.Embedding(
+            self.n_conditions, self.embedding_dim, max_norm=self.embedding_max_norm
+        )
 
         print(
             "Embedding dictionary:\n",
             f"\tNum conditions: {self.n_conditions}\n",
-            f"\tEmbedding dim: {self.embedding_dims}",
+            f"\tEmbedding dim: {self.embedding_dim}",
         )
         self.encoder = Encoder(
             encoder_layer_sizes,
@@ -112,7 +107,7 @@ class scpoli(nn.Module):
             self.use_ln,
             self.use_dr,
             self.dr_rate,
-            sum(self.embedding_dims) if "encoder" in self.inject_condition else None,
+            self.embedding_dim if "encoder" in self.inject_condition else None,
         )
         self.decoder = Decoder(
             decoder_layer_sizes,
@@ -122,30 +117,29 @@ class scpoli(nn.Module):
             self.use_ln,
             self.use_dr,
             self.dr_rate,
-            sum(self.embedding_dims) if "decoder" in self.inject_condition else None,
+            self.embedding_dim if "decoder" in self.inject_condition else None,
         )
 
     def forward(
         self,
         x=None,
         batch=None,
-        combined_batch=None,
         sizefactor=None,
         celltypes=None,
         labeled=None,
-    ):   
-        batch_embeddings = torch.hstack([self.embeddings[i](batch[:, i]) for i in range(batch.shape[1])])
+    ):
+        batch_embedding = self.embedding(batch)
         x_log = torch.log(1 + x)
         if self.recon_loss == "mse":
             x_log = x
         if "encoder" in self.inject_condition:
-            z1_mean, z1_log_var = self.encoder(x_log, batch_embeddings)
+            z1_mean, z1_log_var = self.encoder(x_log, batch_embedding)
         else:
             z1_mean, z1_log_var = self.encoder(x_log, batch=None)
         z1 = self.sampling(z1_mean, z1_log_var)
 
         if "decoder" in self.inject_condition:
-            outputs = self.decoder(z1, batch_embeddings)
+            outputs = self.decoder(z1, batch_embedding)
         else:
             outputs = self.decoder(z1, batch=None)
 
@@ -158,7 +152,7 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
+            dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = (
                 -zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout)
@@ -171,24 +165,12 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
-            dispersion = torch.exp(dispersion)
-            recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
-        elif self.recon_loss == "nb_dist":
-            dec_mean_gamma, y1 = outputs
-            size_factor_view = sizefactor.unsqueeze(1).expand(
-                dec_mean_gamma.size(0), dec_mean_gamma.size(1)
-            )
-            dec_mean = dec_mean_gamma * size_factor_view
             dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
             dispersion = torch.exp(dispersion)
-            recon_loss = nb_dist(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
+            recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
         elif self.recon_loss == 'bernoulli':
             recon_x, y1 = outputs
             recon_loss = bce(recon_x, x).sum(dim=-1).mean()
-        elif self.recon_loss == 'poisson':
-            recon_x, y1 = outputs
-            recon_loss = poisson(recon_x, x).sum(dim=-1).mean()
 
         z1_var = torch.exp(z1_log_var) + 1e-4
         kl_div = (
@@ -255,7 +237,7 @@ class scpoli(nn.Module):
         # Get latent indices which correspond to new prototype
         self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
         latent = latent.to(device)
-        dists = torch.cdist(latent, self.prototypes_labeled["mean"][classes_list, :])
+        dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
         min_dist, y_hat = torch.min(dists, 1)
         y_hat = classes_list[y_hat]
         indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
@@ -273,7 +255,6 @@ class scpoli(nn.Module):
         c=None,
         prototype=False,
         classes_list=None,
-        p=2,
         get_prob=False,
         log_distance=True,
     ):
@@ -282,7 +263,7 @@ class scpoli(nn.Module):
         Data handling before call to model's classify method.
 
         x: torch.Tensor
-            Features to be classified.
+            Features to be classified. If None the stored model's adata is used.
         c: torch.Tensor
             Condition vector.
         prototype: Boolean
@@ -299,7 +280,7 @@ class scpoli(nn.Module):
             latent = self.get_latent(x, c)
         device = next(self.parameters()).device
         self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
-        dists = torch.cdist(latent, self.prototypes_labeled["mean"][classes_list, :], p)
+        dists = euclidean_dist(latent, self.prototypes_labeled["mean"][classes_list, :])
 
         # Idea of using euclidean distances for classification
         if get_prob == True:
@@ -350,7 +331,7 @@ class scpoli(nn.Module):
         if "encoder" in self.inject_condition:
             # c = c.type(torch.cuda.LongTensor)
             c = c.long()
-            embed_c = torch.hstack([self.embeddings[i](c[:, i]) for i in range(c.shape[1])])
+            embed_c = self.embedding(c)
             z_mean, z_log_var = self.encoder(x_, embed_c)
         else:
             z_mean, z_log_var = self.encoder(x_)
@@ -595,7 +576,7 @@ class Decoder(nn.Module):
             )
             # dropout
             self.dropout_decoder = nn.Linear(layer_sizes[-2], layer_sizes[-1])
-        elif self.recon_loss in ["nb", "nb_dist"]:
+        elif self.recon_loss == "nb":
             # mean gamma
             self.mean_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Softmax(dim=-1)
@@ -603,10 +584,6 @@ class Decoder(nn.Module):
         elif self.recon_loss == 'bernoulli':
             self.recon_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Sigmoid()
-            )
-        elif self.recon_loss == 'poisson':
-            self.recon_decoder = nn.Sequential(
-                nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Softmax(dim=-1)
             )
 
     def forward(self, z, batch=None):
@@ -632,12 +609,10 @@ class Decoder(nn.Module):
             dec_mean_gamma = self.mean_decoder(x)
             dec_dropout = self.dropout_decoder(x)
             return dec_mean_gamma, dec_dropout, dec_latent
-        elif self.recon_loss in ["nb", "nb_dist"]:
+        elif self.recon_loss == "nb":
             dec_mean_gamma = self.mean_decoder(x)
             return dec_mean_gamma, dec_latent
         elif self.recon_loss == 'bernoulli':
-            recon_x = self.recon_decoder(x)
-        elif self.recon_loss == 'poisson':
             recon_x = self.recon_decoder(x)
             return recon_x, dec_latent
        
