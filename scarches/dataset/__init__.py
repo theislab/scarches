@@ -1,6 +1,7 @@
 from .trvae._utils import label_encoder
 from .trvae.data_handling import remove_sparsity
 from .trvae.anndata import AnnotatedDataset as trVAEDataset
+from .scpoli.anndata import MultiConditionAnnotatedDataset
 
 import logging
 try:
