@@ -12,23 +12,22 @@ What is scArches?
 -------------------------------
 scArches allows your single-cell query data to be analyzed by integrating it into a reference atlas. To map your data, you need an integrated atlas using one of the reference-building methods for different applications that are supported by scArches which are, including:
 
-- **Annotating a single-cell dataset using a reference atlas**: You can check following models/toturials using  `scPoli(De Donno et al., 2022) <https://docs.scarches.org/en/latest/scpoli_surgery_pipeline.html>`_ or `scANVI(Xu et al., 2019 ) <https://docs.scarches.org/en/latest/scanvi_surgery_pipeline.html>`_.
+- **Annotating a single-cell dataset using a reference atlas**: You can check following models/tutorials using  `scPoli (De Donno et al., 2022) <https://docs.scarches.org/en/latest/scpoli_surgery_pipeline.html>`_ or `scANVI (Xu et al., 2019 ) <https://docs.scarches.org/en/latest/scanvi_surgery_pipeline.html>`_.
 
 
-- **Identify novel cell states present in your data by mapping to an atlas**: If you want to detect cell-states affected by disease or novel subpopulations see `treeArches(Michielsen*, Lotfollahi* et al., 2022) <https://docs.scarches.org/en/latest/treeArches_identifying_new_ct.html>`_ and also similar use case by mapping to `Human Lung cell atlas <https://docs.scarches.org/en/latest/hlca_map_classify.html>`_.
+- **Identify novel cell states present in your data by mapping to an atlas**: If you want to detect cell-states affected by disease or novel subpopulations see `treeArches (Michielsen*, Lotfollahi* et al., 2022) <https://docs.scarches.org/en/latest/treeArches_identifying_new_ct.html>`_ and also similar use case by mapping to `Human Lung cell atlas <https://docs.scarches.org/en/latest/hlca_map_classify.html>`_.
 
 
-- **Multimodal single-cell atlases**: You can check toturial for `Multigrate(Litinetskaya*, Lotfollahi* et al., 2022) <https://docs.scarches.org/en/latest/multigrate.html>`_ to work with CITE-seq + Multiome (ATAC+ RNA). Additionally, you can check `mvTCR(Drost et al., 2022) <https://docs.scarches.org/en/latest/mvTCR_borcherding.html>`_ for joint analysis of T-cell Receptor (TCR) and scRNAseq data. To impute missing surface proteins for your query single-cell RNAseq data using a CITE-seq reference, see  `totalVI(Gayoso et al., 2019) <https://docs.scarches.org/en/latest/totalvi_surgery_pipeline.html>`_.
+- **Multimodal single-cell atlases**: You can check the tutorial for `Multigrate (Litinetskaya*, Lotfollahi* et al., 2022) <https://docs.scarches.org/en/latest/multigrate.html>`_ to work with CITE-seq + Multiome (ATAC+ RNA). Additionally, you can check `mvTCR (Drost et al., 2022) <https://docs.scarches.org/en/latest/mvTCR_borcherding.html>`_ for joint analysis of T-cell Receptor (TCR) and scRNAseq data. To impute missing surface proteins for your query single-cell RNAseq data using a CITE-seq reference, see  `totalVI (Gayoso et al., 2019) <https://docs.scarches.org/en/latest/totalvi_surgery_pipeline.html>`_.
 
 
-
-- **Data integration/batch correction**: For integration of multiple scRNAseq datasets see  `scVI(Lopez et al, 2018) <https://docs.scarches.org/en/latest/scvi_surgery_pipeline.html>`_ or `trVAE(Lotfollahi et al, 2020) <https://docs.scarches.org/en/latest/trvae_surgery_pipeline.html>`_. In case of strong batch effect and access to cell-type labels, consider using `scGen(Lotfollahi et al., 2019) <https://docs.scarches.org/en/latest/scgen_map_query.html>`_.
-
-
-- **Spatial transcriptomics**: To map scRNAseq data to a spatial reference and infer spatial locations check `SageNet(Heidari et al., 2022) <https://docs.scarches.org/en/latest/scgen_map_query.html>`_.
+- **Data integration/batch correction**: For integration of multiple scRNAseq datasets see  `scVI (Lopez et al, 2018) <https://docs.scarches.org/en/latest/scvi_surgery_pipeline.html>`_ or `trVAE (Lotfollahi et al, 2020) <https://docs.scarches.org/en/latest/trvae_surgery_pipeline.html>`_. In case of strong batch effect and access to cell-type labels, consider using `scGen (Lotfollahi et al., 2019) <https://docs.scarches.org/en/latest/scgen_map_query.html>`_.
 
 
-- **Querying gene programs in single-cell atlases**: Using gene programs (GPs), you can embed your datasets into known subspaces (e.g., interferon signaling) and see the activity of your query dataset within desired GPs. You can use available GP databases (e.g, GO pathways) or your curated GPs (see `expiMap(Lotfollahi*, Rybakov*  et al., 2023) <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_basic.html>`_. One can also learn novel GPs as shown `here <https://docs.scarches.org/en/latest/treeArches_identifying_new_ct.html>`__.
+- **Spatial transcriptomics**: To map scRNAseq data to a spatial reference and infer spatial locations check `SageNet (Heidari et al., 2022) <https://docs.scarches.org/en/latest/SageNet_mouse_embryo.html>`_.
+
+
+- **Querying gene programs in single-cell atlases**: Using gene programs (GPs), you can embed your datasets into known subspaces (e.g., interferon signaling) and see the activity of your query dataset within desired GPs. You can use available GP databases (e.g, GO pathways) or your curated GPs (see `expiMap (Lotfollahi*, Rybakov*  et al., 2023) <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_basic.html>`_. One can also learn novel GPs as shown `here <https://docs.scarches.org/en/latest/expimap_surgery_pipeline_advanced.html>`__.
 
 
 
