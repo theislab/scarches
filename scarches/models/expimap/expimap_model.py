@@ -219,9 +219,13 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 kwargs for the expiMap trainer.
         """
         if "alpha_kl" not in kwargs:
+            print("The default value of alpha_kl was changed to 0.35. from 1. "
+                  "This may case inconsistency with previous training results. Set alpha_kl=1. to reproduce the previous results.")
             kwargs["alpha_kl"] = 0.35
 
         if "alpha_epoch_anneal" not in kwargs:
+            print("alpha_epoch_anneal is used by default now. "
+                  "This may case inconsistency with previous training results. Set alpha_epoch_anneal=None to reproduce the previous results.")
             epochs_anneal = 130
             if n_epochs < 130:
                 epochs_anneal = n_epochs
