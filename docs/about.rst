@@ -21,33 +21,27 @@ What can you do with scArches?
 What are the different models?
 ---------------
 scArches is itself an algorithm to map to project query on the top of reference datasets and applies
-to different models. Here we provide a short explanation and hints on when to use which model. Our models are divided into
-three categories:
+to different models. Here we provide a short explanation and hints on when to use which model. Our models are:
 
-Unsupervised
- This class of algorithms require no `cell type` labels, meaning that you can create a reference and project a query without having access to cell type labels.
- We implemented two algorithms:
+- **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes count distribution on the data (NB, ZINB, Poisson).
 
- - **scVI**  (`Lopez et al., 2018 <https://www.nature.com/articles/s41592-018-0229-2>`_): Requires access to raw counts values for data integration and assumes
- count distribution on the data (NB, ZINB, Poisson).
+- **trVAE** (`Lotfollahi et al.,2020 <https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5>`_): It supports both normalized log-transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
 
- - **trVAE** (`Lotfollahi et al.,2019 <https://arxiv.org/abs/1910.01791>`_): It supports both normalized log transformed or count data as input and applies additional MMD loss to have better merging in the latent space.
+- **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method also to classify your query cells using reference labels.
 
-Supervised and Semi-supervised
- This class of algorithms assumes the user has access to `cell type` labels when creating the reference data and usually perform better integration compared to. unsupervised methods. However, query data still can be unlabeled. In addition to integration, you can classify your query cells using
- these methods.
+- **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and Mapping. The reference mapping for this method solely relies on the integrated reference and requires no fine-tuning.
 
- - **scANVI** (`Xu et al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): It needs cell type labels for reference data. Your query data can be either unlabeled or labeled. In the case of unlabeled query data, you can use this method to also classify your query cells using reference labels.
+- **expiMap** (`Lotfollahi*, Rybakov* et al., 2023 <https://www.nature.com/articles/s41556-022-01072-x>`_): This method takes prior knowledge from gene sets databases or users allowing to analyze your query data in the context of known gene programs.
 
- - **scGen** (`Lotfollahi et al., 2019 <https://www.nature.com/articles/s41592-019-0494-8>`_): This method requires cell-type labels for both reference building and query mapping. The query mapping for this method solely relies on the integrated reference and requre no fine-tuning.
+- **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
 
-Multi-modal
- These algorithms can be used to construct multi-modal references atlas and map query data from either modality on the top of the reference.
+- **treeArches** (`Michielsen*, Lotfollahi* et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.07.07.499109v1>`_): This model builds a hierarchical tree for cell-types in the reference atlas and when mapping the query data can annotate and also identify novel cell-states and populations present in the query data.
 
- - **totalVI** (`Gayoso al., 2019 <https://www.biorxiv.org/content/10.1101/532895v1>`_): This model can be used to build multi-modal  CITE-seq reference atalses.
-   Query datasets can be either from sc-RNAseq or CITE-seq. In addition to integrating query with reference, one can use this model to impute the Proteins
-   in the query datasets.
+- **SageNet** (`Heidari et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.04.14.488419v1>`_): This model allows constrcution of a spatial atlas by mapping query dissociated single cells/spots (e.g., from  scRNAseq or visium datasets) into a common coordinate framework using one or more spatially resolved reference datasets.
 
+- **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.
+
+- **scPoli** (`De Donno et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_): This model allows data integration of scRNA-seq dataset, prototype-based label transfer and reference mapping. scPoli learns both sample embeddings and integrated cell embeddings, thus providing the user with a multi-scale view of the data, especially useful in the case of many samples to integrate.
 
 Where to start?
 ---------------
