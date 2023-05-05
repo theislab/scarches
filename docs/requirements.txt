@@ -7,3 +7,4 @@ numpydoc
 cython
 pkgconfig
 furo
+setuptools
