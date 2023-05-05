@@ -45,6 +45,7 @@ notebooks = [
     'mvTCR_borcherding.ipynb',
     'multigrate.ipynb',
     'scpoli_surgery_pipeline.ipynb',
+    'scpoli_ATAC.ipynb',
     'hlca_map_classify.ipynb'
 ]
 
