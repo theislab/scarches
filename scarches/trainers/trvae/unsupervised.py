@@ -58,7 +58,7 @@ class trVAETrainer(Trainer):
     ):
         super().__init__(model, adata, **kwargs)
 
-    def loss(self, total_batch=None, external_memory=0, dataset_counter=0, first_epoch=0, replay_layer=0):
+    def loss(self, total_batch=None):
         recon_loss, kl_loss, mmd_loss = self.model(**total_batch)
         loss = recon_loss + self.calc_alpha_coeff()*kl_loss + mmd_loss
         self.iter_logs["loss"].append(loss.item())
