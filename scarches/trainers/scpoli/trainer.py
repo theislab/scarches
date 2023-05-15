@@ -410,7 +410,7 @@ class scPoliTrainer:
                             indices = labeled_cell_types.eq(value).nonzero(
                                 as_tuple=False
                             )[:, 0]
-                            prototype = labeled_latent[indices].mean(0)
+                            prototype = labeled_latent[indices].mean(0).unsqueeze(0)
                             prototype_cov = cov(labeled_latent[indices]).unsqueeze(0)
                             self.prototypes_labeled = torch.cat(
                                 [self.prototypes_labeled, prototype]
