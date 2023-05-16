@@ -1,6 +1,7 @@
 import numpy as np
 import logging
 from anndata import AnnData
+from scipy.sparse import csr_matrix, hstack
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,13 @@ def _validate_var_names(adata, source_var_names):
               len(ref_genes_not_in_query),
               " genes which were contained in the reference dataset.")
         print("The missing information will be filled with zeroes.")
-
+       
         filling_X = np.zeros((len(adata), len(ref_genes_not_in_query)))
-        new_target_X = np.concatenate((adata.X, filling_X), axis=1)
+        if isinstance(adata.X, csr_matrix): 
+            filling_X = csr_matrix(filling_X) # support csr sparse matrix
+            new_target_X = hstack((adata.X, filling_X))
+        else:
+            new_target_X = np.concatenate((adata.X, filling_X), axis=1)
         new_target_vars = adata.var_names.tolist() + ref_genes_not_in_query
         new_adata = AnnData(new_target_X, dtype="float32")
         new_adata.var_names = new_target_vars

@@ -1,0 +1,18 @@
+name: scarches
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - pytorch
+  - torchaudio
+  - torchvision
+  - pytorch-cuda=11.7
+  - pip:
+    - scvi-tools
+    - scarches
+variables:
+  SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: True

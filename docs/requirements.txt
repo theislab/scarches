@@ -1,7 +1,9 @@
 ipykernel
+ipython<8.13.0
 sphinx>=3.0.3
 nbconvert>=5.6.1
 nbsphinx>=0.7
 numpydoc
 cython
 pkgconfig
+furo
