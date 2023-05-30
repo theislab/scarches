@@ -22,7 +22,7 @@ the required dependencies::
 
     git clone https://github.com/theislab/scarches
     cd scarches
-    conda env create -f envs/scarches_linux.yml
+    conda env create -f envs/scarches_linux.yaml
     conda activate scarches
 
 
