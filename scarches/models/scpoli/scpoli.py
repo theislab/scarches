@@ -123,6 +123,8 @@ class scpoli(nn.Module):
         batch=None,
         combined_batch=None,
         sizefactor=None,
+        celltypes=None,
+        labeled=None,
     ):
         batch_embeddings = torch.hstack(
             [self.embeddings[i](batch[:, i]) for i in range(batch.shape[1])]
