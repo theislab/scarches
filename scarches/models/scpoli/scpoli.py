@@ -123,10 +123,10 @@ class scpoli(nn.Module):
         batch=None,
         combined_batch=None,
         sizefactor=None,
-        celltypes=None,
-        labeled=None,
-    ):   
-        batch_embeddings = torch.hstack([self.embeddings[i](batch[:, i]) for i in range(batch.shape[1])])
+    ):
+        batch_embeddings = torch.hstack(
+            [self.embeddings[i](batch[:, i]) for i in range(batch.shape[1])]
+            )
         x_log = torch.log(1 + x)
         if self.recon_loss == "mse":
             x_log = x
@@ -150,7 +150,10 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
+            dispersion = F.linear(
+                one_hot_encoder(combined_batch, self.n_conditions_combined),
+                self.theta
+                )
             dispersion = torch.exp(dispersion)
             recon_loss = (
                 -zinb(x=x, mu=dec_mean, theta=dispersion, pi=dec_dropout)
@@ -163,7 +166,9 @@ class scpoli(nn.Module):
                 dec_mean_gamma.size(0), dec_mean_gamma.size(1)
             )
             dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
+            dispersion = F.linear(
+                one_hot_encoder(combined_batch, self.n_conditions_combined),
+                self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
         elif self.recon_loss == 'bernoulli':
@@ -229,11 +234,11 @@ class scpoli(nn.Module):
 
         # Get latent indices which correspond to new prototype
         self.prototypes_labeled = self.prototypes_labeled.to(device)
-        latent = latent.to(device)
-        dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :])
-        min_dist, y_hat = torch.min(dists, 1)
-        y_hat = classes_list[y_hat]
-        indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
+        # latent = latent.to(device)
+        # dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :])
+        # min_dist, y_hat = torch.min(dists, 1)
+        # y_hat = classes_list[y_hat]
+        # indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
 
     def classify(
         self,
@@ -243,7 +248,7 @@ class scpoli(nn.Module):
         classes_list=None,
         p=2,
         get_prob=False,
-        log_distance=True,
+        log_distance=False,
     ):
         """
         Classifies unlabeled cells using the prototypes obtained during training.
@@ -270,15 +275,15 @@ class scpoli(nn.Module):
         dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :], p)
 
         # Idea of using euclidean distances for classification
-        if get_prob == True:
+        if get_prob is True:
             dists = F.softmax(-dists, dim=1)
             uncert, preds = torch.max(dists, dim=1)
             preds = classes_list[preds]
         else:
             uncert, preds = torch.min(dists, dim=1)
             preds = classes_list[preds]
-            if log_distance == True:
-                probs = torch.log1p(uncert)
+            if log_distance is True:
+                uncert = torch.log1p(uncert)
 
         return preds, uncert, dists
 

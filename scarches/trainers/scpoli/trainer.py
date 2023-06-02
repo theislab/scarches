@@ -159,6 +159,7 @@ class scPoliTrainer:
         self.val_iters_per_epoch = None
 
         self.logs = defaultdict(list)
+        self.iter_logs = defaultdict(list)
         # Create Train/Valid AnnotatetDataset objects
         self.train_data, self.valid_data = make_dataset(
             self.adata,
@@ -219,30 +220,38 @@ class scPoliTrainer:
             # Create Sampler and Dataloaders
             stratifier_weights = torch.tensor(self.train_data.stratifier_weights, device=self.device)
 
-            self.sampler = WeightedRandomSampler(stratifier_weights,
-                                                 num_samples=self.n_samples,
-                                                 replacement=True)
-            self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,
-                                                                batch_size=self.batch_size,
-                                                                sampler=self.sampler,
-                                                                collate_fn=custom_collate,
-                                                                num_workers=self.n_workers)
+            self.sampler = WeightedRandomSampler(
+                stratifier_weights,
+                num_samples=self.n_samples,
+                replacement=True
+            )
+            self.dataloader_train = torch.utils.data.DataLoader(
+                dataset=self.train_data,
+                batch_size=self.batch_size,
+                sampler=self.sampler,
+                collate_fn=custom_collate,
+                num_workers=self.n_workers
+            )
         else:
-            self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,
-                                                                batch_size=self.batch_size,
-                                                                shuffle=True,
-                                                                collate_fn=custom_collate,
-                                                                num_workers=self.n_workers)
+            self.dataloader_train = torch.utils.data.DataLoader(
+                dataset=self.train_data,
+                batch_size=self.batch_size,
+                shuffle=True,
+                collate_fn=custom_collate,
+                num_workers=self.n_workers
+            )
         if self.valid_data is not None:
             val_batch_size = self.batch_size
             if self.batch_size > len(self.valid_data):
                 val_batch_size = len(self.valid_data)
             self.val_iters_per_epoch = int(np.ceil(len(self.valid_data) / self.batch_size))
-            self.dataloader_valid = torch.utils.data.DataLoader(dataset=self.valid_data,
-                                                                batch_size=val_batch_size,
-                                                                shuffle=True,
-                                                                collate_fn=custom_collate,
-                                                                num_workers=self.n_workers)
+            self.dataloader_valid = torch.utils.data.DataLoader(
+                dataset=self.valid_data,
+                batch_size=val_batch_size,
+                shuffle=True,
+                collate_fn=custom_collate,
+                num_workers=self.n_workers
+            )
 
     def calc_alpha_coeff(self):
         """Calculates current alpha coefficient for alpha annealing.
@@ -290,7 +299,6 @@ class scPoliTrainer:
         print("Starting training")
         for self.epoch in range(n_epochs):
             self.on_epoch_begin(lr, eps)
-            self.iter_logs = defaultdict(list)
             for self.iter, batch_data in enumerate(self.dataloader_train):
                 for key, batch in batch_data.items():
                     batch_data[key] = batch.to(self.device)
@@ -317,7 +325,7 @@ class scPoliTrainer:
     def on_iteration(self, batch_data):
         #do not update any weight on first layers except condition weights
         if self.model.freeze:
-            for name, module in self.model.named_modules():
+            for _, module in self.model.named_modules():
                 if isinstance(module, nn.BatchNorm1d):
                     if not module.weight.requires_grad:
                         module.affine = False
@@ -331,11 +339,6 @@ class scPoliTrainer:
         #gradient Clipping
         if self.clip_value > 0:
             torch.nn.utils.clip_grad_value_(self.model.parameters(), self.clip_value)
-        #if self.model.freeze == True:
-        #    if self.model.embedding:
-        #        self.model.embedding.weight.grad[
-        #            : self.model.n_reference_conditions
-        #        ] = 0
         self.optimizer.step()
 
     def update_labeled_indices(self, labeled_indices):
@@ -408,9 +411,9 @@ class scPoliTrainer:
                             self.prototypes_labeled = torch.cat(
                                 [self.prototypes_labeled, prototype]
                             )
-            else:  
+            else:
                 #compute labeled prototypes
-                    self.prototypes_labeled = self.update_labeled_prototypes(
+                self.prototypes_labeled = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
                     self.train_data.cell_types[
                         torch.where(self.train_data.labeled_vector == 1)[0], :
@@ -452,13 +455,13 @@ class scPoliTrainer:
             else:
                 if self.clustering == "kmeans" and self.n_clusters is None:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden "
-                        f"because no value for the number of clusters was given."
+                        "\nInitializing unlabeled prototypes with Leiden "
+                        "because no value for the number of clusters was given."
                     )
                 else:
                     print(
-                        f"\nInitializing unlabeled prototypes with Leiden "
-                        f"with an unknown number of  clusters."
+                        "\nInitializing unlabeled prototypes with Leiden "
+                        "with an unknown number of  clusters."
                     )
                 lat_adata = sc.AnnData(lat_array)
                 sc.pp.neighbors(lat_adata)
@@ -575,7 +578,6 @@ class scPoliTrainer:
             and (self.prototype_training is True)
         ):
             latent = self.get_latent_train()
-            label_categories = self.train_data.labeled_vector.unique().tolist()
 
             # Update labeled prototype positions
             if self.any_labeled_data is True:
@@ -593,7 +595,7 @@ class scPoliTrainer:
                 for proto in self.prototypes_unlabeled:
                     proto.requires_grad = True
                 self.prototype_optim.zero_grad()
-                update_loss, args_count = self.prototype_unlabeled_loss(
+                update_loss, _ = self.prototype_unlabeled_loss(
                     latent,
                     torch.stack(self.prototypes_unlabeled).squeeze(),
                 )
@@ -687,7 +689,6 @@ class scPoliTrainer:
         """
         unique_labels = torch.unique(labels, sorted=True)
         dists = torch.cdist(latent, prototypes, p=self.p_prototype_loss)
-        
         loss = torch.tensor(0.0, device=self.device)
 
         # If data only contains 'unknown' celltypes

@@ -191,6 +191,8 @@ class scPoli(BaseMixin):
         self.model_cell_types = list(self.cell_types_.keys())
         self.is_trained_ = False
         self.trainer = None
+        self.prototype_training_ = None
+        self.unlabeled_prototype_training_ = None
 
         self.model = scpoli(
             input_dim=self.input_dim_,
@@ -400,7 +402,7 @@ class scPoli(BaseMixin):
 
         """
         
-        assert self.prototypes_labeled_ is not None, f"Model was trained without prototypes"
+        assert self.prototypes_labeled_ is not None, "Model was trained without prototypes"
 
         device = next(self.model.parameters()).device
         self.model.eval()
@@ -727,7 +729,7 @@ class scPoli(BaseMixin):
         if len(condition_keys) > 1:
             adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
         else:
-            adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x))
+            adata.obs['conditions_combined'] = adata.obs[condition_keys]
         new_conditions_combined = adata.obs['conditions_combined'].unique().tolist()
         for item in new_conditions_combined:
             if item not in conditions_combined:
