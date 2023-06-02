@@ -1,4 +1,3 @@
-from scvi.distributions import NegativeBinomial
 import torch
 from torch.autograd import Variable
 from torch.distributions import Poisson
@@ -100,11 +99,6 @@ def nb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
     )
 
     return res
-
-def nb_dist(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, eps=1e-8):
-    loss = -NegativeBinomial(mu=mu, theta=theta).log_prob(x)
-    return loss
-
 
 def zinb(x: torch.Tensor, mu: torch.Tensor, theta: torch.Tensor, pi: torch.Tensor, eps=1e-8):
     """

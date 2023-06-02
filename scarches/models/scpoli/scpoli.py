@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 
 from ._utils import one_hot_encoder
-from ..trvae.losses import mse, nb, zinb, bce, poisson, nb_dist
+from ..trvae.losses import mse, nb, zinb, bce, poisson
 
 class scpoli(nn.Module):
     def __init__(
@@ -76,7 +76,7 @@ class scpoli(nn.Module):
         else:
             self.use_dr = False
 
-        if recon_loss in ["nb", "zinb", "nb_dist"]:
+        if recon_loss in ["nb", "zinb"]:
             self.theta = torch.nn.Parameter(
                 torch.randn(self.input_dim, self.n_conditions_combined)
             )
@@ -167,15 +167,6 @@ class scpoli(nn.Module):
             dispersion = F.linear(one_hot_encoder(combined_batch, self.n_conditions_combined), self.theta)
             dispersion = torch.exp(dispersion)
             recon_loss = -nb(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
-        elif self.recon_loss == "nb_dist":
-            dec_mean_gamma, y1 = outputs
-            size_factor_view = sizefactor.unsqueeze(1).expand(
-                dec_mean_gamma.size(0), dec_mean_gamma.size(1)
-            )
-            dec_mean = dec_mean_gamma * size_factor_view
-            dispersion = F.linear(one_hot_encoder(batch, self.n_conditions), self.theta)
-            dispersion = torch.exp(dispersion)
-            recon_loss = nb_dist(x=x, mu=dec_mean, theta=dispersion).sum(dim=-1).mean()
         elif self.recon_loss == 'bernoulli':
             recon_x, y1 = outputs
             recon_loss = bce(recon_x, x).sum(dim=-1).mean()
@@ -581,7 +572,7 @@ class Decoder(nn.Module):
             )
             # dropout
             self.dropout_decoder = nn.Linear(layer_sizes[-2], layer_sizes[-1])
-        elif self.recon_loss in ["nb", "nb_dist"]:
+        elif self.recon_loss in ["nb"]:
             # mean gamma
             self.mean_decoder = nn.Sequential(
                 nn.Linear(layer_sizes[-2], layer_sizes[-1]), nn.Softmax(dim=-1)
@@ -618,7 +609,7 @@ class Decoder(nn.Module):
             dec_mean_gamma = self.mean_decoder(x)
             dec_dropout = self.dropout_decoder(x)
             return dec_mean_gamma, dec_dropout, dec_latent
-        elif self.recon_loss in ["nb", "nb_dist"]:
+        elif self.recon_loss in ["nb"]:
             dec_mean_gamma = self.mean_decoder(x)
             return dec_mean_gamma, dec_latent
         elif self.recon_loss == 'bernoulli':
