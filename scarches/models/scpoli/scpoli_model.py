@@ -418,7 +418,7 @@ class scPoli(BaseMixin):
 
         """
         
-        assert self.prototypes_labeled_['mean'] is not None, f"Model was trained without prototypes"
+        assert self.prototypes_labeled_ is not None, f"Model was trained without prototypes"
 
         device = next(self.model.parameters()).device
         self.model.eval()
