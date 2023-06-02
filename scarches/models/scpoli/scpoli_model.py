@@ -203,7 +203,7 @@ class scPoli(BaseMixin):
 
         self.input_dim_ = adata.n_vars
         self.prototypes_labeled_ = (
-            {"mean": None, "cov": None}
+            {"mean": None}
             if prototypes_labeled is None
             else prototypes_labeled
         )
@@ -241,9 +241,6 @@ class scPoli(BaseMixin):
 
         if self.prototypes_labeled_["mean"] is not None:
             self.prototypes_labeled_["mean"] = self.prototypes_labeled_["mean"].to(
-                next(self.model.parameters()).device
-            )
-            self.prototypes_labeled_["cov"] = self.prototypes_labeled_["cov"].to(
                 next(self.model.parameters()).device
             )
         if self.prototypes_unlabeled_["mean"] is not None:

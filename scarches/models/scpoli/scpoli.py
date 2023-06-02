@@ -5,7 +5,6 @@ from torch.distributions import Normal, kl_divergence
 
 from ._utils import one_hot_encoder
 from ..trvae.losses import mse, nb, zinb, bce, poisson, nb_dist
-from ...trainers.scpoli._utils import cov
 
 class scpoli(nn.Module):
     def __init__(
@@ -62,7 +61,7 @@ class scpoli(nn.Module):
             for unknown_ct in self.unknown_ct_names:
                 self.cell_type_encoder[unknown_ct] = -1
         self.prototypes_labeled = (
-            {"mean": None, "cov": None}
+            {"mean": None}
             if prototypes_labeled is None
             else prototypes_labeled
         )
@@ -259,13 +258,6 @@ class scpoli(nn.Module):
         min_dist, y_hat = torch.min(dists, 1)
         y_hat = classes_list[y_hat]
         indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
-
-        # Add new prototype cov to labeled prototype covs
-        new_prototype_cov = cov(latent[indices, :]).unsqueeze(0)
-        new_prototype_cov = new_prototype_cov.to(self.prototypes_labeled["cov"].device)
-        self.prototypes_labeled["cov"] = torch.cat(
-            (self.prototypes_labeled["cov"], new_prototype_cov), dim=0
-        )
 
     def classify(
         self,

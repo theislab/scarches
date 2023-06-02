@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
 
-from ._utils import make_dataset, cov, custom_collate, print_progress
+from ._utils import make_dataset, custom_collate, print_progress
 from ...utils.monitor import EarlyStopping
 
 
@@ -180,10 +180,8 @@ class scPoliTrainer:
         self.use_early_stopping_orig = self.use_early_stopping
 
         self.prototypes_labeled = None  # prototypes labeled cells (means)
-        self.prototypes_labeled_cov = None  # prototypes labeled cells (cov)
         self.prototypes_unlabeled = None  # prototypes all cells (means)
         self.best_prototypes_labeled = None  # cache for ES, to use best state
-        self.best_prototypes_labeled_cov = None  # cache for ES
         self.best_prototypes_unlabeled = None  # cache for ES
         self.prototype_optim = None  # prototype optimizer
         
@@ -204,12 +202,8 @@ class scPoliTrainer:
         #parse prototypes from model into right format
         if self.model.prototypes_labeled["mean"] is not None:
             self.prototypes_labeled = self.model.prototypes_labeled["mean"]
-            self.prototypes_labeled_cov = self.model.prototypes_labeled["cov"]
         if self.prototypes_labeled is not None:
             self.prototypes_labeled = self.prototypes_labeled.to(device=self.device)
-            self.prototypes_labeled_cov = self.prototypes_labeled_cov.to(
-                device=self.device
-            )
 
     def initialize_loaders(self):
         """
@@ -411,19 +405,12 @@ class scPoliTrainer:
                                 as_tuple=False
                             )[:, 0]
                             prototype = labeled_latent[indices].mean(0).unsqueeze(0)
-                            prototype_cov = cov(labeled_latent[indices]).unsqueeze(0)
                             self.prototypes_labeled = torch.cat(
                                 [self.prototypes_labeled, prototype]
                             )
-                            self.prototypes_labeled_cov = torch.cat(
-                                [self.prototypes_labeled_cov, prototype_cov]
-                            )
             else:  
                 #compute labeled prototypes
-                (
-                    self.prototypes_labeled,
-                    self.prototypes_labeled_cov,
-                ) = self.update_labeled_prototypes(
+                    self.prototypes_labeled = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
                     self.train_data.cell_types[
                         torch.where(self.train_data.labeled_vector == 1)[0], :
@@ -526,7 +513,6 @@ class scPoliTrainer:
             self.use_early_stopping = True
         if self.epoch >= self.pretraining_epochs and self.epoch - 1 == self.best_epoch:
             self.best_prototypes_labeled = self.prototypes_labeled
-            self.best_prototypes_labeled_cov = self.prototypes_labeled_cov
             self.best_prototypes_unlabeled = self.prototypes_unlabeled
 
     def loss(self, total_batch=None):
@@ -594,16 +580,12 @@ class scPoliTrainer:
 
             # Update labeled prototype positions
             if self.any_labeled_data is True:
-                (
-                    self.prototypes_labeled,
-                    self.prototypes_labeled_cov,
-                ) = self.update_labeled_prototypes(
+                self.prototypes_labeled = self.update_labeled_prototypes(
                     latent[torch.where(self.train_data.labeled_vector == 1)[0]],
                     self.train_data.cell_types[
                         torch.where(self.train_data.labeled_vector == 1)[0], :
                     ],
                     self.prototypes_labeled,
-                    self.prototypes_labeled_cov,
                     self.model.new_prototypes,
                 )
 
@@ -641,11 +623,9 @@ class scPoliTrainer:
         """
         if self.best_state_dict is not None and self.reload_best:
             self.prototypes_labeled = self.best_prototypes_labeled
-            self.prototypes_labeled_cov = self.best_prototypes_labeled_cov
             self.prototypes_unlabeled = self.best_prototypes_unlabeled
 
         self.model.prototypes_labeled["mean"] = self.prototypes_labeled
-        self.model.prototypes_labeled["cov"] = self.prototypes_labeled_cov
 
         if self.prototypes_unlabeled is not None:
             self.model.prototypes_unlabeled["mean"] = torch.stack(
@@ -655,7 +635,7 @@ class scPoliTrainer:
             self.model.prototypes_unlabeled["mean"] = self.prototypes_unlabeled
 
     def update_labeled_prototypes(
-        self, latent, labels, previous_prototypes, previous_prototypes_cov, mask=None
+        self, latent, labels, previous_prototypes, mask=None
     ):
         """
         Function that updates labeled prototypes.
@@ -668,45 +648,30 @@ class scPoliTrainer:
             Tensor containing cell type information of the batch
         previous_prototypes: Tensor
             Tensor containing the means of the prototypes before update
-        previous_prototypes_cov: Tensor
-            Tensor containing the covariance matrices of the prototypes before udpate.
 
         """
         with torch.no_grad():
             unique_labels = torch.unique(labels, sorted=True)
             prototypes_mean = None
-            prototypes_cov = None
             for value in range(self.model.n_cell_types):
                 if (
                     mask is None or value in mask
                 ) and value in unique_labels:  # update the prototype included in mask if there is one
                     indices = labels.eq(value).nonzero(as_tuple=False)[:, 0]
                     prototype = latent[indices, :].mean(0).unsqueeze(0)
-                    prototype_cov = cov(latent[indices, :]).unsqueeze(0)
                     prototypes_mean = (
                         torch.cat([prototypes_mean, prototype])
                         if prototypes_mean is not None
                         else prototype
-                    )
-                    prototypes_cov = (
-                        torch.cat([prototypes_cov, prototype_cov])
-                        if prototypes_cov is not None
-                        else prototype_cov
                     )
                 else:  # do not update the prototypes (e.g. during surgery prototypes are fixed)
                     prototype = previous_prototypes[value].unsqueeze(0)
-                    prototype_cov = previous_prototypes_cov[value].unsqueeze(0)
                     prototypes_mean = (
                         torch.cat([prototypes_mean, prototype])
                         if prototypes_mean is not None
                         else prototype
                     )
-                    prototypes_cov = (
-                        torch.cat([prototypes_cov, prototype_cov])
-                        if prototypes_cov is not None
-                        else prototype_cov
-                    )
-        return prototypes_mean, prototypes_cov
+        return prototypes_mean
 
     def prototype_labeled_loss(self, latent, prototypes, labels):
         """
