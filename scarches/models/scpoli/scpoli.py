@@ -236,11 +236,6 @@ class scpoli(nn.Module):
 
         # Get latent indices which correspond to new prototype
         self.prototypes_labeled = self.prototypes_labeled.to(device)
-        # latent = latent.to(device)
-        # dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :])
-        # min_dist, y_hat = torch.min(dists, 1)
-        # y_hat = classes_list[y_hat]
-        # indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
 
     def classify(
         self,
