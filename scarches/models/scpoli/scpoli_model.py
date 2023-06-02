@@ -37,10 +37,10 @@ class scPoli(BaseMixin):
         List of strings with the names of cell clusters to be ignored for prototypes computation.
     labeled_indices: List
         List of integers with the indices of the labeled cells.
-    prototypes_labeled: Dictionary
-        Dictionary with keys mean, cov and the respective mean or covariate matrices for prototypes.
-    prototypes_unlabeled: Dictionary
-        Dictionary with keys mean and the respective mean for unlabeled prototypes.
+    prototypes_labeled: torch.tensor
+        Mean of unlabeled prototypes.
+    prototypes_unlabeled: torch.tensor
+        Means or unlabeled prototypes.
     hidden_layer_sizes: List
         A list of hidden layer sizes for encoder network. Decoder network will be the reversed order.
     latent_dim: Integer
@@ -82,8 +82,8 @@ class scPoli(BaseMixin):
         cell_types: Optional[dict] = None,
         unknown_ct_names: Optional[list] = None,
         labeled_indices: Optional[list] = None,
-        prototypes_labeled: Optional[dict] = None,
-        prototypes_unlabeled: Optional[dict] = None,
+        prototypes_labeled: Optional[torch.tensor] = None,
+        prototypes_unlabeled: Optional[torch.tensor] = None,
         hidden_layer_sizes: list = None,
         latent_dim: int = 10,
         embedding_dims: Union[list, int] = 10,
@@ -202,18 +202,8 @@ class scPoli(BaseMixin):
         self.embedding_max_norm_ = embedding_max_norm
 
         self.input_dim_ = adata.n_vars
-        self.prototypes_labeled_ = (
-            {"mean": None}
-            if prototypes_labeled is None
-            else prototypes_labeled
-        )
-        self.prototypes_unlabeled_ = (
-            {
-                "mean": None,
-            }
-            if prototypes_unlabeled is None
-            else prototypes_unlabeled
-        )
+        self.prototypes_labeled_ = prototypes_labeled
+        self.prototypes_unlabeled_ = prototypes_unlabeled
 
         self.model_cell_types = list(self.cell_types_.keys())
         self.is_trained_ = False
@@ -239,12 +229,12 @@ class scPoli(BaseMixin):
             use_ln=self.use_ln_,
         )
 
-        if self.prototypes_labeled_["mean"] is not None:
-            self.prototypes_labeled_["mean"] = self.prototypes_labeled_["mean"].to(
+        if self.prototypes_labeled_ is not None:
+            self.prototypes_labeled_ = self.prototypes_labeled_.to(
                 next(self.model.parameters()).device
             )
-        if self.prototypes_unlabeled_["mean"] is not None:
-            self.prototypes_unlabeled_["mean"] = self.prototypes_unlabeled_["mean"].to(
+        if self.prototypes_unlabeled_ is not None:
+            self.prototypes_unlabeled_ = self.prototypes_unlabeled_.to(
                 next(self.model.parameters()).device
             )
 
@@ -615,10 +605,10 @@ class scPoli(BaseMixin):
 
         """
         if prototype_set == "labeled":
-            prototypes = self.prototypes_labeled_["mean"].detach().cpu().numpy()
+            prototypes = self.prototypes_labeled_.detach().cpu().numpy()
             batch_name = "prototype-Set Labeled"
         elif prototype_set == "unlabeled":
-            prototypes = self.prototypes_unlabeled_["mean"].detach().cpu().numpy()
+            prototypes = self.prototypes_unlabeled_.detach().cpu().numpy()
             batch_name = "prototype-Set Unlabeled"
         else:
             print(

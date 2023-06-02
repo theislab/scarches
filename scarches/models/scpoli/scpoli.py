@@ -60,21 +60,15 @@ class scpoli(nn.Module):
         if self.unknown_ct_names is not None:
             for unknown_ct in self.unknown_ct_names:
                 self.cell_type_encoder[unknown_ct] = -1
-        self.prototypes_labeled = (
-            {"mean": None}
-            if prototypes_labeled is None
-            else prototypes_labeled
-        )
-        self.prototypes_unlabeled = (
-            {"mean": None} if prototypes_unlabeled is None else prototypes_unlabeled
-        )
+        self.prototypes_labeled = prototypes_labeled
+        self.prototypes_unlabeled = prototypes_unlabeled
         self.new_prototypes = None
         self.num_reference_conditions = None
-        if self.prototypes_labeled["mean"] is not None:
+        if self.prototypes_labeled is not None:
             # Save indices of possible new prototypes to train
             self.new_prototypes = []
-            for idx in range(self.n_cell_types - len(self.prototypes_labeled["mean"])):
-                self.new_prototypes.append(len(self.prototypes_labeled["mean"]) + idx)
+            for idx in range(self.n_cell_types - len(self.prototypes_labeled)):
+                self.new_prototypes.append(len(self.prototypes_labeled) + idx)
 
         self.dr_rate = dr_rate
         if self.dr_rate > 0:
@@ -245,16 +239,16 @@ class scpoli(nn.Module):
 
         # Add new prototype mean to labeled prototype means
         new_prototype = (
-            self.prototypes_unlabeled["mean"][prototypes].mean(0).unsqueeze(0)
+            self.prototypes_unlabeled[prototypes].mean(0).unsqueeze(0)
         )
-        self.prototypes_labeled["mean"] = torch.cat(
-            (self.prototypes_labeled["mean"], new_prototype), dim=0
+        self.prototypes_labeled = torch.cat(
+            (self.prototypes_labeled, new_prototype), dim=0
         )
 
         # Get latent indices which correspond to new prototype
-        self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
+        self.prototypes_labeled = self.prototypes_labeled.to(device)
         latent = latent.to(device)
-        dists = torch.cdist(latent, self.prototypes_labeled["mean"][classes_list, :])
+        dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :])
         min_dist, y_hat = torch.min(dists, 1)
         y_hat = classes_list[y_hat]
         indices = y_hat.eq(self.n_cell_types - 1).nonzero(as_tuple=False)[:, 0]
@@ -290,8 +284,8 @@ class scpoli(nn.Module):
         else:
             latent = self.get_latent(x, c)
         device = next(self.parameters()).device
-        self.prototypes_labeled["mean"] = self.prototypes_labeled["mean"].to(device)
-        dists = torch.cdist(latent, self.prototypes_labeled["mean"][classes_list, :], p)
+        self.prototypes_labeled = self.prototypes_labeled.to(device)
+        dists = torch.cdist(latent, self.prototypes_labeled[classes_list, :], p)
 
         # Idea of using euclidean distances for classification
         if get_prob == True:

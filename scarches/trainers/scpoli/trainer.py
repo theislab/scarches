@@ -200,8 +200,8 @@ class scPoliTrainer:
         )
         
         #parse prototypes from model into right format
-        if self.model.prototypes_labeled["mean"] is not None:
-            self.prototypes_labeled = self.model.prototypes_labeled["mean"]
+        if self.model.prototypes_labeled is not None:
+            self.prototypes_labeled = self.model.prototypes_labeled
         if self.prototypes_labeled is not None:
             self.prototypes_labeled = self.prototypes_labeled.to(device=self.device)
 
@@ -625,14 +625,14 @@ class scPoliTrainer:
             self.prototypes_labeled = self.best_prototypes_labeled
             self.prototypes_unlabeled = self.best_prototypes_unlabeled
 
-        self.model.prototypes_labeled["mean"] = self.prototypes_labeled
+        self.model.prototypes_labeled = self.prototypes_labeled
 
         if self.prototypes_unlabeled is not None:
-            self.model.prototypes_unlabeled["mean"] = torch.stack(
+            self.model.prototypes_unlabeled = torch.stack(
                 self.prototypes_unlabeled
             ).squeeze()
         else:
-            self.model.prototypes_unlabeled["mean"] = self.prototypes_unlabeled
+            self.model.prototypes_unlabeled = self.prototypes_unlabeled
 
     def update_labeled_prototypes(
         self, latent, labels, previous_prototypes, mask=None
