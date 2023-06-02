@@ -8,3 +8,5 @@ own_notebooks/
 build/
 dist/
 .ipynb_checkpoints
+.vscode
+
