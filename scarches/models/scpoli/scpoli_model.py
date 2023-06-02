@@ -137,7 +137,7 @@ class scPoli(BaseMixin):
             if len(self.condition_keys_) > 1:
                 self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
             else:
-                self.adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x))
+                self.adata.obs['conditions_combined'] = adata.obs[condition_keys]
             self.conditions_combined_ = self.adata.obs['conditions_combined'].unique().tolist()
         else:
             self.conditions_combined_ = conditions_combined
