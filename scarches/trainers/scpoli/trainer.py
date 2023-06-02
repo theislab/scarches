@@ -516,7 +516,7 @@ class scPoliTrainer:
             self.best_prototypes_unlabeled = self.prototypes_unlabeled
 
     def loss(self, total_batch=None):
-        latent, recon_loss, kl_loss, mmd_loss = self.model(**total_batch)
+        latent, recon_loss, kl_loss = self.model(**total_batch)
 
         #calculate classifier loss for labeled/unlabeled data
         label_categories = total_batch["labeled"].unique().tolist()
@@ -547,13 +547,12 @@ class scPoliTrainer:
 
         # Loss addition and Logs
         prototype_loss = self.eta * unweighted_prototype_loss
-        cvae_loss = recon_loss + self.calc_alpha_coeff() * kl_loss + mmd_loss
+        cvae_loss = recon_loss + self.calc_alpha_coeff() * kl_loss
         loss = cvae_loss + prototype_loss
         self.iter_logs["loss"].append(loss.item())
         self.iter_logs["unweighted_loss"].append(
             recon_loss.item()
             + kl_loss.item()
-            + mmd_loss.item()
             + unweighted_prototype_loss.item()
         )
         self.iter_logs["cvae_loss"].append(cvae_loss.item())

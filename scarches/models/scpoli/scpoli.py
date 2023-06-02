@@ -21,7 +21,6 @@ class scpoli(nn.Module):
         embedding_max_norm,
         recon_loss,
         dr_rate,
-        beta,
         use_bn,
         use_ln,
         prototypes_labeled,
@@ -184,15 +183,7 @@ class scpoli(nn.Module):
             .mean()
         )
 
-        mmd_loss = torch.tensor(0.0, device=z1.device)
-        if self.use_mmd:
-            mmd_calculator = mmd(self.n_conditions, self.beta, self.mmd_boundary)
-            if self.mmd_on == "z":
-                mmd_loss = mmd_calculator(z1, batch)
-            else:
-                mmd_loss = mmd_calculator(y1, batch)
-
-        return z1, recon_loss, kl_div, mmd_loss
+        return z1, recon_loss, kl_div
 
     def add_new_cell_type(self, latent, cell_type_name, prototypes, classes_list=None):
         """

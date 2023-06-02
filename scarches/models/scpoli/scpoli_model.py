@@ -51,18 +51,8 @@ class scPoli(BaseMixin):
         Max norm allowed for conditional embeddings.
     dr_rate: Float
         Dropput rate applied to all layers, if `dr_rate`==0 no dropout will be applied.
-    use_mmd: Boolean
-        If 'True' an additional MMD loss will be calculated on the latent dim. 'z' or the first decoder layer 'y'.
-    mmd_on: String
-        Choose on which layer MMD loss will be calculated on if 'use_mmd=True': 'z' for latent dim or 'y' for first
-        decoder layer.
-    mmd_boundary: Integer or None
-        Choose on how many conditions the MMD loss should be calculated on. If 'None' MMD will be calculated on all
-        conditions.
     recon_loss: String
         Definition of Reconstruction-Loss-Method, 'mse', 'nb' or 'zinb'.
-    beta: Float
-        Scaling Factor for MMD loss
     use_bn: Boolean
         If `True` batch normalization will be applied to layers.
     use_ln: Boolean
@@ -89,11 +79,7 @@ class scPoli(BaseMixin):
         embedding_dims: Union[list, int] = 10,
         embedding_max_norm: float = 1.0,
         dr_rate: float = 0.05,
-        use_mmd: bool = False,
-        mmd_on: str = "z",
-        mmd_boundary: Optional[int] = None,
         recon_loss: Optional[str] = "nb",
-        beta: float = 1,
         use_bn: bool = False,
         use_ln: bool = True,
     ):
@@ -185,11 +171,8 @@ class scPoli(BaseMixin):
             self.hidden_layer_sizes_ = hidden_layer_sizes
         self.latent_dim_ = latent_dim
         self.dr_rate_ = dr_rate
-        self.use_mmd_ = use_mmd
-        self.mmd_on_ = mmd_on
-        self.mmd_boundary_ = mmd_boundary
+        self.use_mmd_ = False
         self.recon_loss_ = recon_loss
-        self.beta_ = beta
         self.use_bn_ = use_bn
         self.use_ln_ = use_ln
         self.inject_condition_ = inject_condition
@@ -224,7 +207,6 @@ class scPoli(BaseMixin):
             latent_dim=self.latent_dim_,
             dr_rate=self.dr_rate_,
             recon_loss=self.recon_loss_,
-            beta=self.beta_,
             use_bn=self.use_bn_,
             use_ln=self.use_ln_,
         )
@@ -674,11 +656,7 @@ class scPoli(BaseMixin):
             "hidden_layer_sizes": dct["hidden_layer_sizes_"],
             "latent_dim": dct["latent_dim_"],
             "dr_rate": dct["dr_rate_"],
-            "use_mmd": dct["use_mmd_"],
-            "mmd_on": dct["mmd_on_"],
-            "mmd_boundary": dct["mmd_boundary_"],
             "recon_loss": dct["recon_loss_"],
-            "beta": dct["beta_"],
             "use_bn": dct["use_bn_"],
             "use_ln": dct["use_ln_"],
             "embedding_dims": dct["embedding_dims_"],
@@ -741,7 +719,6 @@ class scPoli(BaseMixin):
                     new_conditions[cond].append(item)
 
         # Add new conditions to overall conditions
-
         for cond in condition_keys:
             for condition in new_conditions[cond]:
                 conditions[cond].append(condition)
