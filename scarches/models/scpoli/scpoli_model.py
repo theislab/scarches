@@ -85,6 +85,8 @@ class scPoli(BaseMixin):
     ):
         # gather data information
         self.adata = adata
+        if self.adata.X.dtype != 'float32':
+            self.adata.X = self.adata.X.astype('float32')
         self.share_metadata_ = share_metadata
         
         if isinstance(condition_keys, str):
