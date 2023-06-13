@@ -38,7 +38,7 @@ class MultiConditionAnnotatedDataset(Dataset):
         self.cell_type_keys = cell_type_keys
         self.cell_type_encoder = cell_type_encoder
         self._is_sparse = sparse.issparse(adata.X)
-        self.data = adata.X if self._is_sparse else torch.tensor(adata.X)
+        self.data = adata.X if self._is_sparse else torch.tensor(adata.X, dtype=torch.float32)
 
         size_factors = np.ravel(adata.X.sum(1))
 
@@ -80,7 +80,7 @@ class MultiConditionAnnotatedDataset(Dataset):
         outputs = dict()
 
         if self._is_sparse:
-            x = torch.tensor(np.squeeze(self.data[index].toarray()))
+            x = torch.tensor(np.squeeze(self.data[index].toarray()), dtype=torch.float32)
         else:
             x = self.data[index]
         outputs["x"] = x

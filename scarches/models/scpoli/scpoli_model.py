@@ -344,7 +344,7 @@ class scPoli(BaseMixin):
             c = torch.tensor(label_tensor, device=device).T
         if sparse.issparse(x):
             x = x.A
-        x = torch.tensor(x, device=device)
+        x = torch.tensor(x, device=device, dtype=torch.float32)
 
         latents = []
         # batch the latent transformation process
