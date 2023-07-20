@@ -100,7 +100,7 @@ def custom_collate(batch):
         output = {key: custom_collate([d[key] for d in batch]) for key in elem}
         return output
 
-def train_test_split(adata, train_frac=0.85, condition_key=None, cell_type_key=None, labeled_array=None):
+def train_test_split(adata, train_frac=0.85, condition_keys=None, cell_type_key=None, labeled_array=None):
     """Splits 'Anndata' object into training and validation data.
 
        Parameters
@@ -206,8 +206,8 @@ def make_dataset(adata,
         train_idx, val_idx = train_test_split(adata, train_frac, cell_type_key=finest_level,
                                               labeled_array=labeled_array)
 
-    elif condition_key is not None:
-        train_idx, val_idx = train_test_split(adata, train_frac, condition_key=condition_key)
+    elif condition_keys is not None:
+        train_idx, val_idx = train_test_split(adata, train_frac, condition_keys=condition_keys)
     else:
         train_idx, val_idx = train_test_split(adata, train_frac)
 
