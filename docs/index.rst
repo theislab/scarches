@@ -71,4 +71,5 @@ scArches allows your single-cell query data to be analyzed by integrating it int
    mvTCR_borcherding
    multigrate
    scpoli_surgery_pipeline
+   scpoli_ATAC.ipynb
    hlca_map_classify
