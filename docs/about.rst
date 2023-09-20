@@ -41,7 +41,7 @@ to different models. Here we provide a short explanation and hints on when to us
 
 - **mvTCR** (`Drost et al., 2022 <https://www.biorxiv.org/content/10.1101/2021.06.24.449733v2.abstract?%3Fcollection=>`_): Using this model you will be able to integrate T-cell receptor (TCR, treated as a sequence) and scRNA-seq dataset across multiple donors into a joint representation capturing information from both modalities.
 
-- **scPoli** (`De Donno et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_): This model allows data integration of scRNA-seq dataset, prototype-based label transfer and reference mapping. scPoli learns both sample embeddings and integrated cell embeddings, thus providing the user with a multi-scale view of the data, especially useful in the case of many samples to integrate.
+- **scPoli** (`De Donno et al., 2022 <https://www.biorxiv.org/content/10.1101/2022.11.28.517803v1>`_): This model allows data integration of scRNA-seq and also scATAC-seq dataset, prototype-based label transfer and reference mapping. scPoli learns both sample embeddings and integrated cell embeddings, thus providing the user with a multi-scale view of the data, especially useful in the case of many samples to integrate.
 
 Where to start?
 ---------------
