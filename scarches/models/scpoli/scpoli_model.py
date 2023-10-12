@@ -740,7 +740,7 @@ class scPoli(BaseMixin):
             attr_dict, model_state_dict, var_names = cls._load_params(reference_model)
             adata = _validate_var_names(adata, var_names)
         else:
-            attr_dict = reference_model._get_public_attributes()
+            attr_dict = deepcopy(reference_model._get_public_attributes())
             model_state_dict = reference_model.model.state_dict()
         init_params = cls._get_init_params_from_dict(attr_dict)
 
@@ -767,7 +767,7 @@ class scPoli(BaseMixin):
         if len(condition_keys) > 1:
             adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x), axis=1)
         else:
-            adata.obs['conditions_combined'] = adata.obs[condition_keys].apply(lambda x: '_'.join(x))
+            adata.obs['conditions_combined'] = adata.obs[condition_keys]
         new_conditions_combined = adata.obs['conditions_combined'].unique().tolist()
         for item in new_conditions_combined:
             if item not in conditions_combined:
