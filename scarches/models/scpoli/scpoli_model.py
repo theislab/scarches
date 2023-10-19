@@ -853,6 +853,8 @@ class scPoli(BaseMixin):
 
         assert len(model.condition_keys_) == 1
 
+        model.model.eval()
+
         cond_key = model.condition_keys_[0]
         new_conditions_list = new_conditions[cond_key]
 
