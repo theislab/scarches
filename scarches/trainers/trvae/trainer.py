@@ -336,7 +336,11 @@ class Trainer:
 
         for name, param in self.model.named_parameters():
             optpar_dict[task_id][name] = param.data.clone() 
-            fisher_dict[task_id][name] = param.grad.data.clone().pow(2) 
+            if param.grad is not None:
+                fisher_dict[task_id][name] = param.grad.data.clone().pow(2) 
+            #sometimes I get AttributeError: 'NoneType' object has no attribute 'data', what is the best way to handle?
+            else: 
+                fisher_dict[task_id][name] = torch.zeros(param.shape, device=self.device)
 
             
     def train_ewc(self,task_id,batch_data):  
