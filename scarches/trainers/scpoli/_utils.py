@@ -67,6 +67,9 @@ def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, leng
     sys.stdout.flush()
 
 def custom_collate(batch):
+    if isinstance(batch, dict):
+        return batch
+    
     r"""Puts each data field into a tensor with outer dimension batch size"""
     np_str_obj_array_pattern = re.compile(r'[SaUO]')
     default_collate_err_msg_format = (
