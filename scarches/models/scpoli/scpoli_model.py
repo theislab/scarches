@@ -347,11 +347,11 @@ class scPoli(BaseMixin):
             c = torch.tensor(label_tensor, device=device).T
         if sparse.issparse(x):
             x = x.A
-        x = torch.tensor(x, device=device, dtype=torch.float32)
+        x = torch.tensor(x, dtype=torch.float32)
 
         latents = []
         # batch the latent transformation process
-        indices = torch.arange(x.size(0), device=device)
+        indices = torch.arange(x.size(0))
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
             latent = self.model.get_latent(
