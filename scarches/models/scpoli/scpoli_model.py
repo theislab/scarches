@@ -840,8 +840,12 @@ class scPoli(BaseMixin):
         unknown_ct_names: Optional[list] = None,
         train_epochs: int = 0,
         batch_size: int = 128,
+        subsample: float = 1.,
+        force_cuda: bool = True,
         **kwargs
     ):
+        assert subsample > 0. and subsample <= 1.
+
         model, new_conditions = cls.load_query_data(
             adata,
             reference_model,
@@ -853,6 +857,9 @@ class scPoli(BaseMixin):
 
         assert len(model.condition_keys_) == 1
 
+        if force_cuda and torch.cuda.is_available():
+            model.model.cuda()
+
         model.model.eval()
 
         cond_key = model.condition_keys_[0]
@@ -862,6 +869,11 @@ class scPoli(BaseMixin):
         for new_cond in new_conditions_list:
             print(f"Processing {new_cond}.")
             adata_cond = adata[adata.obs[cond_key] == new_cond]
+            if subsample < 1.:
+                n_obs = len(adata_cond)
+                n_ss = int(subsample * n_obs)
+                idx = np.random.choice(n_obs, n_ss, replace=False)
+                adata_cond = adata_cond[idx]
 
             min_recon_loss = None
             for old_cond in model.conditions_[cond_key]:
@@ -917,9 +929,11 @@ class scPoli(BaseMixin):
             collate_fn=custom_collate
         )
 
+        device = next(self.model.parameters()).device
         recon_loss = 0.
         with torch.no_grad():
             for batch in dl:
+                batch = {k: v.to(device) for k, v in batch.items()}
                 _, recon_loss_batch, _, _ = self.model(**batch)
                 recon_loss += recon_loss_batch * batch["x"].shape[0]
 
