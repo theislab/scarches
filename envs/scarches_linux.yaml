@@ -10,7 +10,7 @@ dependencies:
   - pytorch
   - torchaudio
   - torchvision
-  - pytorch-cuda=11.7
+  - pytorch-cuda=11.8
   - pip:
     - scvi-tools
     - scarches
