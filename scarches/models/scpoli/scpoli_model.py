@@ -313,22 +313,23 @@ class scPoli(BaseMixin):
         self,
         adata,
         mean: bool = False,
+        mean_var: bool = False
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
         data.
 
-         Parameters
-         ----------
-         x
-             Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-         c
-             `numpy nd-array` of original (unencoded) desired labels for each sample.
-         mean
-             return mean instead of random sample from the latent space
+            Parameters
+            ----------
+            x
+                Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
+            c
+                `numpy nd-array` of original (unencoded) desired labels for each sample.
+            mean
+                return mean instead of random sample from the latent space
 
         Returns
         -------
-             Returns array containing latent space encoding of 'x'.
+                Returns array containing latent space encoding of 'x'.
         """
         device = next(self.model.parameters()).device
         x = adata.X
@@ -345,20 +346,20 @@ class scPoli(BaseMixin):
                     labels[query_conditions == condition] = label
                 label_tensor.append(labels)
             c = torch.tensor(label_tensor, device=device).T
-        if sparse.issparse(x):
-            x = x.A
-        x = torch.tensor(x, dtype=torch.float32)
 
         latents = []
         # batch the latent transformation process
-        indices = torch.arange(x.size(0))
+        indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
+            x_batch = x[batch, :]
+            if sparse.issparse(x_batch):
+                x_batch = x_batch.toarray()
+            x_batch = torch.tensor(x_batch, device=device)
             latent = self.model.get_latent(
-                x[batch, :].to(device), c[batch, :].to(device), mean
+                x_batch, c[batch, :], mean
             )
             latents += [latent.cpu().detach()]
-
         latents = torch.cat(latents)
         return np.array(latents)
 
