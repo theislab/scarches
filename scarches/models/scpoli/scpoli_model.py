@@ -345,22 +345,7 @@ class scPoli(BaseMixin):
                     labels[query_conditions == condition] = label
                 label_tensor.append(labels)
             c = torch.tensor(label_tensor, device=device).T
-        # if sparse.issparse(x):
-        #     x = x.A
-        # x = torch.tensor(x, dtype=torch.float32)
-
-        # latents = []
-        # # batch the latent transformation process
-        # indices = torch.arange(x.size(0))
-        # subsampled_indices = indices.split(512)
-        # for batch in subsampled_indices:
-        #     latent = self.model.get_latent(
-        #         x[batch, :].to(device), c[batch, :].to(device), mean
-        #     )
-        #     latents += [latent.cpu().detach()]
-
-        # latents = torch.cat(latents)
-        # return np.array(latents)
+ 
         latents = []
         # batch the latent transformation process
         indices = torch.arange(x.shape[0])

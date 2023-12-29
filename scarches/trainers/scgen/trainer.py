@@ -1,5 +1,6 @@
 import torch
 from scipy import sparse
+import logging
 from anndata import AnnData
 from collections import defaultdict
 
@@ -44,11 +45,17 @@ class vaeArithTrainer:
 
         self.model = model
 
+        logging.basicConfig(level=logging.INFO)
+
         self.seed = kwargs.get("seed", 2021)
         torch.manual_seed(self.seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed(self.seed)
             self.model.cuda() # put model to cuda(gpu)
+            logging.info("GPU available: True, GPU used: True")
+        else:
+            logging.info("GPU available: False")
+            
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.adata = adata
