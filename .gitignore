@@ -9,3 +9,9 @@ build/
 dist/
 .ipynb_checkpoints
 .vscode/
+
+jupyter.sh
+slurm*
+tmp
+model/
+atlas

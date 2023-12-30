@@ -45,7 +45,8 @@ class vaeArithTrainer:
 
         self.model = model
 
-        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
 
         self.seed = kwargs.get("seed", 2021)
         torch.manual_seed(self.seed)

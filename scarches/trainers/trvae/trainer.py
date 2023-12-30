@@ -105,7 +105,8 @@ class Trainer:
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
 
-        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
 
         torch.manual_seed(self.seed)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
