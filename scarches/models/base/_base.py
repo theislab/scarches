@@ -1,16 +1,15 @@
 import inspect
 import os
-import torch
 import pickle
-import numpy as np
-
 from copy import deepcopy
-from anndata import AnnData, read
 from typing import Optional, Union
-from torch.distributions import Normal
+
+import numpy as np
+import torch
+from anndata import AnnData, read
 from scipy.sparse import issparse
 
-from ._utils import _validate_var_names
+from ._utils import UnpicklerCpu, _validate_var_names
 
 
 class BaseMixin:
@@ -127,8 +126,18 @@ class BaseMixin:
         model_path = os.path.join(dir_path, "model_params.pt")
         varnames_path = os.path.join(dir_path, "var_names.csv")
 
-        with open(setup_dict_path, "rb") as handle:
-            attr_dict = pickle.load(handle)
+        try:
+            with open(setup_dict_path, "rb") as handle:
+                attr_dict = pickle.load(handle)
+        # This catches the following error:
+        # RuntimeError: Attempting to deserialize object on a CUDA device
+        # but torch.cuda.is_available() is False.
+        # If you are running on a CPU-only machine, please use torch.load with 
+        # map_location=torch.device('cpu') to map your storages to the CPU.
+        except RuntimeError:
+            with open(setup_dict_path, "rb") as handle:
+                attr_dict = UnpicklerCpu(handle).load()
+        
 
         model_state_dict = torch.load(model_path, map_location=map_location)
 
