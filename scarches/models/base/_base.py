@@ -9,8 +9,7 @@ import torch
 from anndata import AnnData, read
 from scipy.sparse import issparse
 
-from models.base._utils import get_minified_adata_scrna
-from ._utils import UnpicklerCpu, _validate_var_names
+from ._utils import UnpicklerCpu, _validate_var_names, get_minified_adata_scrna
 
 
 class BaseMixin:
@@ -208,7 +207,7 @@ class BaseMixin:
             adata = self.adata
 
         #get the latent representation and store it in the adata
-        qzm, qzv = self.get_latent_representation(adata, mean_var=True)
+        qzm, qzv = self.get_latent(adata, mean_var=True)
         adata.obsm[f"X_latent_qzm_{model_name}"] = qzm
         adata.obsm[f"X_latent_qzv_{model_name}"] = qzv
 
@@ -219,7 +218,10 @@ class BaseMixin:
         minified_adata.obs["observed_lib_size"] = np.squeeze(
             np.asarray(counts.sum(axis=1))
         )
-        return minified_adata
+        self.adata = minified_adata
+
+        print(self.adata)
+
 
 
 class SurgeryMixin:

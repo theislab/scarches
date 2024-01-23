@@ -352,8 +352,12 @@ class scPoli(BaseMixin):
         indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            latent = self.model.get_latent(self.model,
-                x[batch, :].to(device), c[batch, :].to(device), mean, mean_var
+            x_batch = x[batch, :]
+            if sparse.issparse(x_batch):
+                x_batch = x_batch.toarray()
+            x_batch = torch.tensor(x_batch, device=device).float()
+            latent = self.model.get_latent(
+                x_batch, c[batch, :], mean, mean_var
             )
             latent = (latent,) if not isinstance(latent, tuple) else latent
             latents += [tuple(l.cpu().detach() for l in latent)]
@@ -970,6 +974,6 @@ class scPoli(BaseMixin):
         self.model.load_state_dict(load_state_dict)
 
 
-    def minify_adata(self, adata):
+    def minify_adata(self, adata=None):
         super().minify_adata(adata, model_name="scpoli")
 
