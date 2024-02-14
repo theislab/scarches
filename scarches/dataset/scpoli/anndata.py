@@ -120,7 +120,7 @@ class MultiConditionAnnotatedDataset(Dataset):
 
     @property
     def stratifier_weights(self):
-        conditions = self.conditions.detach().cpu().numpy()
+        conditions = self.conditions.detach().cpu().numpy().squeeze()
         condition_coeff = 1. / len(conditions)
 
         condition2count = Counter(conditions)

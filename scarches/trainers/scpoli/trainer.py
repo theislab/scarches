@@ -235,7 +235,7 @@ class scPoliTrainer:
             # Create Sampler and Dataloaders
             stratifier_weights = torch.tensor(self.train_data.stratifier_weights, device=self.device)
 
-            self.sampler = WeightedRandomSampler(stratifier_weights,
+            self.sampler = torch.utils.data.WeightedRandomSampler(stratifier_weights,
                                                  num_samples=self.n_samples,
                                                  replacement=True)
             self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,
