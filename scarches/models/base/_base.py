@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import numpy as np
 import torch
+from torch.distributions import Normal
 from anndata import AnnData, read
 from scipy.sparse import issparse
 
@@ -132,12 +133,12 @@ class BaseMixin:
         # This catches the following error:
         # RuntimeError: Attempting to deserialize object on a CUDA device
         # but torch.cuda.is_available() is False.
-        # If you are running on a CPU-only machine, please use torch.load with 
+        # If you are running on a CPU-only machine, please use torch.load with
         # map_location=torch.device('cpu') to map your storages to the CPU.
         except RuntimeError:
             with open(setup_dict_path, "rb") as handle:
                 attr_dict = UnpicklerCpu(handle).load()
-        
+
 
         model_state_dict = torch.load(model_path, map_location=map_location)
 
