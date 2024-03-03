@@ -76,27 +76,31 @@ class MultiConditionAnnotatedDataset(Dataset):
             self.cell_types = np.stack(self.cell_types).T
             self.cell_types = torch.tensor(self.cell_types, dtype=torch.long)
 
-    def __getitem__(self, index):
+    def __getitems__(self, indices):
+        # Make sure this function supports both single-element and list input
         outputs = dict()
 
         if self._is_sparse:
-            x = torch.tensor(np.squeeze(self.data[index].toarray()), dtype=torch.float32)
+            x = torch.tensor(np.squeeze(self.data[indices].toarray()), dtype=torch.float32)
         else:
-            x = self.data[index]
+            x = self.data[indices]
         outputs["x"] = x
 
-        outputs["labeled"] = self.labeled_vector[index]
-        outputs["sizefactor"] = self.size_factors[index]
+        outputs["labeled"] = self.labeled_vector[indices]
+        outputs["sizefactor"] = self.size_factors[indices]
 
         if self.condition_keys:
-            outputs["batch"] = self.conditions[index, :]
-            outputs["combined_batch"] = self.conditions_combined[index]
+            outputs["batch"] = self.conditions[indices, :]
+            outputs["combined_batch"] = self.conditions_combined[indices]
 
         if self.cell_type_keys:
-            outputs["celltypes"] = self.cell_types[index, :]
+            outputs["celltypes"] = self.cell_types[indices, :]
 
         return outputs
 
+    def __getitem__(self, index):
+        return self.__getitems__(index)
+    
     def __len__(self):
         return self.data.shape[0]
 
