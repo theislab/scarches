@@ -1,5 +1,9 @@
-import numpy as np
+import io
 import logging
+import pickle
+
+import numpy as np
+import torch
 from anndata import AnnData
 from scipy.sparse import csr_matrix, hstack
 
@@ -57,3 +61,15 @@ def _validate_var_names(adata, source_var_names):
     print(new_adata)
 
     return new_adata
+
+
+class UnpicklerCpu(pickle.Unpickler):
+    """Helps to pickle.load a model trained on GPU to CPU.
+    
+    See also https://github.com/pytorch/pytorch/issues/16797#issuecomment-633423219.
+    """
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else:
+            return super().find_class(module, name)

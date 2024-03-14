@@ -7,7 +7,7 @@ import scanpy as sc
 import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
-
+import logging
 from ._utils import make_dataset, cov, custom_collate, print_progress
 from ...utils.monitor import EarlyStopping
 
@@ -132,10 +132,20 @@ class scPoliTrainer:
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
 
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+
         torch.manual_seed(self.seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed(self.seed)
             self.model.cuda()
+            logger.info("GPU available: True, GPU used: True")
+            #print("GPU available: True, GPU used: True")
+        else:
+            logger.info("GPU available: False")
+            #print("GPU available: False")
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.epoch = -1
@@ -225,7 +235,7 @@ class scPoliTrainer:
             # Create Sampler and Dataloaders
             stratifier_weights = torch.tensor(self.train_data.stratifier_weights, device=self.device)
 
-            self.sampler = WeightedRandomSampler(stratifier_weights,
+            self.sampler = torch.utils.data.WeightedRandomSampler(stratifier_weights,
                                                  num_samples=self.n_samples,
                                                  replacement=True)
             self.dataloader_train = torch.utils.data.DataLoader(dataset=self.train_data,

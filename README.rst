@@ -2,7 +2,7 @@
 
  <img src="https://user-images.githubusercontent.com/33202701/187203672-e0415eec-1278-4b2a-a097-5bb8b6ab694f.svg" width="300px" height="200px" align="center">
 
-|PyPI| |PyPIDownloads| |Docs| |travis|
+|PyPI| |PyPIDownloads| |Docs|
 
 
 Single-cell architecture surgery (scArches) is a package for reference-based analysis of single-cell data.
@@ -10,7 +10,7 @@ Single-cell architecture surgery (scArches) is a package for reference-based ana
 
 What is scArches?
 -------------------------------
-scArches allows your single-cell query data to be analyzed by integrating it into a reference atlas. By mapping your data into an integrated reference you can transfer cell-type annotation from reference to query, identify disease states by mapping to healthy atlas, and advanced applications such as imputing missing data modalities or spatial locations. 
+scArches allows your single-cell query data to be analyzed by integrating it into a reference atlas. By mapping your data into an integrated reference you can transfer cell-type annotation from reference to query, identify disease states by mapping to healthy atlas, and advanced applications such as imputing missing data modalities or spatial locations.
 
 
 Usage and installation
@@ -49,6 +49,3 @@ If scArches is helpful in your research, please consider citing the following `p
 
 .. |Docs| image:: https://readthedocs.org/projects/scarches/badge/?version=latest
    :target: https://scarches.readthedocs.io
-
-.. |travis| image:: https://travis-ci.com/theislab/scarches.svg?branch=master
-    :target: https://travis-ci.com/theislab/scarches

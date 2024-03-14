@@ -9,7 +9,7 @@ try:
     from scarches import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
-    __version__ = '0.5.10'
+    __version__ = '0.6.1'
 
 # otherwise readthedocs fails
 # because somewhere in the dependency tree there is the sklearn deprecated package
@@ -45,7 +45,6 @@ setup(name='scArches',
         "muon",
       ],
       classifiers=[
-          "Programming Language :: Python :: 3.8",
           "Programming Language :: Python :: 3.9",
           'Environment :: Console',
           'Framework :: Jupyter',
