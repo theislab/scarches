@@ -313,6 +313,7 @@ class scPoli(BaseMixin):
         self,
         adata,
         mean: bool = False,
+        mean_var: bool = False
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
         data.
@@ -356,11 +357,13 @@ class scPoli(BaseMixin):
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device).float()
             latent = self.model.get_latent(
-                x_batch, c[batch, :], mean
+                x_batch, c[batch, :], mean, mean_var
             )
-            latents += [latent.cpu().detach()]
-        latents = torch.cat(latents)
-        return np.array(latents)
+            latent = (latent,) if not isinstance(latent, tuple) else latent
+            latents += [tuple(l.cpu().detach() for l in latent)]
+        result = tuple(np.array(torch.cat(l)) for l in zip(*latents))
+        result = result[0] if len(result) == 1 else result
+        return result
 
     def get_conditional_embeddings(self):
         """
@@ -969,3 +972,8 @@ class scPoli(BaseMixin):
                 load_state_dict[key] = fixed_ten
 
         self.model.load_state_dict(load_state_dict)
+
+
+    def minify_adata(self, adata=None):
+        super().minify_adata(adata, model_name="scpoli")
+
