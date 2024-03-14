@@ -10,7 +10,7 @@ from torch.distributions import Normal
 from anndata import AnnData, read
 from scipy.sparse import issparse
 
-from ._utils import UnpicklerCpu, _validate_var_names
+from ._utils import UnpicklerCpu, _validate_var_names, get_minified_adata_scrna
 
 
 class BaseMixin:
@@ -193,6 +193,36 @@ class BaseMixin:
         model.is_trained_ = attr_dict['is_trained_']
 
         return model
+    
+    def minify_adata(self, adata=None, model_name=None):
+        """
+        This function is adapted from scvi-tools
+        https://docs.scvi-tools.org/en/stable/api/reference/scvi.model.SCVI.html#scvi.model.SCVI.minify_adata
+        minify adata using latent posterior parameters:
+        * the original count data is removed (`adata.X`, adata.raw, and any layers)
+        * the parameters of the latent representation of the original data is stored
+        * everything else is left untouched
+        """
+
+        if adata is None:
+            adata = self.adata
+
+        #get the latent representation and store it in the adata
+        qzm, qzv = self.get_latent(adata, mean_var=True)
+        adata.obsm[f"X_latent_qzm_{model_name}"] = qzm
+        adata.obsm[f"X_latent_qzv_{model_name}"] = qzv
+
+        minified_adata = get_minified_adata_scrna(adata)
+        minified_adata.obsm[f"X_latent_qzm_{model_name}"] = adata.obsm[f"X_latent_qzm_{model_name}"]
+        minified_adata.obsm[f"X_latent_qzv_{model_name}"] = adata.obsm[f"X_latent_qzv_{model_name}"]
+        counts = adata.X
+        minified_adata.obs["observed_lib_size"] = np.squeeze(
+            np.asarray(counts.sum(axis=1))
+        )
+        self.adata = minified_adata
+
+        print(self.adata)
+
 
 
 class SurgeryMixin:
