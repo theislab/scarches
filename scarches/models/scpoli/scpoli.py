@@ -235,6 +235,9 @@ class scpoli(nn.Module):
         self.cell_type_encoder = {
             k: v for k, v in zip(self.cell_types, range(len(self.cell_types)))
         }
+        if self.unknown_ct_names is not None:
+            for unknown_ct in self.unknown_ct_names:
+                self.cell_type_encoder[unknown_ct] = -1
 
         # Add new celltype index to hierarchy index list of prototypes
         classes_list = torch.cat(
