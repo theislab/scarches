@@ -67,6 +67,9 @@ def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, leng
     sys.stdout.flush()
 
 def custom_collate(batch):
+    if isinstance(batch, dict):
+        return batch
+    
     r"""Puts each data field into a tensor with outer dimension batch size"""
     np_str_obj_array_pattern = re.compile(r'[SaUO]')
     default_collate_err_msg_format = (
@@ -127,28 +130,26 @@ def train_test_split(adata, train_frac=0.85, condition_keys=None, cell_type_key=
         labeled_idx = indices[labeled_array == 1]
         unlabeled_idx = indices[labeled_array == 0]
 
-        train_labeled_idx = []
-        val_labeled_idx = []
-        train_unlabeled_idx = []
-        val_unlabeled_idx = []
+        train_labeled_idx = np.array([], dtype=int)
+        val_labeled_idx = np.array([], dtype=int)
+        train_unlabeled_idx = np.array([], dtype=int)
+        val_unlabeled_idx = np.array([], dtype=int)
 
         if len(labeled_idx) > 0:
-            cell_types = adata[labeled_idx].obs[cell_type_key].unique().tolist()
-            for cell_type in cell_types:
-                ct_idx = labeled_idx[adata[labeled_idx].obs[cell_type_key] == cell_type]
-                n_train_samples = int(np.ceil(train_frac * len(ct_idx)))
-                np.random.shuffle(ct_idx)
-                train_labeled_idx.append(ct_idx[:n_train_samples])
-                val_labeled_idx.append(ct_idx[n_train_samples:])
+            cell_type_info = adata[labeled_idx].obs[[cell_type_key]].copy()
+            cell_type_info['random'] = np.random.rand(len(cell_type_info.index))
+            cell_type_info['count_in_ct'] = cell_type_info.groupby(cell_type_key, observed=True)['random'].transform('count')
+            cell_type_info['rank_in_ct'] = cell_type_info.groupby(cell_type_key, observed=True)['random'].rank(method="first") - 1
+            cell_type_info['train'] = cell_type_info['count_in_ct'] * train_frac > cell_type_info['rank_in_ct']
+            train_labeled_idx = labeled_idx[cell_type_info['train']]
+            val_labeled_idx = labeled_idx[~cell_type_info['train']]
         if len(unlabeled_idx) > 0:
             n_train_samples = int(np.ceil(train_frac * len(unlabeled_idx)))
-            train_unlabeled_idx.append(unlabeled_idx[:n_train_samples])
-            val_unlabeled_idx.append(unlabeled_idx[n_train_samples:])
-        train_idx = train_labeled_idx + train_unlabeled_idx
-        val_idx = val_labeled_idx + val_unlabeled_idx
+            train_unlabeled_idx = unlabeled_idx[:n_train_samples]
+            val_unlabeled_idx = unlabeled_idx[n_train_samples:]
 
-        train_idx = np.concatenate(train_idx)
-        val_idx = np.concatenate(val_idx)
+        train_idx = np.concatenate([train_labeled_idx, train_unlabeled_idx])
+        val_idx = np.concatenate([val_labeled_idx, val_unlabeled_idx])
 
     elif condition_keys is not None:
         train_idx = []
