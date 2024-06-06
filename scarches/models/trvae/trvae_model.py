@@ -1,5 +1,6 @@
 import inspect
 import os
+from pathlib import PurePath
 import torch
 import pickle
 import numpy as np
@@ -7,8 +8,10 @@ import numpy as np
 from anndata import AnnData, read
 from copy import deepcopy
 from typing import Optional, Union
+from scipy.sparse import issparse
 
 from .trvae import trVAE
+from ._utils import subsample_conditions
 from ...trainers.trvae.unsupervised import trVAETrainer
 from ..base._utils import _validate_var_names
 from ..base._base import BaseMixin, SurgeryMixin, CVAELatentsMixin
@@ -49,6 +52,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
        use_ln: Boolean
             If `True` layer normalization will be applied to layers.
     """
+
     def __init__(
         self,
         adata: AnnData,
@@ -137,6 +141,119 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
+
+    @classmethod
+    def zero_shot_surgery(
+        cls,
+        adata,
+        model_path,
+        force_cuda=False,
+        copy=False,
+        subsample=1.
+        ):
+        assert subsample > 0. and subsample <= 1.
+
+        if copy:
+            adata = adata.copy()
+
+        with open(PurePath(model_path) / "attr.pkl", "rb") as handle:
+            attr_dict = pickle.load(handle)
+
+        ref_conditions = attr_dict["conditions_"]
+        condition_key = attr_dict["condition_key_"]
+
+        if subsample < 1.:
+            adata = subsample_conditions(adata, condition_key, subsample)
+
+        original_key = "_original_" + condition_key
+        adata.obs[original_key] = adata.obs[condition_key].copy()
+
+        adata.strings_to_categoricals()
+
+        original_cats = adata.obs[condition_key].unique()
+
+        adata.obs[condition_key] = adata.obs[condition_key].cat.rename_categories(ref_conditions[:len(original_cats)])
+
+        ref_model = cls.load(model_path, adata)
+        if force_cuda:
+            ref_model.model = ref_model.model.cuda()
+
+        device = next(ref_model.model.parameters()).device
+        print("Device", device)
+
+        rename_cats = {}
+
+        for cat in original_cats:
+            cat_mask = adata.obs[original_key] == cat
+            X = adata.X[cat_mask]
+            print("Processing original category:", cat, "n_obs:", X.shape[0])
+            if issparse(X):
+                X = X.toarray()
+            X = torch.tensor(X, device=device)
+            sizefactor = X.sum(-1)
+            c = torch.zeros(X.shape[0], device=device, dtype=int)
+
+            min_loss = None
+            for ref_cat, ref_cat_val in ref_model.model.condition_encoder.items():
+                print("  processing", ref_cat)
+                c[:] = ref_cat_val
+                recon_loss,_, _ = ref_model.model.forward(x=X, batch=c, sizefactor=sizefactor)
+                if min_loss is None:
+                    min_loss = recon_loss
+                    rename_cats[cat] = ref_cat
+                else:
+                    if recon_loss < min_loss:
+                        min_loss = recon_loss
+                        rename_cats[cat] = ref_cat
+
+        map_cats = adata.obs[original_key].map(rename_cats).astype("category")
+
+        adata.obs[condition_key] = map_cats
+        ref_model.adata.obs[condition_key] = map_cats
+
+        return ref_model, rename_cats
+
+
+    @classmethod
+    def one_shot_surgery(
+        cls,
+        adata,
+        model_path,
+        force_cuda=False,
+        copy=False,
+        subsample=1.,
+        pretrain=1,
+        **kwargs
+    ):
+        assert subsample > 0. and subsample <= 1.
+
+        if copy:
+            adata = adata.copy()
+
+        ref_model, rename_cats = cls.zero_shot_surgery(adata, model_path, force_cuda=force_cuda, copy=False)
+
+        cond_key = ref_model.condition_key_
+        adata.obs[cond_key] = adata.obs["_original_" + cond_key]
+
+        if subsample < 1.:
+            adata = subsample_conditions(adata, cond_key, subsample)
+
+        query_model = cls.load_query_data(adata, ref_model, **kwargs)
+
+        cond_enc = query_model.model.condition_encoder
+
+        to_set = [cond_enc[cat] for cat in rename_cats]
+        to_get = [cond_enc[cat] for cat in rename_cats.values()]
+        
+        query_model.model.encoder.FC[0].cond_L.weight.data[to_set] = query_model.model.encoder.FC[0].cond_L.weight.data[to_get]
+        query_model.model.decoder.FirstL[0].cond_L.weight.data[to_set] = query_model.model.decoder.FirstL[0].cond_L.weight.data[to_get] 
+
+        if pretrain > 0:
+            query_model.train(n_epochs=pretrain, pretraining_epochs=pretrain)
+
+        return query_model 
+
+
     @classmethod
     def _get_init_params_from_dict(cls, dct):
         init_params = {
@@ -164,3 +281,7 @@ class TRVAE(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         adata_conditions = adata.obs[dct['condition_key_']].unique().tolist()
         if not set(adata_conditions).issubset(dct['conditions_']):
             raise ValueError("Incorrect conditions")
+
+
+   
+    
