@@ -347,11 +347,17 @@ class scPoli(BaseMixin):
                 label_tensor.append(labels)
             c = torch.tensor(label_tensor, device=device).T
  
-        latents = []
-        # batch the latent transformation process
-        indices = torch.arange(x.shape[0])
+        # Ensure x is a PyTorch tensor
+        if not isinstance(x, torch.Tensor):
+            x = torch.tensor(x)
+
+        # Ensure indices is a LongTensor
+        indices = torch.arange(x.shape[0]).to(torch.long)
         subsampled_indices = indices.split(512)
+
+        latents = []
         for batch in subsampled_indices:
+            batch = batch.to(torch.long)  # Ensure batch is a LongTensor
             x_batch = x[batch, :]
             if sparse.issparse(x_batch):
                 x_batch = x_batch.toarray()
