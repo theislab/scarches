@@ -1,17 +1,14 @@
 name: scarches
 channels:
-  - pytorch
-  - nvidia
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - numpy
-  - pytorch
-  - torchaudio
-  - torchvision
-  - pytorch-cuda=11.8
   - pip:
+    - torch --extra-index-url https://download.pytorch.org/whl/cu118
+    - torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+    - torchvision --extra-index-url https://download.pytorch.org/whl/cu118
     - scvi-tools
     - scarches
 variables:
