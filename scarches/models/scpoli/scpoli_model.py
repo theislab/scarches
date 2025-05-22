@@ -314,18 +314,16 @@ class scPoli(BaseMixin):
         adata,
         mean: bool = False,
     ):
-        """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
-        data.
-
-         Parameters
-         ----------
-         x
-             Numpy nd-array to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
-         c
-             `numpy nd-array` of original (unencoded) desired labels for each sample.
-         mean
+        """
+        Map `x` in to the latent space using the encoder network
+        Parameters
+        ----------
+        x:
+             Input data matrix
+        c:
+             Condition onehot matrix
+        mean:
              return mean instead of random sample from the latent space
-
         Returns
         -------
              Returns array containing latent space encoding of 'x'.
@@ -351,12 +349,15 @@ class scPoli(BaseMixin):
         indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
         for batch in subsampled_indices:
-            x_batch = x[batch, :]
+            # Convert PyTorch tensor to NumPy array for indexing sparse matrix
+            batch_np = batch.cpu().numpy()
+            x_batch = x[batch_np, :]
             if sparse.issparse(x_batch):
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device).float()
+            # Also convert batch to NumPy for indexing c
             latent = self.model.get_latent(
-                x_batch, c[batch, :], mean
+                x_batch, c[batch_np, :], mean
             )
             latents += [latent.cpu().detach()]
         latents = torch.cat(latents)
