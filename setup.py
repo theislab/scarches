@@ -27,21 +27,18 @@ setup(name='scArches',
       packages=find_packages(),
       zip_safe=False,
       install_requires=[
-        "scanpy>=1.6.0",
-    	"anndata>=0.7.4",
+        "scanpy[leiden]>=1.6.0", # includes anndata
         "scHPL>=1.0.0",
-    	"h5py>=2.10.0",
-    	"torch>=1.8.0",
     	"numpy>=1.19.2",
     	"scipy>=1.5.2",
     	"scikit-learn>=0.23.2",
     	"matplotlib>=3.3.1",
     	"pandas>=1.1.2",
+        "torch>=1.8.0",
     	"scvi-tools>=0.12.1",
     	"tqdm>=4.56.0",
     	"requests",
         "gdown",
-        "leidenalg",  # TODO: set version criteria
         "muon",
       ],
       classifiers=[
