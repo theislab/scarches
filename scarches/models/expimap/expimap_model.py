@@ -70,6 +70,10 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
        soft_ext_mask: Boolean
             Use the soft mask mode for training with the constarined extension terms.
             Used for query mapping.
+       cont_cov_key: String
+             A key in `adata.obs` that corresponds to continuous data.
+             These covariate can be added in addition to the discrete conditional covariate
+             and is also treated as a nuisance factor.
     """
     def __init__(
         self,
@@ -91,7 +95,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         use_hsic: bool = False,
         hsic_one_vs_all: bool = False,
         ext_mask: Optional[Union[np.ndarray, list]] = None,
-        soft_ext_mask: bool = False
+        soft_ext_mask: bool = False,
+        cont_cov_key: Optional[str] = None
     ):
         self.adata = adata
 
@@ -99,6 +104,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             raise ValueError('Please provide mask.')
 
         self.condition_key_ = condition_key
+
+        self.cont_cov_key_ = cont_cov_key
 
         if conditions is None:
             if condition_key is not None:
@@ -158,7 +165,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             self.use_hsic_,
             self.hsic_one_vs_all_,
             ext_mask,
-            self.soft_ext_mask_
+            self.soft_ext_mask_,
+            has_cont_cov = self.cont_cov_key_ is not None
         )
 
         self.is_trained_ = False
@@ -237,6 +245,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             alpha=alpha,
             omega=omega,
             condition_key=self.condition_key_,
+            cont_cov_key=self.cont_cov_key_,
             **kwargs
         )
         self.trainer.train(n_epochs, lr, eps)
@@ -252,6 +261,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
+        cont_cov: Optional[np.ndarray] = None,
         only_active: bool = False,
         mean: bool = False,
         mean_var: bool = False
@@ -266,6 +276,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate.
            only_active
                 Return only the latent variables which correspond to active terms, i.e terms that
                 were not deactivated by the group lasso regularization.
@@ -279,7 +291,7 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
            -------
                 Returns array containing latent space encoding of 'x'.
         """
-        result = super().get_latent(x, c, mean, mean_var)
+        result = super().get_latent(x, c, cont_cov, mean, mean_var)
 
         if not only_active:
             return result
@@ -590,6 +602,9 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
 
         adata.uns[key_added] = scores
 
+    def decoder_norms(self):
+        return self.model.decoder.norms()
+
     @classmethod
     def load_query_data(
         cls,
@@ -687,7 +702,8 @@ class EXPIMAP(BaseMixin, SurgeryMixin, CVAELatentsMixin):
             'soft_ext_mask': dct['soft_ext_mask_'] if 'soft_ext_mask_' in dct else False,
             'hsic_one_vs_all': dct['hsic_one_vs_all_'] if 'hsic_one_vs_all_' in dct else False,
             'use_hsic': dct['use_hsic_'] if 'use_hsic_' in dct else False,
-            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None
+            'ext_mask': dct['ext_mask_'] if 'ext_mask_' in dct else None,
+            'cont_cov_key': dct['cont_cov_key_'] if 'cont_cov_key_' in dct else None
         }
 
         return init_params
