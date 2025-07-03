@@ -40,7 +40,7 @@ class scgen(BaseMixin):
         self.trainer = None
 
     def train(self, n_epochs: int = 100, lr: float = 0.001, eps: float = 1e-8, batch_size = 32, **kwargs):
-        self.trainer = vaeArithTrainer(self.model, self.adata, batch_size, **kwargs)
+        self.trainer = vaeArithTrainer(self.model, self.adata, batch_size = batch_size, **kwargs)
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
 
