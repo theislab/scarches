@@ -457,7 +457,7 @@ class scPoli(BaseMixin):
             x = adata
 
         if sparse.issparse(x):
-            x = x.A
+            x = x.toarray()
         x = torch.tensor(x, device=device)
 
         results = dict()
@@ -570,7 +570,7 @@ class scPoli(BaseMixin):
             c = torch.tensor(label_tensor, device=device).T
 
         if sparse.issparse(x):
-            x = x.A
+            x = x.toarray()
         x = torch.tensor(x, device=device)
         latents = []
         indices = torch.arange(x.size(0), device=device)

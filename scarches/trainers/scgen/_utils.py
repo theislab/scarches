@@ -111,7 +111,7 @@ def balancer(adata, cell_type_key="cell_type", condition_key="condition"):
         temp = adata.copy()[adata.obs[cell_type_key] == cls]
         index = np.random.choice(range(len(temp)), max_number)
         if sparse.issparse(temp.X):
-            temp_x = temp.X.A[index]
+            temp_x = temp.X.toarray()[index]
         else:
             temp_x = temp.X[index]
         all_data_x.append(temp_x)

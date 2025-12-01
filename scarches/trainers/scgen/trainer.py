@@ -119,7 +119,7 @@ class vaeArithTrainer:
             for lower in range(0, train_adata.shape[0], self.batch_size):
                 upper = min(lower + self.batch_size, train_adata.shape[0])
                 if sparse.issparse(train_adata.X):
-                    x_mb = torch.from_numpy(train_adata[lower:upper, :].X.A)
+                    x_mb = torch.from_numpy(train_adata[lower:upper, :].X.toarray())
                 else:
                     x_mb = torch.from_numpy(train_adata[lower:upper, :].X)
                 if upper - lower > 1:
@@ -146,7 +146,7 @@ class vaeArithTrainer:
                 for lower in range(0, train_adata.shape[0], self.batch_size):
                     upper = min(lower + self.batch_size, train_adata.shape[0])
                     if sparse.issparse(train_adata.X):
-                        x_mb = torch.from_numpy(train_adata[lower:upper, :].X.A)
+                        x_mb = torch.from_numpy(train_adata[lower:upper, :].X.toarray())
                     else:
                         x_mb = torch.from_numpy(train_adata[lower:upper, :].X)
                     if upper - lower > 1:

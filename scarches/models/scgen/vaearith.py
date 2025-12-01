@@ -213,15 +213,15 @@ class vaeArith(nn.Module):
         cd_ind = np.random.choice(range(ctrl_x.shape[0]), size=eq, replace=False)
         stim_ind = np.random.choice(range(stim_x.shape[0]), size=eq, replace=False)
         if sparse.issparse(ctrl_x.X) and sparse.issparse(stim_x.X):
-            latent_ctrl = self._avg_vector(torch.tensor(ctrl_x.X.A[cd_ind, :], device=device))
-            latent_sim = self._avg_vector(torch.tensor(stim_x.X.A[stim_ind, :], device=device))
+            latent_ctrl = self._avg_vector(torch.tensor(ctrl_x.X.toarray()[cd_ind, :], device=device))
+            latent_sim = self._avg_vector(torch.tensor(stim_x.X.toarray()[stim_ind, :], device=device))
         else:
             latent_ctrl = self._avg_vector(torch.tensor(ctrl_x.X[cd_ind, :], device=device))
             latent_sim = self._avg_vector(torch.tensor(stim_x.X[stim_ind, :], device=device))
 
         delta = latent_sim - latent_ctrl
         if sparse.issparse(ctrl_pred.X):
-            latent_cd = self.get_latent(torch.tensor(ctrl_pred.X.A, device=device))
+            latent_cd = self.get_latent(torch.tensor(ctrl_pred.X.toarray(), device=device))
         else:
             latent_cd = self.get_latent(torch.tensor(ctrl_pred.X, device=device))
 
@@ -252,7 +252,7 @@ class vaeArith(nn.Module):
         """
         device = next(self.parameters()).device # get device of model.parameters
         if sparse.issparse(adata.X):
-            latent_all = (self.get_latent(torch.tensor(adata.X.A, device=device))).cpu().detach().numpy()
+            latent_all = (self.get_latent(torch.tensor(adata.X.toarray(), device=device))).cpu().detach().numpy()
         else:
             latent_all = (self.get_latent(torch.tensor(adata.X, device=device))).cpu().detach().numpy()
 
