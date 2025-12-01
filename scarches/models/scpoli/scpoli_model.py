@@ -346,18 +346,15 @@ class scPoli(BaseMixin):
  
         latents = []
         # batch the latent transformation process
-        indices = torch.arange(x.shape[0])
-        subsampled_indices = indices.split(512)
+        indices = np.arange(x.shape[0])
+        subsampled_indices = np.array_split(indices, max(1, len(indices) // 512 + 1))
         for batch in subsampled_indices:
-            # Convert PyTorch tensor to NumPy array for indexing sparse matrix
-            batch_np = batch.cpu().numpy()
-            x_batch = x[batch_np, :]
+            x_batch = x[batch, :]
             if sparse.issparse(x_batch):
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device).float()
-            # Also convert batch to NumPy for indexing c
             latent = self.model.get_latent(
-                x_batch, c[batch_np, :], mean
+                x_batch, c[batch, :], mean
             )
             latents += [latent.cpu().detach()]
         latents = torch.cat(latents)
