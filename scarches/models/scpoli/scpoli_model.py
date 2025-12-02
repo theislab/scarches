@@ -342,7 +342,7 @@ class scPoli(BaseMixin):
                 for condition, label in self.model.condition_encoders[cond].items():
                     labels[query_conditions == condition] = label
                 label_tensor.append(labels)
-            c = torch.tensor(label_tensor, device=device).T
+            c = torch.tensor(np.stack(label_tensor), device=device).T
  
         latents = []
         # batch the latent transformation process
@@ -449,7 +449,7 @@ class scPoli(BaseMixin):
                     for condition, label in self.model.condition_encoders[cond].items():
                         labels[query_conditions == condition] = label
                     label_tensor.append(labels)
-                c = torch.tensor(label_tensor, device=device).T
+                c = torch.tensor(np.stack(label_tensor), device=device).T
         else:
             x = adata
 
@@ -564,7 +564,7 @@ class scPoli(BaseMixin):
                 for condition, label in self.model.condition_encoders[cond].items():
                     labels[query_conditions == condition] = label
                 label_tensor.append(labels)
-            c = torch.tensor(label_tensor, device=device).T
+            c = torch.tensor(np.stack(label_tensor), device=device).T
 
         if sparse.issparse(x):
             x = x.toarray()
