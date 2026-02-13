@@ -14,6 +14,8 @@ except:
 from .expimap.expimap import expiMap
 from .expimap.expimap_model import EXPIMAP
 from scvi.model import SCVI, SCANVI, TOTALVI
+from scvi.external import SYSVI
+
 try:
     import tcr_embedding as mvTCR
 except:
