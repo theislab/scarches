@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from anndata import AnnData, read
+from anndata import AnnData
 from copy import deepcopy
 from typing import Optional, Union
 
