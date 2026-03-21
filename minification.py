@@ -80,7 +80,7 @@ def get_latent_representation(
                 label_tensor.append(labels)
             c = torch.tensor(label_tensor, device=device).T
         if sparse.issparse(x):
-            x = x.A
+            x = x.toarray()
         x = torch.tensor(x, dtype=torch.float32)
 
         latents = []

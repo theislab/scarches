@@ -458,6 +458,13 @@ class Encoder(nn.Module):
     def forward(self, x, batch=None):
         if batch is not None:
             #    batch = one_hot_encoder(batch, n_cls=self.n_classes)
+
+            # check that dimensions are not 1
+            if x.dim() == 1:
+                x = x.unsqueeze(0)
+            if batch.dim() == 1:
+                batch = batch.unsqueeze(0)
+
             x = torch.cat((x, batch), dim=-1)
         if self.FC is not None:
             x = self.FC(x)

@@ -351,7 +351,10 @@ class scPoli(BaseMixin):
         # batch the latent transformation process
         indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
+          # Convert batch of indices to NumPy array
+    
         for batch in subsampled_indices:
+            batch = batch.cpu().numpy()
             x_batch = x[batch, :]
             if sparse.issparse(x_batch):
                 x_batch = x_batch.toarray()
@@ -459,7 +462,7 @@ class scPoli(BaseMixin):
             x = adata
 
         if sparse.issparse(x):
-            x = x.A
+            x = x.toarray()
         x = torch.tensor(x, device=device)
 
         results = dict()
@@ -572,7 +575,7 @@ class scPoli(BaseMixin):
             c = torch.tensor(label_tensor, device=device).T
 
         if sparse.issparse(x):
-            x = x.A
+            x = x.toarray()
         x = torch.tensor(x, device=device)
         latents = []
         indices = torch.arange(x.size(0), device=device)
