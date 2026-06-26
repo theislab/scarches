@@ -351,13 +351,15 @@ class scPoli(BaseMixin):
         for batch in subsampled_indices:
             x_batch = x[batch, :]
             if sparse.issparse(x_batch):
+                batch = batch.cpu().numpy()  # IMPORTANT: Convert to NumPy array
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device).float()
             latent = self.model.get_latent(
                 x_batch, c[batch, :], mean
             )
             latents += [latent.cpu().detach()]
-        latents = torch.cat(latents)
+        # latents = torch.cat(latents) # MODIFY THIS
+        latents = torch.cat(latents).cpu().numpy()  # Convert to NumPy after concatenation
         return np.array(latents)
 
     def get_conditional_embeddings(self):
@@ -476,7 +478,7 @@ class scPoli(BaseMixin):
             for batch in subsampled_indices:
                 if prototype:  # classify prototypes used for unseen cell type
                     pred, prob, weighted_distance = self.model.classify(
-                        x[batch, :].to(device),
+                        x[batch, :].to(device, dtype=torch.float32), # add dtype
                         prototype=prototype,
                         classes_list=prototypes_idx,
                         p=p,
@@ -485,8 +487,8 @@ class scPoli(BaseMixin):
                     )
                 else:  # default routine, classify cell by cell
                     pred, prob, weighted_distance = self.model.classify(
-                        x[batch, :].to(device),
-                        c[batch].to(device),
+                        x[batch, :].to(device, dtype=torch.float32), # add dtype
+                        c[batch].to(device, dtype=torch.float32), # add dtype
                         prototype=prototype,
                         classes_list=prototypes_idx,
                         p=p,
