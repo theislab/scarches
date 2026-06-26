@@ -1,12 +1,12 @@
 from typing import Union
 
-from ..models import TRVAE, SCVI, SCANVI, TOTALVI
+from ..models import TRVAE, SCVI, SCANVI, TOTALVI, SysVI
 from .file import *
 from .deposition import *
 from .zip import *
 
 
-def upload_model(model: Union[TRVAE, SCVI, SCANVI, TOTALVI, str],
+def upload_model(model: Union[TRVAE, SCVI, SCANVI, TOTALVI, SysVI, str],
                  deposition_id: str,
                  access_token: str,
                  model_name: str = None):
@@ -14,7 +14,7 @@ def upload_model(model: Union[TRVAE, SCVI, SCANVI, TOTALVI, str],
 
         Parameters
         ----------
-        model: :class:`~scarches.models.TRVAE`, :class:`~scarches.models.SCVI`, :class:`~scarches.models.SCANVI`, :class:`~scarches.models.TOTALVI`, str
+        model: :class:`~scarches.models.TRVAE`, :class:`~scarches.models.SCVI`, :class:`~scarches.models.SCANVI`, :class:`~scarches.models.TOTALVI`, :class:`~scarches.models.SysVI`, str
             An instance of one of classes defined in ``scarches.models`` module or a path to a saved model.
         deposition_id: str
             ID of a deposition in your Zenodo account.

@@ -1,5 +1,5 @@
 from ..metrics.metrics import entropy_batch_mixing, knn_purity, asw, nmi
-from ..models import SCVI, SCANVI, TOTALVI
+from ..models import SCVI, SCANVI, TOTALVI, SysVI
 
 from scipy.sparse import issparse
 import numpy as np
@@ -18,7 +18,7 @@ np.set_printoptions(precision=2, edgeitems=7)
 class SCVI_EVAL:
     def __init__(
             self,
-            model: Union[SCVI, SCANVI, TOTALVI],
+            model: Union[SCVI, SCANVI, TOTALVI, SysVI],
             adata: anndata.AnnData,
             trainer: Optional['Trainer'] = None,
             cell_type_key: str = None,

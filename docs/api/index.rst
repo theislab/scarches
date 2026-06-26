@@ -14,7 +14,7 @@ Import scarches as::
     import scarches as sca
 
 After reading the data (``sca.data.read``), you can you can instantiate one of the implemented models from ``sca.models`` module (currently we support ``trVAE``,
-``scVI``, ``scANVI``, and ``TotalVI``) and train it on your dataset.
+``scVI``, ``scANVI``, ``TotalVI`` and ``SysVI``) and train it on your dataset.
 
 .. toctree::
     :glob:
