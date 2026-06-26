@@ -136,4 +136,4 @@ def weighted_knn_transfer(
 
     print("finished!")
 
-    return pred_labels, uncertainties
+    return pred_labels, uncertainties, top_k_indices
