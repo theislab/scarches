@@ -330,7 +330,7 @@ class scpoli(nn.Module):
         var = torch.exp(log_var) + 1e-4
         return Normal(mu, var.sqrt()).rsample()
 
-    def get_latent(self, x, c=None, mean=False):
+    def get_latent(self, x, c=None, mean=False, mean_var=False):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
         data.
         Parameters
@@ -357,6 +357,8 @@ class scpoli(nn.Module):
         latent = self.sampling(z_mean, z_log_var)
         if mean:
             return z_mean
+        elif mean_var:
+            return (z_mean, z_log_var)
         return latent
 
 

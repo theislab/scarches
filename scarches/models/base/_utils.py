@@ -62,6 +62,33 @@ def _validate_var_names(adata, source_var_names):
 
     return new_adata
 
+def get_minified_adata_scrna(
+    adata: AnnData,
+) -> AnnData:
+
+
+    """This function is adapted from scvi-tools
+    https://docs.scvi-tools.org/en/stable/api/reference/scvi.model.utils.get_minified_adata_scrna.html
+    
+    Returns a minified adata.
+    Parameters
+    ----------
+    adata
+        Original adata, of which we to create a minified version.
+    """
+    all_zeros = csr_matrix(adata.X.shape)
+    layers = {layer: all_zeros.copy() for layer in adata.layers}
+    bdata = AnnData(
+        X=all_zeros,
+        layers=layers,
+        uns=adata.uns.copy(),
+        obs=adata.obs,
+        var=adata.var,
+        varm=adata.varm,
+        obsm=adata.obsm,
+        obsp=adata.obsp,
+    )
+    return bdata
 
 class UnpicklerCpu(pickle.Unpickler):
     """Helps to pickle.load a model trained on GPU to CPU.
