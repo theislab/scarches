@@ -286,6 +286,7 @@ class CVAELatentsMixin:
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
+        cont_cov: Optional[np.ndarray] = None,
         mean: bool = False,
         mean_var: bool = False
     ):
@@ -298,6 +299,8 @@ class CVAELatentsMixin:
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate. Supported only by the `EXPIMAP` model.
            mean
                 return mean instead of random sample from the latent space
            mean_var
@@ -322,6 +325,16 @@ class CVAELatentsMixin:
                 labels[c == condition] = label
             c = torch.tensor(labels, device=device)
 
+        if cont_cov is not None:
+            cont_cov = torch.tensor(cont_cov)
+        else:
+            cont_cov_key = getattr(self, "cont_cov_key_", None)
+            if cont_cov_key is not None:
+                cont_cov = torch.tensor(self.adata.obs[cont_cov_key], device=device)
+
+        if cont_cov is not None and len(cont_cov.shape) < 2:
+            cont_cov = cont_cov[:, None]
+
         latents = []
         indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
@@ -330,7 +343,11 @@ class CVAELatentsMixin:
             if issparse(x_batch):
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device)
-            latent = self.model.get_latent(x_batch, c[batch], mean, mean_var)
+            if cont_cov is not None:
+                cont_cov_batch = cont_cov[batch]
+            else:
+                cont_cov_batch = None
+            latent = self.model.get_latent(x_batch, c[batch], cont_cov_batch, mean, mean_var)
             latent = (latent,) if not isinstance(latent, tuple) else latent
             latents += [tuple(l.cpu().detach() for l in latent)]
 
@@ -343,6 +360,7 @@ class CVAELatentsMixin:
         self,
         x: Optional[np.ndarray] = None,
         c: Optional[np.ndarray] = None,
+        cont_cov: Optional[np.ndarray] = None
     ):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
@@ -354,6 +372,9 @@ class CVAELatentsMixin:
                 If None, then `self.adata.X` is used.
            c
                 `numpy nd-array` of original (unencoded) desired labels for each sample.
+           cont_cov
+                `numpy nd-array` of the categorical covariate. Supported only by the `EXPIMAP` model.
+
            Returns
            -------
                 Returns array containing output of first decoder layer.
@@ -373,6 +394,16 @@ class CVAELatentsMixin:
                 labels[c == condition] = label
             c = torch.tensor(labels, device=device)
 
+        if cont_cov is not None:
+            cont_cov = torch.tensor(cont_cov)
+        else:
+            cont_cov_key = getattr(self, "cont_cov_key_", None)
+            if cont_cov_key is not None:
+                cont_cov = torch.tensor(sef.adata.obs[cont_cov_key], device=device)
+
+        if cont_cov is not None and len(cont_cov.shape) < 2:
+            cont_cov = cont_cov[:, None]
+
         latents = []
         indices = torch.arange(x.shape[0])
         subsampled_indices = indices.split(512)
@@ -381,7 +412,11 @@ class CVAELatentsMixin:
             if issparse(x_batch):
                 x_batch = x_batch.toarray()
             x_batch = torch.tensor(x_batch, device=device)
-            latent = self.model.get_y(x_batch, c[batch])
+            if cont_cov is not None:
+                cont_cov_batch = cont_cov[batch]
+            else:
+                cont_cov_batch = None
+            latent = self.model.get_y(x_batch, c[batch], cont_cov_batch)
             latents += [latent.cpu().detach()]
 
         return np.array(torch.cat(latents))
@@ -406,7 +441,7 @@ class CVAELatentsModelMixin:
         var = torch.exp(log_var) + 1e-4
         return Normal(mu, var.sqrt()).rsample()
 
-    def get_latent(self, x, c=None, mean=False, mean_var=False):
+    def get_latent(self, x, c=None, cont_cov=None, mean=False, mean_var=False):
         """Map `x` in to the latent space. This function will feed data in encoder  and return  z for each sample in
            data.
            Parameters
@@ -415,7 +450,14 @@ class CVAELatentsModelMixin:
                 Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
            c: torch.Tensor
                 Torch Tensor of condition labels for each sample.
-           mean: boolean
+           cont_cov: torch.Tensor
+                Torch Tensor of the categorical covariate. Supported only by the `EXPIMAP` model.
+           mean: Boolean
+                return mean instead of random sample from the latent space
+           mean_var: Boolean
+                return mean and variance instead of random sample from the latent space
+                if `mean=False`.
+
            Returns
            -------
            Returns Torch Tensor containing latent space encoding of 'x'.
@@ -423,7 +465,12 @@ class CVAELatentsModelMixin:
         x_ = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_ = x
-        z_mean, z_log_var = self.encoder(x_, c)
+
+        if cont_cov is not None:
+            z_mean, z_log_var = self.encoder(x_, c, cont_cov=cont_cov)
+        else:
+            z_mean, z_log_var = self.encoder(x_, c)
+
         latent = self.sampling(z_mean, z_log_var)
         if mean:
             return z_mean
@@ -431,7 +478,7 @@ class CVAELatentsModelMixin:
             return (z_mean, torch.exp(z_log_var) + 1e-4)
         return latent
 
-    def get_y(self, x, c=None):
+    def get_y(self, x, c=None, cont_cov=None):
         """Map `x` in to the y dimension (First Layer of Decoder). This function will feed data in encoder  and return
            y for each sample in data.
 
@@ -441,6 +488,8 @@ class CVAELatentsModelMixin:
                 Torch Tensor to be mapped to latent space. `x` has to be in shape [n_obs, input_dim].
            c: torch.Tensor
                 Torch Tensor of condition labels for each sample.
+           cont_cov: torch.Tensor
+                Torch Tensor of the categorical covariate. Supported only by the `EXPIMAP` model.
 
            Returns
            -------
@@ -449,7 +498,12 @@ class CVAELatentsModelMixin:
         x_ = torch.log(1 + x)
         if self.recon_loss == 'mse':
             x_ = x
-        z_mean, z_log_var = self.encoder(x_, c)
+
+        if cont_cov is not None:
+            z_mean, z_log_var = self.encoder(x_, c, cont_cov=cont_cov)
+        else:
+            z_mean, z_log_var = self.encoder(x_, c)
+
         latent = self.sampling(z_mean, z_log_var)
         output = self.decoder(latent, c)
         return output[-1]
