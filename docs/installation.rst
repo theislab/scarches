@@ -2,7 +2,7 @@ Installation
 ============
 
 
-scArches requires Python 3.7 or 3.8. We recommend to use Miniconda.
+scArches requires Python 3.9 or above. We recommend to use Miniconda.
 
 PyPI
 --------
