@@ -278,6 +278,17 @@ class SurgeryMixin:
                     if "L0" in name or "N0" in name:
                         p.requires_grad = True
 
+        import logging as lg
+        try:
+            #TODO: Check if there are any disparsities here
+            query_genes = adata.var_names
+            ref_genes = reference_model.adata.var_names
+            percentage = round((query_genes.intersection(ref_genes).size/query_genes.size)*100,4)
+            if percentage != 100:
+                lg.warning(f"WARNING: Query shares {percentage}% of its genes with the reference. This may lead to inaccuracy in the results.")
+        except Exception:
+                lg.warning("WARNING: Something is wrong with the reference genes.")
+                
         return new_model
 
 
