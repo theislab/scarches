@@ -122,7 +122,7 @@ class scPoli(BaseMixin):
         self.unknown_ct_names_ = unknown_ct_names
 
         if labeled_indices is None:
-            self.labeled_indices_ = range(len(adata))
+            self.labeled_indices_ = np.argwhere(adata.obs[self.cell_type_keys_].isin(self.unknown_ct_names_).to_numpy().astype(int).min(axis=1) == 0).T[0]
         else:
             self.labeled_indices_ = labeled_indices
 
@@ -179,7 +179,6 @@ class scPoli(BaseMixin):
             for unknown_ct in self.unknown_ct_names_:
                 if unknown_ct in self.cell_types_:
                     del self.cell_types_[unknown_ct]
-
 
         # store model parameters
         if hidden_layer_sizes is None:
