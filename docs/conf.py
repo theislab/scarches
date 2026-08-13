@@ -41,6 +41,7 @@ notebooks = [
     'expimap_surgery_pipeline_advanced.ipynb',
     'treeArches_pbmc.ipynb',
     'treeArches_identifying_new_ct.ipynb',
+    'treeArches_information_rich_tree_plots.ipynb',
     'SageNet_mouse_embryo.ipynb',
     'mvTCR_borcherding.ipynb',
     'multigrate.ipynb',

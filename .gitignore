@@ -9,6 +9,9 @@ build/
 dist/
 .ipynb_checkpoints
 .vscode/
+notebooks/pbmc.h5ad
+notebooks/ref_model/
+notebooks/surgery_model/
 
 jupyter.sh
 slurm*
