@@ -67,6 +67,7 @@ scArches allows your single-cell query data to be analyzed by integrating it int
    expimap_surgery_pipeline_advanced
    treeArches_pbmc
    treeArches_identifying_new_ct
+   treeArches_information_rich_tree_plots
    SageNet_mouse_embryo
    mvTCR_borcherding
    multigrate
