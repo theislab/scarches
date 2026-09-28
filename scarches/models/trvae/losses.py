@@ -7,6 +7,12 @@ import torch.nn.functional as F
 from ._utils import partition
 
 
+MMD_ALPHAS = [
+    1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100,
+    1e3, 1e4, 1e5, 1e6
+]
+
+
 def bce(recon_x, x):
     """Computes BCE loss between reconstructed data and ground truth data.
 
@@ -215,11 +221,7 @@ def mmd_loss_calc(source_features, target_features):
        -------
        Returns the computed MMD between x and y.
     """
-    alphas = [
-        1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100,
-        1e3, 1e4, 1e5, 1e6
-    ]
-    alphas = Variable(torch.FloatTensor(alphas)).to(device=source_features.device)
+    alphas = Variable(torch.FloatTensor(MMD_ALPHAS)).to(device=source_features.device)
 
     cost = torch.mean(gaussian_kernel_matrix(source_features, source_features, alphas))
     cost += torch.mean(gaussian_kernel_matrix(target_features, target_features, alphas))
@@ -249,22 +251,32 @@ def mmd(y,c,n_conditions, beta, boundary):
        Returns MMD loss.
     """
 
-    # partition separates y into num_cls subsets w.r.t. their labels c
-    conditions_mmd = partition(y, c, n_conditions)
-    loss = torch.tensor(0.0, device=y.device)
+    labels = c.flatten()
+    # As in partition(), only labels in [0, n_conditions) take part.
+    keep = (labels >= 0) & (labels < n_conditions)
     if boundary is not None:
-        for i in range(boundary):
-            for j in range(boundary, n_conditions):
-                if conditions_mmd[i].size(0) < 2 or conditions_mmd[j].size(0) < 2:
-                    continue
-                loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
-    else:
-        for i in range(len(conditions_mmd)):
-            if conditions_mmd[i].size(0) < 1:
-                continue
-            for j in range(i):
-                if conditions_mmd[j].size(0) < 1 or i == j:
-                    continue
-                loss += mmd_loss_calc(conditions_mmd[i], conditions_mmd[j])
+        # The boundary route skips conditions with fewer than two cells.
+        _, inverse, counts = torch.unique(labels, return_inverse=True, return_counts=True)
+        keep &= counts[inverse] >= 2
+    y, labels = y[keep], labels[keep]
 
-    return beta * loss
+    groups, inverse, counts = torch.unique(labels, return_inverse=True, return_counts=True)
+    if counts.numel() < 2:
+        return beta * torch.tensor(0.0, device=y.device)
+
+    alphas = torch.tensor(MMD_ALPHAS, dtype=torch.float32, device=y.device)
+    kernel = gaussian_kernel_matrix(y, y, alphas)
+    membership = F.one_hot(inverse, num_classes=counts.numel()).to(kernel.dtype)
+    membership = membership / counts.to(kernel.dtype)
+    group_kernel = membership.T @ kernel @ membership
+
+    # Block means include self-kernels, as in mmd_loss_calc.
+    within = group_kernel.diagonal()
+    pair_losses = within[:, None] + within[None, :] - 2 * group_kernel
+    if boundary is None:
+        # Every unordered pair of populated conditions.
+        pair_mask = groups[:, None] > groups[None, :]
+    else:
+        # Only pairs of an old (< boundary) and a new (>= boundary) condition.
+        pair_mask = (groups[:, None] < boundary) & (groups[None, :] >= boundary)
+    return beta * pair_losses[pair_mask].sum()
